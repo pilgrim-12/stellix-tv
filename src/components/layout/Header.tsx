@@ -58,6 +58,12 @@ export function Header() {
               <span className="hidden sm:inline">Программа</span>
             </Link>
           </Button>
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/admin" className="flex items-center gap-1.5">
+              <Shield className="h-4 w-4" />
+              <span className="hidden sm:inline">Админ</span>
+            </Link>
+          </Button>
         </nav>
 
         {/* Actions */}
