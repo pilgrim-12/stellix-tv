@@ -2,7 +2,6 @@
 
 import { useEffect } from 'react'
 import { Header } from '@/components/layout'
-import { Sidebar } from '@/components/layout'
 import { VideoPlayer } from '@/components/player'
 import { ChannelList } from '@/components/channels'
 import { ProtectedRoute } from '@/components/auth'
@@ -23,7 +22,6 @@ function WatchContent() {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if user is typing in an input
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return
       }
@@ -38,9 +36,6 @@ function WatchContent() {
           break
         case 'm':
           toggleMute()
-          break
-        case 'f':
-          // Fullscreen is handled by the player component
           break
         case 'arrowup':
           e.preventDefault()
@@ -67,7 +62,6 @@ function WatchContent() {
           }
           break
         default:
-          // Number keys 1-9 for quick channel select
           if (/^[1-9]$/.test(e.key)) {
             const index = parseInt(e.key) - 1
             if (sampleChannels[index]) {
@@ -82,84 +76,32 @@ function WatchContent() {
   }, [])
 
   return (
-    <div className="flex h-screen flex-col bg-background">
+    <div className="flex h-screen flex-col bg-background overflow-hidden">
       <Header />
 
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
-
-        <main className="flex-1 overflow-auto">
-          {/* Player section */}
-          <div className="p-4 pb-2">
-            <div className="max-w-3xl">
+        {/* Main content */}
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+          {/* Player section - fixed height on mobile, fixed width on desktop */}
+          <div className="lg:w-2/3 xl:w-3/4 flex flex-col shrink-0">
+            <div className="p-4">
               <VideoPlayer />
-            </div>
-
-            {/* Now playing info */}
-            {currentChannel && (
-              <div className="mt-2 max-w-3xl">
-                <h1 className="text-lg font-semibold">{currentChannel.name}</h1>
-                <p className="text-sm text-muted-foreground capitalize">
-                  {currentChannel.group} • {currentChannel.country}
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Channel list */}
-          <div className="border-t border-border/40">
-            <ChannelList />
-          </div>
-        </main>
-
-        {/* Right sidebar with ad space */}
-        <aside className="hidden xl:flex w-80 flex-col border-l border-border/40 p-4">
-          {/* Ad banner placeholder */}
-          <div className="rounded-lg border border-dashed border-border bg-muted/30 p-4 text-center mb-4">
-            <p className="text-xs text-muted-foreground">Ad Space</p>
-            <p className="text-xs text-muted-foreground">300x250</p>
-          </div>
-
-          {/* Now playing card */}
-          {currentChannel && (
-            <div className="rounded-lg border border-border bg-card p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="live-indicator inline-flex items-center gap-1 text-xs font-medium text-red-500">
-                  <span className="h-2 w-2 rounded-full bg-red-500" />
-                  LIVE
-                </span>
-                <span className="text-xs text-muted-foreground">Now Playing</span>
-              </div>
-
-              {currentChannel.logo && (
-                <div className="mb-3 flex h-16 items-center justify-center rounded bg-muted/50">
-                  <img
-                    src={currentChannel.logo}
-                    alt={currentChannel.name}
-                    className="h-12 w-auto object-contain"
-                  />
+              {currentChannel && (
+                <div className="mt-3">
+                  <h1 className="text-xl font-semibold">{currentChannel.name}</h1>
+                  <p className="text-sm text-muted-foreground capitalize">
+                    {currentChannel.group} • {currentChannel.country}
+                  </p>
                 </div>
               )}
-
-              <h3 className="font-semibold">{currentChannel.name}</h3>
-              <p className="text-sm text-muted-foreground capitalize">
-                {currentChannel.group}
-              </p>
-            </div>
-          )}
-
-          {/* Keyboard shortcuts hint */}
-          <div className="mt-auto rounded-lg border border-border bg-card/50 p-4">
-            <h4 className="text-sm font-medium mb-2">Keyboard Shortcuts</h4>
-            <div className="space-y-1 text-xs text-muted-foreground">
-              <p><kbd className="px-1 bg-muted rounded">Space</kbd> Play/Pause</p>
-              <p><kbd className="px-1 bg-muted rounded">M</kbd> Mute</p>
-              <p><kbd className="px-1 bg-muted rounded">←</kbd> <kbd className="px-1 bg-muted rounded">→</kbd> Change channel</p>
-              <p><kbd className="px-1 bg-muted rounded">↑</kbd> <kbd className="px-1 bg-muted rounded">↓</kbd> Volume</p>
-              <p><kbd className="px-1 bg-muted rounded">1-9</kbd> Quick select</p>
             </div>
           </div>
-        </aside>
+
+          {/* Channels section - scrollable */}
+          <div className="flex-1 lg:w-1/3 xl:w-1/4 border-t lg:border-t-0 lg:border-l border-border/40 overflow-auto">
+            <ChannelList />
+          </div>
+        </div>
       </div>
     </div>
   )
