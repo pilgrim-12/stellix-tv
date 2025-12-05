@@ -24,6 +24,7 @@ interface ChannelState {
   setError: (error: string | null) => void;
   markChannelOffline: (channelId: string) => void;
   markChannelOnline: (channelId: string) => void;
+  setChannelStatus: (channelId: string, isOnline: boolean) => void;
   toggleChannelEnabled: (channelId: string) => void;
   loadDisabledChannels: () => void;
 
@@ -76,6 +77,17 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
     const { offlineChannels } = get();
     const newOffline = new Set(offlineChannels);
     newOffline.delete(channelId);
+    set({ offlineChannels: newOffline });
+  },
+
+  setChannelStatus: (channelId, isOnline) => {
+    const { offlineChannels } = get();
+    const newOffline = new Set(offlineChannels);
+    if (isOnline) {
+      newOffline.delete(channelId);
+    } else {
+      newOffline.add(channelId);
+    }
     set({ offlineChannels: newOffline });
   },
 

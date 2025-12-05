@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { useChannelStore } from '@/stores'
+import { useChannelHealthCheck } from '@/hooks'
 import { sampleChannels } from '@/data/channels'
 import { ChannelCard } from './ChannelCard'
 import { Input } from '@/components/ui/input'
@@ -16,6 +17,9 @@ export function ChannelList() {
     setSearchQuery,
     loadDisabledChannels,
   } = useChannelStore()
+
+  // Фоновая проверка доступности каналов
+  useChannelHealthCheck()
 
   useEffect(() => {
     setChannels(sampleChannels)
