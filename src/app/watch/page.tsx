@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import { Header } from '@/components/layout'
 import { VideoPlayer } from '@/components/player'
-import { ChannelList, CategoryFilter } from '@/components/channels'
+import { ChannelList, CategoryFilter, LanguageFilter } from '@/components/channels'
 import { ProtectedRoute } from '@/components/auth'
 import { useChannelStore } from '@/stores'
 import { sampleChannels } from '@/data/channels'
@@ -110,6 +110,8 @@ function WatchContent() {
 
           {/* Channels section - scrollable */}
           <div className="w-full lg:w-72 xl:w-80 border-t lg:border-t-0 lg:border-l border-border/40 flex flex-col overflow-hidden">
+            {/* Language filter */}
+            <LanguageFilter />
             {/* Ad banner in sidebar */}
             <div className="p-1.5 border-b border-border/40 shrink-0">
               <div className="rounded bg-muted/30 border border-border/40 p-1.5 text-center">

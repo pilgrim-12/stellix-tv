@@ -154,8 +154,22 @@
 
 .video-container video {
   width: 100%;
-  aspect-ratio: 16 / 9;
+  max-height: calc(100vh - 280px);
   object-fit: contain;
+}
+
+/* Fullscreen video */
+.video-container:fullscreen video,
+.video-container:-webkit-full-screen video {
+  max-height: 100vh;
+  height: 100vh;
+}
+
+.video-container:fullscreen,
+.video-container:-webkit-full-screen {
+  background: black;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Volume slider styling */
@@ -209,4 +223,14 @@
 
 .live-indicator {
   animation: pulse-live 2s ease-in-out infinite;
+}
+
+/* Hide scrollbar for carousel */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

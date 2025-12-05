@@ -14,7 +14,6 @@ import {
   SkipBack,
   SkipForward,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { sampleChannels } from '@/data/channels'
 
 interface PlayerControlsProps {
@@ -79,12 +78,8 @@ export function PlayerControls({ videoRef, containerRef }: PlayerControlsProps) 
   }
 
   return (
-    <div
-      className={cn(
-        'bg-black/90 px-2 py-1.5',
-        'opacity-0 group-hover:opacity-100 transition-opacity duration-300'
-      )}
-    >
+    <div className="bg-black px-2 py-1.5">
+
       {/* Controls row */}
       <div className="flex items-center gap-1">
         {/* Channel navigation */}
