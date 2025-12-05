@@ -11,7 +11,7 @@ export function VideoPlayer() {
   const hlsRef = useRef<Hls | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const { currentChannel } = useChannelStore()
+  const { currentChannel, markChannelOffline, markChannelOnline } = useChannelStore()
   const {
     isPlaying,
     isMuted,
@@ -50,27 +50,39 @@ export function VideoPlayer() {
 
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         setLoading(false)
+        if (currentChannel) markChannelOnline(currentChannel.id)
         video.play().catch(() => {
-          // Autoplay blocked, user needs to interact
           setPlaying(false)
         })
       })
 
+      let retryCount = 0
+      const maxRetries = 2
+
       hls.on(Hls.Events.ERROR, (_, data) => {
         if (data.fatal) {
-          switch (data.type) {
-            case Hls.ErrorTypes.NETWORK_ERROR:
-              setError('Network error - trying to recover...')
-              hls.startLoad()
-              break
-            case Hls.ErrorTypes.MEDIA_ERROR:
-              setError('Media error - trying to recover...')
-              hls.recoverMediaError()
-              break
-            default:
-              setError('Failed to load stream')
-              hls.destroy()
-              break
+          retryCount++
+          if (retryCount <= maxRetries) {
+            switch (data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                setError('Network error - trying to recover...')
+                hls.startLoad()
+                break
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                setError('Media error - trying to recover...')
+                hls.recoverMediaError()
+                break
+              default:
+                setError('Channel offline')
+                if (currentChannel) markChannelOffline(currentChannel.id)
+                hls.destroy()
+                break
+            }
+          } else {
+            setError('Channel offline')
+            setLoading(false)
+            if (currentChannel) markChannelOffline(currentChannel.id)
+            hls.destroy()
           }
         }
       })
@@ -86,7 +98,7 @@ export function VideoPlayer() {
     } else {
       setError('HLS is not supported in this browser')
     }
-  }, [setLoading, setError, setPlaying])
+  }, [setLoading, setError, setPlaying, currentChannel, markChannelOffline, markChannelOnline])
 
   // Load channel when changed
   useEffect(() => {

@@ -1,7 +1,209 @@
 import { Channel } from '@/types';
 
 export const sampleChannels: Channel[] = [
-  // News
+  // === RUSSIAN CHANNELS ===
+  {
+    id: 'ru1',
+    name: 'Первый канал',
+    logo: 'https://i.imgur.com/YBhKhLR.png',
+    url: 'https://edge1.1internet.tv/dash-live/streams/1tv/1tv.mpd',
+    group: 'entertainment',
+    country: 'RU',
+    language: 'ru',
+  },
+  {
+    id: 'ru2',
+    name: 'Россия 1',
+    logo: 'https://i.imgur.com/DK8VRQF.png',
+    url: 'https://live.russia.tv/index/index/channel_id/1',
+    group: 'entertainment',
+    country: 'RU',
+    language: 'ru',
+  },
+  {
+    id: 'ru3',
+    name: 'НТВ',
+    logo: 'https://i.imgur.com/4P0PFGa.png',
+    url: 'https://ntv-live.cdn.ngenix.net/streaming/ntv_hls/index.m3u8',
+    group: 'entertainment',
+    country: 'RU',
+    language: 'ru',
+  },
+  {
+    id: 'ru4',
+    name: 'РЕН ТВ',
+    logo: 'https://i.imgur.com/Vqwy6d6.png',
+    url: 'https://ren-live.cdn.ngenix.net/streaming/ren_hls/index.m3u8',
+    group: 'entertainment',
+    country: 'RU',
+    language: 'ru',
+  },
+  {
+    id: 'ru5',
+    name: 'ТНТ',
+    logo: 'https://i.imgur.com/9NxACUf.png',
+    url: 'https://tnt-live.cdn.ngenix.net/streaming/tnt_hls/index.m3u8',
+    group: 'entertainment',
+    country: 'RU',
+    language: 'ru',
+  },
+  {
+    id: 'ru6',
+    name: 'СТС',
+    logo: 'https://i.imgur.com/8lGsqDq.png',
+    url: 'https://ctc-live.cdn.ngenix.net/streaming/ctc_hls/index.m3u8',
+    group: 'entertainment',
+    country: 'RU',
+    language: 'ru',
+  },
+  {
+    id: 'ru7',
+    name: 'Россия 24',
+    logo: 'https://i.imgur.com/rr1Ckhd.png',
+    url: 'https://live.russia.tv/index/index/channel_id/3',
+    group: 'news',
+    country: 'RU',
+    language: 'ru',
+  },
+  {
+    id: 'ru8',
+    name: 'RT на русском',
+    logo: 'https://i.imgur.com/6y9tEcI.png',
+    url: 'https://rt-rus.rttv.com/live/rtrussian/playlist.m3u8',
+    group: 'news',
+    country: 'RU',
+    language: 'ru',
+  },
+  {
+    id: 'ru9',
+    name: 'Матч ТВ',
+    logo: 'https://i.imgur.com/u8bHxmz.png',
+    url: 'https://matchtv-live.cdn.ngenix.net/streaming/matchtv_hls/index.m3u8',
+    group: 'sports',
+    country: 'RU',
+    language: 'ru',
+  },
+  {
+    id: 'ru10',
+    name: 'Карусель',
+    logo: 'https://i.imgur.com/5o1j84S.png',
+    url: 'https://karusel-live.cdn.ngenix.net/streaming/karusel_hls/index.m3u8',
+    group: 'kids',
+    country: 'RU',
+    language: 'ru',
+  },
+  {
+    id: 'ru11',
+    name: 'Мульт',
+    logo: 'https://i.imgur.com/zE3O3WH.png',
+    url: 'https://mult-live.cdn.ngenix.net/streaming/mult_hls/index.m3u8',
+    group: 'kids',
+    country: 'RU',
+    language: 'ru',
+  },
+  {
+    id: 'ru12',
+    name: 'Муз ТВ',
+    logo: 'https://i.imgur.com/SKy9cL8.png',
+    url: 'https://muztv-live.cdn.ngenix.net/streaming/muztv_hls/index.m3u8',
+    group: 'music',
+    country: 'RU',
+    language: 'ru',
+  },
+
+  // === MOVIES / FILMS ===
+  {
+    id: 'mov1',
+    name: 'FilmBox',
+    logo: 'https://i.imgur.com/0iqPaXP.png',
+    url: 'https://spi-filmbox-pl.cdn.vustreams.com/live/4cbb3fef-0b79-4bfc-bf50-0d34c12e65b7/live.isml/4cbb3fef-0b79-4bfc-bf50-0d34c12e65b7.m3u8',
+    group: 'movies',
+    country: 'PL',
+    language: 'en',
+  },
+  {
+    id: 'mov2',
+    name: 'Pluto TV Action',
+    logo: 'https://i.imgur.com/YB9VqH7.png',
+    url: 'https://service-stitcher.clusters.pluto.tv/v1/stitch/embed/hls/channel/5f4c868ca0e7540007818843/master.m3u8',
+    group: 'movies',
+    country: 'US',
+    language: 'en',
+  },
+  {
+    id: 'mov3',
+    name: 'Pluto TV Drama',
+    logo: 'https://i.imgur.com/cHPEKX7.png',
+    url: 'https://service-stitcher.clusters.pluto.tv/v1/stitch/embed/hls/channel/5dc9d8e2e320970009ab872c/master.m3u8',
+    group: 'movies',
+    country: 'US',
+    language: 'en',
+  },
+  {
+    id: 'mov4',
+    name: 'Pluto TV Comedy',
+    logo: 'https://i.imgur.com/xWIvqx4.png',
+    url: 'https://service-stitcher.clusters.pluto.tv/v1/stitch/embed/hls/channel/5f4c86a3f731b900072eb8f3/master.m3u8',
+    group: 'movies',
+    country: 'US',
+    language: 'en',
+  },
+  {
+    id: 'mov5',
+    name: 'Pluto TV Horror',
+    logo: 'https://i.imgur.com/TA3Ahgx.png',
+    url: 'https://service-stitcher.clusters.pluto.tv/v1/stitch/embed/hls/channel/5dc9d81de320970009ab8680/master.m3u8',
+    group: 'movies',
+    country: 'US',
+    language: 'en',
+  },
+  {
+    id: 'mov6',
+    name: 'Pluto TV Thriller',
+    logo: 'https://i.imgur.com/iB4SYuR.png',
+    url: 'https://service-stitcher.clusters.pluto.tv/v1/stitch/embed/hls/channel/5dc9d859e320970009ab86f6/master.m3u8',
+    group: 'movies',
+    country: 'US',
+    language: 'en',
+  },
+  {
+    id: 'mov7',
+    name: 'Rakuten Action',
+    logo: 'https://i.imgur.com/dCNMkxQ.png',
+    url: 'https://rakuten-action-movies-1-eu.rakuten.wurl.tv/playlist.m3u8',
+    group: 'movies',
+    country: 'EU',
+    language: 'en',
+  },
+  {
+    id: 'mov8',
+    name: 'Rakuten Comedy',
+    logo: 'https://i.imgur.com/pZJtKHw.png',
+    url: 'https://rakuten-comedy-movies-1-eu.rakuten.wurl.tv/playlist.m3u8',
+    group: 'movies',
+    country: 'EU',
+    language: 'en',
+  },
+  {
+    id: 'mov9',
+    name: 'Rakuten Drama',
+    logo: 'https://i.imgur.com/HB5yCkM.png',
+    url: 'https://rakuten-drama-movies-1-eu.rakuten.wurl.tv/playlist.m3u8',
+    group: 'movies',
+    country: 'EU',
+    language: 'en',
+  },
+  {
+    id: 'mov10',
+    name: 'Filmstream',
+    logo: 'https://i.imgur.com/oIU4eqQ.png',
+    url: 'https://d2xpvaymmx6kja.cloudfront.net/live/film-stream-de/live.isml/live.m3u8',
+    group: 'movies',
+    country: 'DE',
+    language: 'de',
+  },
+
+  // === NEWS ===
   {
     id: '1',
     name: 'France 24 English',
@@ -93,7 +295,7 @@ export const sampleChannels: Channel[] = [
     language: 'en',
   },
 
-  // Documentary
+  // === DOCUMENTARY ===
   {
     id: '11',
     name: 'NASA TV',
@@ -112,17 +314,8 @@ export const sampleChannels: Channel[] = [
     country: 'RU',
     language: 'en',
   },
-  {
-    id: '13',
-    name: 'Love Nature',
-    logo: 'https://i.imgur.com/HLYqhSe.png',
-    url: 'https://lin06.content.mtvuutiset.fi/a]love-nature-4k/index.m3u8',
-    group: 'documentary',
-    country: 'CA',
-    language: 'en',
-  },
 
-  // Entertainment
+  // === ENTERTAINMENT ===
   {
     id: '14',
     name: 'Fashion TV',
@@ -132,17 +325,8 @@ export const sampleChannels: Channel[] = [
     country: 'FR',
     language: 'en',
   },
-  {
-    id: '15',
-    name: 'FilmBox',
-    logo: 'https://i.imgur.com/0iqPaXP.png',
-    url: 'https://spi-filmbox-pl.cdn.vustreams.com/live/4cbb3fef-0b79-4bfc-bf50-0d34c12e65b7/live.isml/4cbb3fef-0b79-4bfc-bf50-0d34c12e65b7.m3u8',
-    group: 'movies',
-    country: 'PL',
-    language: 'en',
-  },
 
-  // Music
+  // === MUSIC ===
   {
     id: '16',
     name: 'MTV Live',
@@ -180,7 +364,7 @@ export const sampleChannels: Channel[] = [
     language: 'de',
   },
 
-  // Sports
+  // === SPORTS ===
   {
     id: '20',
     name: 'Red Bull TV',
@@ -209,7 +393,7 @@ export const sampleChannels: Channel[] = [
     language: 'en',
   },
 
-  // Kids
+  // === KIDS ===
   {
     id: '23',
     name: 'Baby TV',

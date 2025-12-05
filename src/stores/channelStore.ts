@@ -9,6 +9,7 @@ interface ChannelState {
   favorites: string[];
   isLoading: boolean;
   error: string | null;
+  offlineChannels: Set<string>;
 
   // Actions
   setChannels: (channels: Channel[]) => void;
@@ -18,6 +19,8 @@ interface ChannelState {
   toggleFavorite: (channelId: string) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+  markChannelOffline: (channelId: string) => void;
+  markChannelOnline: (channelId: string) => void;
 
   // Computed
   getFilteredChannels: () => Channel[];
@@ -31,6 +34,7 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
   favorites: [],
   isLoading: false,
   error: null,
+  offlineChannels: new Set(),
 
   setChannels: (channels) => set({ channels }),
   setCurrentChannel: (channel) => set({ currentChannel: channel }),
@@ -43,7 +47,6 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
       ? favorites.filter((id) => id !== channelId)
       : [...favorites, channelId];
     set({ favorites: newFavorites });
-    // Save to localStorage
     if (typeof window !== 'undefined') {
       localStorage.setItem('stellix-favorites', JSON.stringify(newFavorites));
     }
@@ -52,19 +55,44 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
   setLoading: (loading) => set({ isLoading: loading }),
   setError: (error) => set({ error }),
 
+  markChannelOffline: (channelId) => {
+    const { offlineChannels } = get();
+    const newOffline = new Set(offlineChannels);
+    newOffline.add(channelId);
+    set({ offlineChannels: newOffline });
+  },
+
+  markChannelOnline: (channelId) => {
+    const { offlineChannels } = get();
+    const newOffline = new Set(offlineChannels);
+    newOffline.delete(channelId);
+    set({ offlineChannels: newOffline });
+  },
+
   getFilteredChannels: () => {
-    const { channels, selectedCategory, searchQuery } = get();
+    const { channels, selectedCategory, searchQuery, offlineChannels } = get();
 
-    return channels.filter((channel) => {
-      const matchesCategory =
-        selectedCategory === 'all' ||
-        channel.group.toLowerCase() === selectedCategory;
+    return channels
+      .map((channel) => ({
+        ...channel,
+        isOffline: offlineChannels.has(channel.id),
+      }))
+      .filter((channel) => {
+        const matchesCategory =
+          selectedCategory === 'all' ||
+          channel.group.toLowerCase() === selectedCategory;
 
-      const matchesSearch =
-        !searchQuery ||
-        channel.name.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesSearch =
+          !searchQuery ||
+          channel.name.toLowerCase().includes(searchQuery.toLowerCase());
 
-      return matchesCategory && matchesSearch;
-    });
+        return matchesCategory && matchesSearch;
+      })
+      .sort((a, b) => {
+        // Online channels first
+        if (a.isOffline && !b.isOffline) return 1;
+        if (!a.isOffline && b.isOffline) return -1;
+        return 0;
+      });
   },
 }));

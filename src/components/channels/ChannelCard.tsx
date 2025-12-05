@@ -3,7 +3,7 @@
 import { Channel } from '@/types'
 import { useChannelStore } from '@/stores'
 import { Card } from '@/components/ui/card'
-import { Star } from 'lucide-react'
+import { Star, WifiOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface ChannelCardProps {
@@ -14,16 +14,28 @@ export function ChannelCard({ channel }: ChannelCardProps) {
   const { currentChannel, setCurrentChannel, favorites, toggleFavorite } = useChannelStore()
   const isActive = currentChannel?.id === channel.id
   const isFavorite = favorites.includes(channel.id)
+  const isOffline = channel.isOffline
 
   return (
     <Card
       className={cn(
         'channel-card relative cursor-pointer overflow-hidden p-3',
         'hover:border-primary/50',
-        isActive && 'border-primary ring-1 ring-primary'
+        isActive && 'border-primary ring-1 ring-primary',
+        isOffline && 'opacity-50'
       )}
       onClick={() => setCurrentChannel(channel)}
     >
+      {/* Offline indicator */}
+      {isOffline && (
+        <div className="absolute left-2 top-2 z-10">
+          <span className="inline-flex items-center gap-1 rounded bg-red-500/20 px-1.5 py-0.5 text-[10px] font-medium text-red-400">
+            <WifiOff className="h-3 w-3" />
+            Offline
+          </span>
+        </div>
+      )}
+
       {/* Favorite button */}
       <button
         className={cn(
@@ -68,7 +80,7 @@ export function ChannelCard({ channel }: ChannelCardProps) {
       </div>
 
       {/* Live indicator for active channel */}
-      {isActive && (
+      {isActive && !isOffline && (
         <div className="absolute bottom-2 right-2">
           <span className="live-indicator inline-flex items-center gap-1 text-xs font-medium text-red-500">
             <span className="h-1.5 w-1.5 rounded-full bg-red-500" />

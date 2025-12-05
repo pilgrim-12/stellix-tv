@@ -7,6 +7,7 @@ export interface Channel {
   country?: string;
   language?: string;
   isNSFW?: boolean;
+  isOffline?: boolean;
 }
 
 export interface ChannelGroup {
