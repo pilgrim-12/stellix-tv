@@ -2,8 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Search, User, Settings, Star, LogOut, Loader2, Calendar, Tv } from 'lucide-react'
-import { Input } from '@/components/ui/input'
+import { Settings, Star, LogOut, Loader2, Calendar, Tv } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -13,12 +12,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { useChannelStore } from '@/stores'
 import { useAuthContext } from '@/contexts/AuthContext'
 
 export function Header() {
   const router = useRouter()
-  const { searchQuery, setSearchQuery } = useChannelStore()
   const { user, loading, logout } = useAuthContext()
 
   const handleLogout = async () => {
@@ -38,50 +35,33 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-14 items-center px-4 gap-4">
+      <div className="flex h-12 items-center px-4 gap-4">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <span className="text-lg font-bold text-primary-foreground">S</span>
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary">
+            <span className="text-base font-bold text-primary-foreground">S</span>
           </div>
-          <span className="text-xl font-bold tracking-tight">Stellix TV</span>
+          <span className="text-lg font-bold tracking-tight hidden sm:block">Stellix TV</span>
         </Link>
 
-        {/* Search */}
-        <div className="flex-1 max-w-md mx-auto">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search channels..."
-              className="pl-9 bg-muted/50"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-        </div>
-
         {/* Navigation */}
-        <nav className="hidden md:flex items-center gap-1">
+        <nav className="flex items-center gap-1 ml-auto">
           <Button variant="ghost" size="sm" asChild>
             <Link href="/watch" className="flex items-center gap-1.5">
               <Tv className="h-4 w-4" />
-              Watch
+              <span className="hidden sm:inline">Смотреть</span>
             </Link>
           </Button>
           <Button variant="ghost" size="sm" asChild>
             <Link href="/guide" className="flex items-center gap-1.5">
               <Calendar className="h-4 w-4" />
-              Guide
+              <span className="hidden sm:inline">Программа</span>
             </Link>
           </Button>
         </nav>
 
         {/* Actions */}
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="hidden sm:flex">
-            <Star className="h-5 w-5" />
-          </Button>
 
           {loading ? (
             <Button variant="ghost" size="icon" disabled>

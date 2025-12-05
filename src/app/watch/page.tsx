@@ -82,24 +82,43 @@ function WatchContent() {
       <div className="flex flex-1 overflow-hidden">
         {/* Main content */}
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-          {/* Player section - fixed height on mobile, fixed width on desktop */}
-          <div className="lg:w-2/3 xl:w-3/4 flex flex-col shrink-0">
-            <div className="p-4">
+          {/* Player section */}
+          <div className="lg:flex-1 flex flex-col shrink-0">
+            <div className="p-3">
               <VideoPlayer />
               {currentChannel && (
-                <div className="mt-3">
-                  <h1 className="text-xl font-semibold">{currentChannel.name}</h1>
-                  <p className="text-sm text-muted-foreground capitalize">
+                <div className="mt-2">
+                  <h1 className="text-lg font-semibold">{currentChannel.name}</h1>
+                  <p className="text-xs text-muted-foreground capitalize">
                     {currentChannel.group} • {currentChannel.country}
                   </p>
                 </div>
               )}
+
+              {/* Ad banner below player */}
+              <div className="mt-4 rounded-lg bg-muted/30 border border-border/40 p-4 text-center">
+                <p className="text-xs text-muted-foreground mb-1">Реклама</p>
+                <div className="h-[90px] bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded flex items-center justify-center">
+                  <span className="text-sm text-muted-foreground">728x90 Banner</span>
+                </div>
+              </div>
             </div>
           </div>
 
           {/* Channels section - scrollable */}
-          <div className="flex-1 lg:w-1/3 xl:w-1/4 border-t lg:border-t-0 lg:border-l border-border/40 overflow-auto">
-            <ChannelList />
+          <div className="w-full lg:w-80 xl:w-96 border-t lg:border-t-0 lg:border-l border-border/40 flex flex-col overflow-hidden">
+            {/* Ad banner in sidebar */}
+            <div className="p-2 border-b border-border/40 shrink-0">
+              <div className="rounded bg-muted/30 border border-border/40 p-2 text-center">
+                <p className="text-[10px] text-muted-foreground mb-1">Реклама</p>
+                <div className="h-[60px] bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded flex items-center justify-center">
+                  <span className="text-xs text-muted-foreground">300x60 Banner</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex-1 overflow-auto">
+              <ChannelList />
+            </div>
           </div>
         </div>
       </div>

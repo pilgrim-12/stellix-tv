@@ -3,12 +3,34 @@
 import { useState } from 'react'
 import { Channel, languageNames } from '@/types'
 import { useChannelStore } from '@/stores'
-import { Card } from '@/components/ui/card'
 import { Star, WifiOff, Radio } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface ChannelCardProps {
   channel: Channel
+}
+
+const labelColors: Record<string, string> = {
+  HD: 'bg-blue-500/20 text-blue-400',
+  '4K': 'bg-purple-500/20 text-purple-400',
+  Live: 'bg-red-500/20 text-red-400',
+  New: 'bg-green-500/20 text-green-400',
+  Premium: 'bg-yellow-500/20 text-yellow-400',
+  Free: 'bg-emerald-500/20 text-emerald-400',
+}
+
+const categoryNames: Record<string, string> = {
+  news: 'Новости',
+  sports: 'Спорт',
+  movies: 'Кино',
+  kids: 'Детям',
+  music: 'Музыка',
+  entertainment: 'Развлечения',
+  documentary: 'Документальное',
+  nature: 'Природа',
+  lifestyle: 'Стиль жизни',
+  cooking: 'Кулинария',
+  gaming: 'Игры',
 }
 
 export function ChannelCard({ channel }: ChannelCardProps) {
@@ -18,55 +40,81 @@ export function ChannelCard({ channel }: ChannelCardProps) {
   const isOffline = channel.isOffline
   const [imgError, setImgError] = useState(false)
 
+  const categoryName = categoryNames[channel.group] || channel.group
+  const langName = channel.language ? (languageNames[channel.language] || channel.language.toUpperCase()) : null
+
   return (
-    <Card
+    <div
       className={cn(
-        'channel-card relative cursor-pointer p-2 flex items-center gap-3',
-        'hover:bg-muted/50 transition-colors',
-        isActive && 'bg-primary/10 border-primary',
-        isOffline && 'opacity-50'
+        'group relative cursor-pointer rounded-lg p-2 transition-all',
+        'hover:bg-muted/60',
+        isActive && 'bg-primary/15 ring-1 ring-primary',
+        isOffline && 'opacity-40'
       )}
       onClick={() => setCurrentChannel(channel)}
     >
-      {/* Channel logo */}
-      <div className="shrink-0 h-10 w-10 flex items-center justify-center rounded bg-muted/50 overflow-hidden">
-        {channel.logo && !imgError ? (
-          <img
-            src={channel.logo}
-            alt={channel.name}
-            className="h-8 w-8 object-contain"
-            onError={() => setImgError(true)}
-          />
-        ) : (
-          <span className="text-lg font-bold text-muted-foreground">
-            {channel.name.charAt(0)}
-          </span>
-        )}
-      </div>
-
-      {/* Channel info */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <h3 className="text-sm font-medium truncate">{channel.name}</h3>
-          {isActive && !isOffline && (
-            <Radio className="h-3 w-3 text-red-500 shrink-0 animate-pulse" />
+      <div className="flex items-center gap-3">
+        {/* Large channel logo */}
+        <div className="shrink-0 h-12 w-12 flex items-center justify-center rounded-md bg-black/40 overflow-hidden">
+          {channel.logo && !imgError ? (
+            <img
+              src={channel.logo}
+              alt={channel.name}
+              className="h-10 w-10 object-contain"
+              onError={() => setImgError(true)}
+            />
+          ) : (
+            <span className="text-xl font-bold text-muted-foreground">
+              {channel.name.charAt(0)}
+            </span>
           )}
         </div>
-        <p className="text-xs text-muted-foreground capitalize truncate">
-          {channel.group}
-          {channel.language && ` • ${languageNames[channel.language] || channel.language.toUpperCase()}`}
-        </p>
-      </div>
 
-      {/* Status indicators */}
-      <div className="shrink-0 flex items-center gap-1">
-        {isOffline && (
-          <WifiOff className="h-4 w-4 text-red-400" />
-        )}
+        {/* Channel info */}
+        <div className="flex-1 min-w-0">
+          {/* Name row */}
+          <div className="flex items-center gap-1.5">
+            <h3 className="text-sm font-semibold truncate">{channel.name}</h3>
+            {isActive && !isOffline && (
+              <Radio className="h-3 w-3 text-red-500 shrink-0 animate-pulse" />
+            )}
+            {isOffline && <WifiOff className="h-3 w-3 text-red-400 shrink-0" />}
+          </div>
+
+          {/* Badges row */}
+          <div className="flex items-center gap-1 mt-1 flex-wrap">
+            {/* Category badge */}
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+              {categoryName}
+            </span>
+            {/* Language badge */}
+            {langName && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                {langName}
+              </span>
+            )}
+            {/* Labels */}
+            {channel.labels?.map((label) => (
+              <span
+                key={label}
+                className={cn(
+                  'text-[10px] px-1.5 py-0.5 rounded font-medium',
+                  labelColors[label] || 'bg-muted text-muted-foreground'
+                )}
+              >
+                {label}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Favorite button */}
         <button
           className={cn(
-            'rounded-full p-1 transition-colors hover:bg-muted',
-            isFavorite ? 'text-yellow-500' : 'text-muted-foreground/50'
+            'shrink-0 rounded-full p-1.5 transition-colors',
+            'opacity-0 group-hover:opacity-100',
+            isFavorite && 'opacity-100',
+            isFavorite ? 'text-yellow-500' : 'text-muted-foreground/50 hover:text-yellow-500'
           )}
           onClick={(e) => {
             e.stopPropagation()
@@ -76,6 +124,6 @@ export function ChannelCard({ channel }: ChannelCardProps) {
           <Star className={cn('h-4 w-4', isFavorite && 'fill-current')} />
         </button>
       </div>
-    </Card>
+    </div>
   )
 }
