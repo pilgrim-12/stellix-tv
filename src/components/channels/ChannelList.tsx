@@ -4,8 +4,9 @@ import { useEffect } from 'react'
 import { useChannelStore } from '@/stores'
 import { sampleChannels, channelCategories } from '@/data/channels'
 import { ChannelCard } from './ChannelCard'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Button } from '@/components/ui/button'
 import { ChannelCategory } from '@/types'
+import { cn } from '@/lib/utils'
 
 export function ChannelList() {
   const {
@@ -40,28 +41,47 @@ export function ChannelList() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Category tabs */}
-      <div className="p-3 border-b border-border/40 shrink-0">
-        <div className="overflow-x-auto">
-          <Tabs value={selectedCategory} onValueChange={(v) => setCategory(v as ChannelCategory)}>
-            <TabsList className="inline-flex h-8 bg-muted/50">
-              {channelCategories.map((category) => (
-                <TabsTrigger
-                  key={category.id}
-                  value={category.id}
-                  className="text-xs px-2.5 whitespace-nowrap"
-                >
-                  {category.name}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
+      {/* Category buttons - grid layout */}
+      <div className="p-2 border-b border-border/40 shrink-0">
+        <div className="grid grid-cols-4 gap-1">
+          {channelCategories.slice(0, 8).map((category) => (
+            <Button
+              key={category.id}
+              variant={selectedCategory === category.id ? 'default' : 'ghost'}
+              size="sm"
+              className={cn(
+                'h-7 text-xs px-2',
+                selectedCategory === category.id && 'bg-primary text-primary-foreground'
+              )}
+              onClick={() => setCategory(category.id as ChannelCategory)}
+            >
+              {category.name}
+            </Button>
+          ))}
         </div>
+        {channelCategories.length > 8 && (
+          <div className="grid grid-cols-4 gap-1 mt-1">
+            {channelCategories.slice(8).map((category) => (
+              <Button
+                key={category.id}
+                variant={selectedCategory === category.id ? 'default' : 'ghost'}
+                size="sm"
+                className={cn(
+                  'h-7 text-xs px-2',
+                  selectedCategory === category.id && 'bg-primary text-primary-foreground'
+                )}
+                onClick={() => setCategory(category.id as ChannelCategory)}
+              >
+                {category.name}
+              </Button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Channels list */}
       <div className="flex-1 overflow-auto p-2">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-2">
+        <div className="space-y-1">
           {filteredChannels.map((channel) => (
             <ChannelCard key={channel.id} channel={channel} />
           ))}
