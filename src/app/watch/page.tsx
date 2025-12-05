@@ -86,11 +86,11 @@ function WatchContent() {
         {/* Main content */}
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
           {/* Player section */}
-          <div className="lg:flex-1 flex flex-col">
-            <div className="p-2">
+          <div className="lg:flex-1 flex flex-col overflow-auto">
+            <div className="p-2 flex flex-col gap-2">
               <VideoPlayer />
               {currentChannel && (
-                <div className="mt-1">
+                <div>
                   <h1 className="text-sm font-semibold">{currentChannel.name}</h1>
                   <p className="text-[10px] text-muted-foreground capitalize">
                     {currentChannel.group} • {currentChannel.country}
@@ -99,7 +99,7 @@ function WatchContent() {
               )}
 
               {/* Ad banner below player */}
-              <div className="mt-2 rounded bg-muted/30 border border-border/40 p-2 text-center">
+              <div className="rounded bg-muted/30 border border-border/40 p-2 text-center shrink-0">
                 <p className="text-[10px] text-muted-foreground mb-0.5">Реклама</p>
                 <div className="h-[50px] bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded flex items-center justify-center">
                   <span className="text-xs text-muted-foreground">728x90 Banner</span>

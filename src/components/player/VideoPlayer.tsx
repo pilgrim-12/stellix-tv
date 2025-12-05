@@ -151,11 +151,11 @@ export function VideoPlayer() {
 
   return (
     <div ref={containerRef} className="video-container group">
-      {/* Video wrapper with relative positioning for overlays */}
-      <div className="relative">
+      {/* Video wrapper with minimum height to prevent layout shift */}
+      <div className="relative w-full min-h-[200px] bg-black rounded-lg overflow-hidden">
         <video
           ref={videoRef}
-          className="w-full"
+          className="w-full h-auto"
           playsInline
           onPlay={handlePlay}
           onPause={handlePause}
