@@ -81,64 +81,53 @@ export function PlayerControls({ videoRef, containerRef }: PlayerControlsProps) 
   return (
     <div
       className={cn(
-        'bg-black/90 px-4 py-3',
+        'bg-black/90 px-2 py-1.5',
         'opacity-0 group-hover:opacity-100 transition-opacity duration-300'
       )}
     >
-      {/* Channel info */}
-      {currentChannel && (
-        <div className="mb-3 flex items-center gap-2">
-          <span className="live-indicator inline-flex items-center gap-1.5 text-xs font-semibold text-red-500">
-            <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-            LIVE
-          </span>
-          <span className="text-sm font-medium text-white truncate">{currentChannel.name}</span>
-        </div>
-      )}
-
       {/* Controls row */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
         {/* Channel navigation */}
         <Button
           variant="ghost"
           size="icon"
-          className="h-9 w-9 text-white hover:bg-white/20"
+          className="h-7 w-7 text-white hover:bg-white/20"
           onClick={handlePrevChannel}
         >
-          <SkipBack className="h-5 w-5" />
+          <SkipBack className="h-4 w-4" />
         </Button>
 
         {/* Play/Pause */}
         <Button
           variant="ghost"
           size="icon"
-          className="h-9 w-9 text-white hover:bg-white/20"
+          className="h-7 w-7 text-white hover:bg-white/20"
           onClick={togglePlay}
         >
-          {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+          {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
         </Button>
 
         <Button
           variant="ghost"
           size="icon"
-          className="h-9 w-9 text-white hover:bg-white/20"
+          className="h-7 w-7 text-white hover:bg-white/20"
           onClick={handleNextChannel}
         >
-          <SkipForward className="h-5 w-5" />
+          <SkipForward className="h-4 w-4" />
         </Button>
 
         {/* Volume */}
-        <div className="flex items-center gap-2 ml-2">
+        <div className="flex items-center gap-1 ml-1">
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 text-white hover:bg-white/20"
+            className="h-7 w-7 text-white hover:bg-white/20"
             onClick={toggleMute}
           >
             {isMuted || volume === 0 ? (
-              <VolumeX className="h-5 w-5" />
+              <VolumeX className="h-4 w-4" />
             ) : (
-              <Volume2 className="h-5 w-5" />
+              <Volume2 className="h-4 w-4" />
             )}
           </Button>
           <input
@@ -148,9 +137,17 @@ export function PlayerControls({ videoRef, containerRef }: PlayerControlsProps) 
             step="0.05"
             value={isMuted ? 0 : volume}
             onChange={(e) => setVolume(parseFloat(e.target.value))}
-            className="w-20 h-1.5 cursor-pointer"
+            className="w-16 h-1 cursor-pointer"
           />
         </div>
+
+        {/* Live indicator */}
+        {currentChannel && (
+          <span className="live-indicator ml-2 inline-flex items-center gap-1 text-[10px] font-semibold text-red-500">
+            <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+            LIVE
+          </span>
+        )}
 
         {/* Spacer */}
         <div className="flex-1" />
@@ -159,23 +156,23 @@ export function PlayerControls({ videoRef, containerRef }: PlayerControlsProps) 
         <Button
           variant="ghost"
           size="icon"
-          className="h-9 w-9 text-white hover:bg-white/20"
+          className="h-7 w-7 text-white hover:bg-white/20"
           onClick={handlePiP}
         >
-          <PictureInPicture2 className="h-5 w-5" />
+          <PictureInPicture2 className="h-4 w-4" />
         </Button>
 
         {/* Fullscreen */}
         <Button
           variant="ghost"
           size="icon"
-          className="h-9 w-9 text-white hover:bg-white/20"
+          className="h-7 w-7 text-white hover:bg-white/20"
           onClick={handleFullscreen}
         >
           {isFullscreen ? (
-            <Minimize className="h-5 w-5" />
+            <Minimize className="h-4 w-4" />
           ) : (
-            <Maximize className="h-5 w-5" />
+            <Maximize className="h-4 w-4" />
           )}
         </Button>
       </div>

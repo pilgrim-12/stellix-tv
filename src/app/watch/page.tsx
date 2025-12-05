@@ -86,36 +86,36 @@ function WatchContent() {
         {/* Main content */}
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
           {/* Player section */}
-          <div className="lg:flex-1 flex flex-col overflow-auto">
-            <div className="p-3">
+          <div className="lg:flex-1 flex flex-col">
+            <div className="p-2">
               <VideoPlayer />
               {currentChannel && (
-                <div className="mt-2">
-                  <h1 className="text-lg font-semibold">{currentChannel.name}</h1>
-                  <p className="text-xs text-muted-foreground capitalize">
+                <div className="mt-1">
+                  <h1 className="text-sm font-semibold">{currentChannel.name}</h1>
+                  <p className="text-[10px] text-muted-foreground capitalize">
                     {currentChannel.group} • {currentChannel.country}
                   </p>
                 </div>
               )}
 
               {/* Ad banner below player */}
-              <div className="mt-4 rounded-lg bg-muted/30 border border-border/40 p-4 text-center">
-                <p className="text-xs text-muted-foreground mb-1">Реклама</p>
-                <div className="h-[90px] bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded flex items-center justify-center">
-                  <span className="text-sm text-muted-foreground">728x90 Banner</span>
+              <div className="mt-2 rounded bg-muted/30 border border-border/40 p-2 text-center">
+                <p className="text-[10px] text-muted-foreground mb-0.5">Реклама</p>
+                <div className="h-[50px] bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded flex items-center justify-center">
+                  <span className="text-xs text-muted-foreground">728x90 Banner</span>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Channels section - scrollable */}
-          <div className="w-full lg:w-80 xl:w-96 border-t lg:border-t-0 lg:border-l border-border/40 flex flex-col overflow-hidden">
+          <div className="w-full lg:w-72 xl:w-80 border-t lg:border-t-0 lg:border-l border-border/40 flex flex-col overflow-hidden">
             {/* Ad banner in sidebar */}
-            <div className="p-2 border-b border-border/40 shrink-0">
-              <div className="rounded bg-muted/30 border border-border/40 p-2 text-center">
-                <p className="text-[10px] text-muted-foreground mb-1">Реклама</p>
-                <div className="h-[60px] bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded flex items-center justify-center">
-                  <span className="text-xs text-muted-foreground">300x60 Banner</span>
+            <div className="p-1.5 border-b border-border/40 shrink-0">
+              <div className="rounded bg-muted/30 border border-border/40 p-1.5 text-center">
+                <p className="text-[9px] text-muted-foreground mb-0.5">Реклама</p>
+                <div className="h-[40px] bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded flex items-center justify-center">
+                  <span className="text-[10px] text-muted-foreground">300x50 Banner</span>
                 </div>
               </div>
             </div>
