@@ -6,7 +6,7 @@ import { useChannelHealthCheck } from '@/hooks'
 import { sampleChannels } from '@/data/channels'
 import { ChannelCard } from './ChannelCard'
 import { Input } from '@/components/ui/input'
-import { Search } from 'lucide-react'
+import { Search, Tv, CheckCircle2, XCircle } from 'lucide-react'
 
 export function ChannelList() {
   const {
@@ -16,6 +16,7 @@ export function ChannelList() {
     setSearchQuery,
     loadDisabledChannels,
     loadCustomPlaylists,
+    offlineChannels,
   } = useChannelStore()
 
   // Фоновая проверка доступности каналов
@@ -47,8 +48,33 @@ export function ChannelList() {
 
   const filteredChannels = getFilteredChannels()
 
+  // Статистика каналов
+  const totalChannels = filteredChannels.length
+  const offlineCount = filteredChannels.filter(ch => ch.isOffline).length
+  const onlineCount = totalChannels - offlineCount
+
   return (
     <div className="h-full flex flex-col">
+      {/* Stats */}
+      <div className="px-2 py-1.5 border-b border-border/40 shrink-0">
+        <div className="flex items-center justify-between text-[10px]">
+          <div className="flex items-center gap-1 text-muted-foreground">
+            <Tv className="h-3 w-3" />
+            <span>{totalChannels}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 text-green-500">
+              <CheckCircle2 className="h-3 w-3" />
+              <span>{onlineCount}</span>
+            </div>
+            <div className="flex items-center gap-1 text-red-500">
+              <XCircle className="h-3 w-3" />
+              <span>{offlineCount}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Search */}
       <div className="p-2 border-b border-border/40 shrink-0">
         <div className="relative">
