@@ -1,0 +1,88 @@
+import { Channel } from '@/types';
+
+// Sample channels for development - will be replaced with M3U parser
+export const sampleChannels: Channel[] = [
+  {
+    id: '1',
+    name: 'France 24 English',
+    logo: 'https://i.imgur.com/gzBsQ0P.png',
+    url: 'https://ott.france24.com/france24/smil:france24_en.smil/playlist.m3u8',
+    group: 'news',
+    country: 'FR',
+    language: 'en',
+  },
+  {
+    id: '2',
+    name: 'DW English',
+    logo: 'https://i.imgur.com/A1xzjOI.png',
+    url: 'https://dwamdstream102.akamaized.net/hls/live/2015525/dwstream102/index.m3u8',
+    group: 'news',
+    country: 'DE',
+    language: 'en',
+  },
+  {
+    id: '3',
+    name: 'Al Jazeera English',
+    logo: 'https://i.imgur.com/gVCWsRn.png',
+    url: 'https://live-hls-web-aje.getaj.net/AJE/index.m3u8',
+    group: 'news',
+    country: 'QA',
+    language: 'en',
+  },
+  {
+    id: '4',
+    name: 'Euronews',
+    logo: 'https://i.imgur.com/5oLoiQD.png',
+    url: 'https://euronews-euronews-english-2-eu.rakuten.wurl.tv/playlist.m3u8',
+    group: 'news',
+    country: 'EU',
+    language: 'en',
+  },
+  {
+    id: '5',
+    name: 'NASA TV',
+    logo: 'https://i.imgur.com/yC51GPH.png',
+    url: 'https://ntv1.akamaized.net/hls/live/2014075/NASA-NTV1-HLS/master.m3u8',
+    group: 'documentary',
+    country: 'US',
+    language: 'en',
+  },
+  {
+    id: '6',
+    name: 'Bloomberg TV',
+    logo: 'https://i.imgur.com/DoR86Ui.png',
+    url: 'https://www.bloomberg.com/media-manifest/streams/us.m3u8',
+    group: 'news',
+    country: 'US',
+    language: 'en',
+  },
+  {
+    id: '7',
+    name: 'RT Documentary',
+    logo: 'https://i.imgur.com/yw8Ojqp.png',
+    url: 'https://rt-rtd.rttv.com/live/rtdoc/playlist.m3u8',
+    group: 'documentary',
+    country: 'RU',
+    language: 'en',
+  },
+  {
+    id: '8',
+    name: 'Fashion TV',
+    logo: 'https://i.imgur.com/6rFaXmk.png',
+    url: 'https://fash1043.cloudycdn.services/slive/_definst_/ftv_ftv_midnite_secrets_hls_aes/playlist.m3u8',
+    group: 'entertainment',
+    country: 'FR',
+    language: 'en',
+  },
+];
+
+export const channelCategories = [
+  { id: 'all', name: 'All', icon: 'Grid' },
+  { id: 'news', name: 'News', icon: 'Newspaper' },
+  { id: 'sports', name: 'Sports', icon: 'Trophy' },
+  { id: 'movies', name: 'Movies', icon: 'Film' },
+  { id: 'kids', name: 'Kids', icon: 'Baby' },
+  { id: 'music', name: 'Music', icon: 'Music' },
+  { id: 'entertainment', name: 'Entertainment', icon: 'Tv' },
+  { id: 'documentary', name: 'Documentary', icon: 'BookOpen' },
+] as const;
