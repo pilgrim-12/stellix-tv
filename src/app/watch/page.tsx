@@ -97,14 +97,6 @@ function WatchContent() {
                   </p>
                 </div>
               )}
-
-              {/* Ad banner below player */}
-              <div className="rounded bg-muted/30 border border-border/40 p-2 text-center shrink-0">
-                <p className="text-[10px] text-muted-foreground mb-0.5">Реклама</p>
-                <div className="h-[50px] bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded flex items-center justify-center">
-                  <span className="text-xs text-muted-foreground">728x90 Banner</span>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -125,6 +117,14 @@ function WatchContent() {
               <ChannelList />
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Ad banner fixed at bottom */}
+      <div className="shrink-0 border-t border-border/40 bg-background p-2 text-center">
+        <p className="text-[10px] text-muted-foreground mb-0.5">Реклама</p>
+        <div className="h-[50px] bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded flex items-center justify-center">
+          <span className="text-xs text-muted-foreground">728x90 Banner</span>
         </div>
       </div>
     </div>
