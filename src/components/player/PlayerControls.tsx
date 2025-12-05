@@ -81,18 +81,19 @@ export function PlayerControls({ videoRef, containerRef }: PlayerControlsProps) 
   return (
     <div
       className={cn(
-        'absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-4',
+        'absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/70 to-transparent',
+        'px-4 pb-4 pt-10 rounded-b-lg',
         'opacity-0 group-hover:opacity-100 transition-opacity duration-300'
       )}
     >
       {/* Channel info */}
       {currentChannel && (
         <div className="mb-3 flex items-center gap-2">
-          <span className="live-indicator inline-flex items-center gap-1 text-xs font-medium text-red-500">
-            <span className="h-2 w-2 rounded-full bg-red-500" />
+          <span className="live-indicator inline-flex items-center gap-1.5 text-xs font-semibold text-red-500">
+            <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
             LIVE
           </span>
-          <span className="text-sm font-medium text-white">{currentChannel.name}</span>
+          <span className="text-sm font-medium text-white truncate">{currentChannel.name}</span>
         </div>
       )}
 
@@ -102,7 +103,7 @@ export function PlayerControls({ videoRef, containerRef }: PlayerControlsProps) 
         <Button
           variant="ghost"
           size="icon"
-          className="text-white hover:bg-white/20"
+          className="h-9 w-9 text-white hover:bg-white/20"
           onClick={handlePrevChannel}
         >
           <SkipBack className="h-5 w-5" />
@@ -112,7 +113,7 @@ export function PlayerControls({ videoRef, containerRef }: PlayerControlsProps) 
         <Button
           variant="ghost"
           size="icon"
-          className="text-white hover:bg-white/20"
+          className="h-9 w-9 text-white hover:bg-white/20"
           onClick={togglePlay}
         >
           {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
@@ -121,18 +122,18 @@ export function PlayerControls({ videoRef, containerRef }: PlayerControlsProps) 
         <Button
           variant="ghost"
           size="icon"
-          className="text-white hover:bg-white/20"
+          className="h-9 w-9 text-white hover:bg-white/20"
           onClick={handleNextChannel}
         >
           <SkipForward className="h-5 w-5" />
         </Button>
 
         {/* Volume */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2 ml-2">
           <Button
             variant="ghost"
             size="icon"
-            className="text-white hover:bg-white/20"
+            className="h-9 w-9 text-white hover:bg-white/20"
             onClick={toggleMute}
           >
             {isMuted || volume === 0 ? (
@@ -145,10 +146,10 @@ export function PlayerControls({ videoRef, containerRef }: PlayerControlsProps) 
             type="range"
             min="0"
             max="1"
-            step="0.1"
+            step="0.05"
             value={isMuted ? 0 : volume}
             onChange={(e) => setVolume(parseFloat(e.target.value))}
-            className="w-20 accent-white"
+            className="w-20 h-1.5 cursor-pointer"
           />
         </div>
 
@@ -159,7 +160,7 @@ export function PlayerControls({ videoRef, containerRef }: PlayerControlsProps) 
         <Button
           variant="ghost"
           size="icon"
-          className="text-white hover:bg-white/20"
+          className="h-9 w-9 text-white hover:bg-white/20"
           onClick={handlePiP}
         >
           <PictureInPicture2 className="h-5 w-5" />
@@ -169,7 +170,7 @@ export function PlayerControls({ videoRef, containerRef }: PlayerControlsProps) 
         <Button
           variant="ghost"
           size="icon"
-          className="text-white hover:bg-white/20"
+          className="h-9 w-9 text-white hover:bg-white/20"
           onClick={handleFullscreen}
         >
           {isFullscreen ? (

@@ -11,6 +11,7 @@ export interface Channel {
   labels?: ChannelLabel[];
   isNSFW?: boolean;
   isOffline?: boolean;
+  enabled?: boolean; // for admin panel - default true
 }
 
 export interface ChannelGroup {
@@ -64,4 +65,11 @@ export const languageNames: Record<string, string> = {
   pl: 'Polski',
   nl: 'Nederlands',
   uk: 'Українська',
+  az: 'Azərbaycan',
+  hy: 'Հայերdelays',
+  bs: 'Bosanski',
+  sr: 'Српски',
+  sq: 'Shqip',
+  bg: 'Български',
+  ca: 'Català',
 };

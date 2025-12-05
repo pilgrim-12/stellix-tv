@@ -14,10 +14,12 @@ export function ChannelList() {
     favorites,
     searchQuery,
     setSearchQuery,
+    loadDisabledChannels,
   } = useChannelStore()
 
   useEffect(() => {
     setChannels(sampleChannels)
+    loadDisabledChannels()
 
     if (typeof window !== 'undefined') {
       const savedFavorites = localStorage.getItem('stellix-favorites')
@@ -34,7 +36,7 @@ export function ChannelList() {
         }
       }
     }
-  }, [setChannels, favorites])
+  }, [setChannels, favorites, loadDisabledChannels])
 
   const filteredChannels = getFilteredChannels()
 

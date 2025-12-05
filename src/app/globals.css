@@ -150,13 +150,43 @@
   aspect-ratio: 16 / 9;
   background: black;
   border-radius: var(--radius);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .video-container video {
   width: 100%;
   height: 100%;
   object-fit: contain;
+  border-radius: var(--radius);
+}
+
+/* Volume slider styling */
+.video-container input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  height: 4px;
+  cursor: pointer;
+}
+
+.video-container input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  background: white;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.video-container input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  background: white;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
 }
 
 /* Channel card hover effect */

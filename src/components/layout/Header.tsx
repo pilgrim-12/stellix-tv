@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Settings, Star, LogOut, Loader2, Calendar, Tv } from 'lucide-react'
+import { Settings, Star, LogOut, Loader2, Calendar, Tv, Shield } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -89,6 +89,12 @@ export function Header() {
                   <Link href="/watch">
                     <Star className="mr-2 h-4 w-4" />
                     Favorites
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/admin">
+                    <Shield className="mr-2 h-4 w-4" />
+                    Админ панель
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem>

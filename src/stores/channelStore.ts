@@ -11,6 +11,7 @@ interface ChannelState {
   isLoading: boolean;
   error: string | null;
   offlineChannels: Set<string>;
+  disabledChannels: Set<string>; // admin-disabled channels
 
   // Actions
   setChannels: (channels: Channel[]) => void;
@@ -23,10 +24,13 @@ interface ChannelState {
   setError: (error: string | null) => void;
   markChannelOffline: (channelId: string) => void;
   markChannelOnline: (channelId: string) => void;
+  toggleChannelEnabled: (channelId: string) => void;
+  loadDisabledChannels: () => void;
 
   // Computed
   getFilteredChannels: () => Channel[];
   getAvailableLanguages: () => string[];
+  getAllChannelsWithStatus: () => Channel[];
 }
 
 export const useChannelStore = create<ChannelState>((set, get) => ({
@@ -39,6 +43,7 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
   isLoading: false,
   error: null,
   offlineChannels: new Set(),
+  disabledChannels: new Set(),
 
   setChannels: (channels) => set({ channels }),
   setCurrentChannel: (channel) => set({ currentChannel: channel }),
@@ -74,10 +79,39 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
     set({ offlineChannels: newOffline });
   },
 
+  toggleChannelEnabled: (channelId) => {
+    const { disabledChannels } = get();
+    const newDisabled = new Set(disabledChannels);
+    if (newDisabled.has(channelId)) {
+      newDisabled.delete(channelId);
+    } else {
+      newDisabled.add(channelId);
+    }
+    set({ disabledChannels: newDisabled });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('stellix-disabled-channels', JSON.stringify(Array.from(newDisabled)));
+    }
+  },
+
+  loadDisabledChannels: () => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('stellix-disabled-channels');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          set({ disabledChannels: new Set(parsed) });
+        } catch {
+          // Invalid JSON, ignore
+        }
+      }
+    }
+  },
+
   getFilteredChannels: () => {
-    const { channels, selectedCategory, selectedLanguage, searchQuery, offlineChannels } = get();
+    const { channels, selectedCategory, selectedLanguage, searchQuery, offlineChannels, disabledChannels } = get();
 
     return channels
+      .filter((channel) => !disabledChannels.has(channel.id)) // exclude disabled channels
       .map((channel) => ({
         ...channel,
         isOffline: offlineChannels.has(channel.id),
@@ -112,5 +146,14 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
       if (ch.language) languages.add(ch.language);
     });
     return Array.from(languages).sort();
+  },
+
+  getAllChannelsWithStatus: () => {
+    const { channels, offlineChannels, disabledChannels } = get();
+    return channels.map((channel) => ({
+      ...channel,
+      isOffline: offlineChannels.has(channel.id),
+      enabled: !disabledChannels.has(channel.id),
+    }));
   },
 }));
