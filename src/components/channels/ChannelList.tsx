@@ -4,7 +4,6 @@ import { useEffect } from 'react'
 import { useChannelStore } from '@/stores'
 import { sampleChannels, channelCategories } from '@/data/channels'
 import { ChannelCard } from './ChannelCard'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ChannelCategory } from '@/types'
 
@@ -43,40 +42,38 @@ export function ChannelList() {
   const filteredChannels = getFilteredChannels()
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="p-4">
       {/* Category tabs - visible on mobile and tablet */}
-      <div className="lg:hidden border-b border-border/40 px-4 py-2">
-        <ScrollArea className="w-full">
+      <div className="lg:hidden mb-4">
+        <div className="overflow-x-auto">
           <Tabs value={selectedCategory} onValueChange={(v) => setCategory(v as ChannelCategory)}>
             <TabsList className="inline-flex h-9 bg-muted/50">
               {channelCategories.map((category) => (
                 <TabsTrigger
                   key={category.id}
                   value={category.id}
-                  className="text-xs px-3"
+                  className="text-xs px-3 whitespace-nowrap"
                 >
                   {category.name}
                 </TabsTrigger>
               ))}
             </TabsList>
           </Tabs>
-        </ScrollArea>
+        </div>
       </div>
 
       {/* Channels grid */}
-      <ScrollArea className="flex-1 p-4">
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
-          {filteredChannels.map((channel) => (
-            <ChannelCard key={channel.id} channel={channel} />
-          ))}
-        </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+        {filteredChannels.map((channel) => (
+          <ChannelCard key={channel.id} channel={channel} />
+        ))}
+      </div>
 
-        {filteredChannels.length === 0 && (
-          <div className="flex items-center justify-center h-40">
-            <p className="text-muted-foreground">No channels found</p>
-          </div>
-        )}
-      </ScrollArea>
+      {filteredChannels.length === 0 && (
+        <div className="flex items-center justify-center h-40">
+          <p className="text-muted-foreground">No channels found</p>
+        </div>
+      )}
     </div>
   )
 }

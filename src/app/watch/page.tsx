@@ -88,17 +88,17 @@ function WatchContent() {
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
 
-        <main className="flex-1 flex flex-col overflow-hidden">
+        <main className="flex-1 overflow-auto">
           {/* Player section */}
           <div className="p-4 pb-2">
-            <div className="max-w-5xl">
+            <div className="max-w-3xl">
               <VideoPlayer />
             </div>
 
             {/* Now playing info */}
             {currentChannel && (
-              <div className="mt-3 max-w-5xl">
-                <h1 className="text-xl font-semibold">{currentChannel.name}</h1>
+              <div className="mt-2 max-w-3xl">
+                <h1 className="text-lg font-semibold">{currentChannel.name}</h1>
                 <p className="text-sm text-muted-foreground capitalize">
                   {currentChannel.group} • {currentChannel.country}
                 </p>
@@ -107,7 +107,7 @@ function WatchContent() {
           </div>
 
           {/* Channel list */}
-          <div className="flex-1 overflow-hidden border-t border-border/40">
+          <div className="border-t border-border/40">
             <ChannelList />
           </div>
         </main>

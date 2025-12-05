@@ -3,7 +3,9 @@
     "allow": [
       "Bash(npm install:*)",
       "Bash(npm run build:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: Add Firebase authentication system\n\n- Add Firebase configuration and initialization\n- Implement auth helpers (login, register, Google OAuth, password reset)\n- Create AuthContext provider for global auth state\n- Add LoginForm and RegisterForm components with validation\n- Add Google sign-in button with official branding\n- Create protected route component for /watch page\n- Update Header with user menu (avatar, sign out)\n- Add /login and /register pages with auto-redirect\n- Store user data in Firestore on registration\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []
