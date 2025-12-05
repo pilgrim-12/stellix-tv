@@ -150,37 +150,40 @@ export function VideoPlayer() {
   const handlePause = () => setPlaying(false)
 
   return (
-    <div ref={containerRef} className="video-container group relative">
-      <video
-        ref={videoRef}
-        className="w-full h-full"
-        playsInline
-        onPlay={handlePlay}
-        onPause={handlePause}
-      />
+    <div ref={containerRef} className="video-container group">
+      {/* Video wrapper with relative positioning for overlays */}
+      <div className="relative">
+        <video
+          ref={videoRef}
+          className="w-full"
+          playsInline
+          onPlay={handlePlay}
+          onPause={handlePause}
+        />
 
-      {/* Loading overlay */}
-      {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-          <Loader2 className="h-12 w-12 animate-spin text-white" />
-        </div>
-      )}
+        {/* Loading overlay */}
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+            <Loader2 className="h-12 w-12 animate-spin text-white" />
+          </div>
+        )}
 
-      {/* Error overlay */}
-      {error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/80">
-          <p className="text-red-500">{error}</p>
-        </div>
-      )}
+        {/* Error overlay */}
+        {error && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+            <p className="text-red-500">{error}</p>
+          </div>
+        )}
 
-      {/* No channel selected */}
-      {!currentChannel && !isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black">
-          <p className="text-muted-foreground">Select a channel to start watching</p>
-        </div>
-      )}
+        {/* No channel selected */}
+        {!currentChannel && !isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black">
+            <p className="text-muted-foreground">Select a channel to start watching</p>
+          </div>
+        )}
+      </div>
 
-      {/* Controls */}
+      {/* Controls - positioned below video */}
       <PlayerControls videoRef={videoRef} containerRef={containerRef} />
     </div>
   )

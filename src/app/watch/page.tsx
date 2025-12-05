@@ -86,7 +86,7 @@ function WatchContent() {
         {/* Main content */}
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
           {/* Player section */}
-          <div className="lg:flex-1 flex flex-col shrink-0">
+          <div className="lg:flex-1 flex flex-col overflow-auto">
             <div className="p-3">
               <VideoPlayer />
               {currentChannel && (

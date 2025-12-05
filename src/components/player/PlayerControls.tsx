@@ -81,8 +81,7 @@ export function PlayerControls({ videoRef, containerRef }: PlayerControlsProps) 
   return (
     <div
       className={cn(
-        'absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/70 to-transparent',
-        'px-4 pb-4 pt-10 rounded-b-lg',
+        'bg-black/90 px-4 py-3',
         'opacity-0 group-hover:opacity-100 transition-opacity duration-300'
       )}
     >

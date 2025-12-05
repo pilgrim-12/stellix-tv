@@ -147,17 +147,15 @@
 .video-container {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 9;
   background: black;
   border-radius: var(--radius);
-  overflow: visible;
+  overflow: hidden;
 }
 
 .video-container video {
   width: 100%;
-  height: 100%;
+  aspect-ratio: 16 / 9;
   object-fit: contain;
-  border-radius: var(--radius);
 }
 
 /* Volume slider styling */
