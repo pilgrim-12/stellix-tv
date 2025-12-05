@@ -5,6 +5,7 @@ interface ChannelState {
   channels: Channel[];
   currentChannel: Channel | null;
   selectedCategory: ChannelCategory;
+  selectedLanguage: string; // 'all' or language code
   searchQuery: string;
   favorites: string[];
   isLoading: boolean;
@@ -15,6 +16,7 @@ interface ChannelState {
   setChannels: (channels: Channel[]) => void;
   setCurrentChannel: (channel: Channel | null) => void;
   setCategory: (category: ChannelCategory) => void;
+  setLanguage: (language: string) => void;
   setSearchQuery: (query: string) => void;
   toggleFavorite: (channelId: string) => void;
   setLoading: (loading: boolean) => void;
@@ -24,12 +26,14 @@ interface ChannelState {
 
   // Computed
   getFilteredChannels: () => Channel[];
+  getAvailableLanguages: () => string[];
 }
 
 export const useChannelStore = create<ChannelState>((set, get) => ({
   channels: [],
   currentChannel: null,
   selectedCategory: 'all',
+  selectedLanguage: 'all',
   searchQuery: '',
   favorites: [],
   isLoading: false,
@@ -39,6 +43,7 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
   setChannels: (channels) => set({ channels }),
   setCurrentChannel: (channel) => set({ currentChannel: channel }),
   setCategory: (category) => set({ selectedCategory: category }),
+  setLanguage: (language) => set({ selectedLanguage: language }),
   setSearchQuery: (query) => set({ searchQuery: query }),
 
   toggleFavorite: (channelId) => {
@@ -70,7 +75,7 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
   },
 
   getFilteredChannels: () => {
-    const { channels, selectedCategory, searchQuery, offlineChannels } = get();
+    const { channels, selectedCategory, selectedLanguage, searchQuery, offlineChannels } = get();
 
     return channels
       .map((channel) => ({
@@ -82,11 +87,15 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
           selectedCategory === 'all' ||
           channel.group.toLowerCase() === selectedCategory;
 
+        const matchesLanguage =
+          selectedLanguage === 'all' ||
+          channel.language === selectedLanguage;
+
         const matchesSearch =
           !searchQuery ||
           channel.name.toLowerCase().includes(searchQuery.toLowerCase());
 
-        return matchesCategory && matchesSearch;
+        return matchesCategory && matchesLanguage && matchesSearch;
       })
       .sort((a, b) => {
         // Online channels first
@@ -94,5 +103,14 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
         if (!a.isOffline && b.isOffline) return -1;
         return 0;
       });
+  },
+
+  getAvailableLanguages: () => {
+    const { channels } = get();
+    const languages = new Set<string>();
+    channels.forEach((ch) => {
+      if (ch.language) languages.add(ch.language);
+    });
+    return Array.from(languages).sort();
   },
 }));

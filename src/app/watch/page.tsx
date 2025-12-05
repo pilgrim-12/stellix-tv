@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import { Header } from '@/components/layout'
 import { VideoPlayer } from '@/components/player'
-import { ChannelList } from '@/components/channels'
+import { ChannelList, CategoryFilter } from '@/components/channels'
 import { ProtectedRoute } from '@/components/auth'
 import { useChannelStore } from '@/stores'
 import { sampleChannels } from '@/data/channels'
@@ -78,6 +78,9 @@ function WatchContent() {
   return (
     <div className="flex h-screen flex-col bg-background overflow-hidden">
       <Header />
+
+      {/* Filters bar */}
+      <CategoryFilter />
 
       <div className="flex flex-1 overflow-hidden">
         {/* Main content */}
