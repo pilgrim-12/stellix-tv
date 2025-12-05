@@ -12,10 +12,10 @@ export function ChannelList() {
   const {
     setChannels,
     getFilteredChannels,
-    favorites,
     searchQuery,
     setSearchQuery,
     loadDisabledChannels,
+    loadCustomPlaylists,
   } = useChannelStore()
 
   // Фоновая проверка доступности каналов
@@ -24,14 +24,16 @@ export function ChannelList() {
   useEffect(() => {
     setChannels(sampleChannels)
     loadDisabledChannels()
+    loadCustomPlaylists()
 
     if (typeof window !== 'undefined') {
       const savedFavorites = localStorage.getItem('stellix-favorites')
       if (savedFavorites) {
         try {
           const parsed = JSON.parse(savedFavorites)
+          const currentFavorites = useChannelStore.getState().favorites
           parsed.forEach((id: string) => {
-            if (!favorites.includes(id)) {
+            if (!currentFavorites.includes(id)) {
               useChannelStore.getState().toggleFavorite(id)
             }
           })
@@ -40,7 +42,8 @@ export function ChannelList() {
         }
       }
     }
-  }, [setChannels, favorites, loadDisabledChannels])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const filteredChannels = getFilteredChannels()
 

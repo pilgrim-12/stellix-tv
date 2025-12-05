@@ -1,8 +1,18 @@
 import { create } from 'zustand';
 import { Channel, ChannelCategory } from '@/types';
 
+interface CustomPlaylist {
+  id: string;
+  name: string;
+  url?: string;
+  channels: Channel[];
+  addedAt: number;
+  enabled: boolean;
+}
+
 interface ChannelState {
   channels: Channel[];
+  customPlaylists: CustomPlaylist[];
   currentChannel: Channel | null;
   selectedCategory: ChannelCategory;
   selectedLanguage: string; // 'all' or language code
@@ -15,6 +25,10 @@ interface ChannelState {
 
   // Actions
   setChannels: (channels: Channel[]) => void;
+  addCustomPlaylist: (playlist: CustomPlaylist) => void;
+  removeCustomPlaylist: (playlistId: string) => void;
+  togglePlaylistEnabled: (playlistId: string) => void;
+  loadCustomPlaylists: () => void;
   setCurrentChannel: (channel: Channel | null) => void;
   setCategory: (category: ChannelCategory) => void;
   setLanguage: (language: string) => void;
@@ -36,6 +50,7 @@ interface ChannelState {
 
 export const useChannelStore = create<ChannelState>((set, get) => ({
   channels: [],
+  customPlaylists: [],
   currentChannel: null,
   selectedCategory: 'all',
   selectedLanguage: 'all',
@@ -47,6 +62,84 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
   disabledChannels: new Set(),
 
   setChannels: (channels) => set({ channels }),
+
+  addCustomPlaylist: (playlist) => {
+    const { customPlaylists, channels } = get();
+    const newPlaylists = [...customPlaylists, playlist];
+    const newChannels = [...channels, ...playlist.channels];
+    set({ customPlaylists: newPlaylists, channels: newChannels });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('stellix-custom-playlists', JSON.stringify(newPlaylists));
+    }
+  },
+
+  removeCustomPlaylist: (playlistId) => {
+    const { customPlaylists, channels } = get();
+    const playlist = customPlaylists.find(p => p.id === playlistId);
+    if (!playlist) return;
+
+    const channelIds = new Set(playlist.channels.map(ch => ch.id));
+    const newChannels = channels.filter(ch => !channelIds.has(ch.id));
+    const newPlaylists = customPlaylists.filter(p => p.id !== playlistId);
+
+    set({ customPlaylists: newPlaylists, channels: newChannels });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('stellix-custom-playlists', JSON.stringify(newPlaylists));
+    }
+  },
+
+  togglePlaylistEnabled: (playlistId) => {
+    const { customPlaylists, channels } = get();
+    const playlist = customPlaylists.find(p => p.id === playlistId);
+    if (!playlist) return;
+
+    const newEnabled = !playlist.enabled;
+    const newPlaylists = customPlaylists.map(p =>
+      p.id === playlistId ? { ...p, enabled: newEnabled } : p
+    );
+
+    // Добавляем или убираем каналы из общего списка
+    let newChannels: Channel[];
+    if (newEnabled) {
+      // Добавляем каналы обратно
+      const existingIds = new Set(channels.map(ch => ch.id));
+      const channelsToAdd = playlist.channels.filter(ch => !existingIds.has(ch.id));
+      newChannels = [...channels, ...channelsToAdd];
+    } else {
+      // Убираем каналы плейлиста
+      const channelIds = new Set(playlist.channels.map(ch => ch.id));
+      newChannels = channels.filter(ch => !channelIds.has(ch.id));
+    }
+
+    set({ customPlaylists: newPlaylists, channels: newChannels });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('stellix-custom-playlists', JSON.stringify(newPlaylists));
+    }
+  },
+
+  loadCustomPlaylists: () => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('stellix-custom-playlists');
+      if (saved) {
+        try {
+          const playlists: CustomPlaylist[] = JSON.parse(saved);
+          // Добавляем каналы только из включённых плейлистов
+          const enabledPlaylists = playlists.filter(p => p.enabled !== false);
+          const customChannels = enabledPlaylists.flatMap(p => p.channels);
+          const { channels } = get();
+          // Добавляем кастомные каналы если их ещё нет
+          const existingIds = new Set(channels.map(ch => ch.id));
+          const newChannels = customChannels.filter(ch => !existingIds.has(ch.id));
+          set({
+            customPlaylists: playlists,
+            channels: [...channels, ...newChannels]
+          });
+        } catch {
+          // Invalid JSON, ignore
+        }
+      }
+    }
+  },
   setCurrentChannel: (channel) => set({ currentChannel: channel }),
   setCategory: (category) => set({ selectedCategory: category }),
   setLanguage: (language) => set({ selectedLanguage: language }),
