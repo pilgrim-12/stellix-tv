@@ -124,6 +124,9 @@ export function CategoryFilter() {
   )
 }
 
+// Порядок языков: Русский, Английский, Испанский, Французский, Немецкий и т.д.
+const languageOrder = ['ru', 'en', 'es', 'fr', 'de', 'it', 'pt', 'tr', 'pl', 'uk', 'ar', 'zh', 'ja', 'ko', 'hi', 'nl', 'az', 'hy', 'bs', 'sr', 'sq', 'bg', 'ca']
+
 export function LanguageFilter() {
   const {
     selectedLanguage,
@@ -133,36 +136,70 @@ export function LanguageFilter() {
 
   const availableLanguages = getAvailableLanguages()
 
+  // Сортировка языков по заданному порядку
+  const sortedLanguages = [...availableLanguages].sort((a, b) => {
+    const indexA = languageOrder.indexOf(a)
+    const indexB = languageOrder.indexOf(b)
+    if (indexA === -1 && indexB === -1) return a.localeCompare(b)
+    if (indexA === -1) return 1
+    if (indexB === -1) return -1
+    return indexA - indexB
+  })
+
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const scroll = (direction: 'left' | 'right') => {
+    const el = containerRef.current
+    if (!el) return
+    el.scrollBy({
+      left: direction === 'left' ? -120 : 120,
+      behavior: 'smooth',
+    })
+  }
+
   return (
-    <div className="flex items-center gap-1 px-1.5 py-1 border-b border-border/40 bg-muted/10">
-      <Globe className="h-3 w-3 text-muted-foreground shrink-0" />
-      <Carousel className="flex-1">
+    <div className="flex items-center gap-1 px-1 py-1.5 border-b border-border/40 bg-muted/10 shrink-0">
+      <Globe className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-6 w-6 shrink-0"
+        onClick={() => scroll('left')}
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </Button>
+      <div
+        ref={containerRef}
+        className="flex-1 flex items-center gap-1 overflow-x-auto scrollbar-hide"
+      >
         <Button
-          variant={selectedLanguage === 'all' ? 'secondary' : 'ghost'}
+          variant={selectedLanguage === 'all' ? 'default' : 'outline'}
           size="sm"
-          className={cn(
-            'h-5 text-[10px] px-1.5 shrink-0',
-            selectedLanguage === 'all' && 'bg-secondary'
-          )}
+          className="h-6 text-[11px] px-2 shrink-0"
           onClick={() => setLanguage('all')}
         >
           Все
         </Button>
-        {availableLanguages.map((lang) => (
+        {sortedLanguages.map((lang) => (
           <Button
             key={lang}
-            variant={selectedLanguage === lang ? 'secondary' : 'ghost'}
+            variant={selectedLanguage === lang ? 'default' : 'outline'}
             size="sm"
-            className={cn(
-              'h-5 text-[10px] px-1.5 shrink-0',
-              selectedLanguage === lang && 'bg-secondary'
-            )}
+            className="h-6 text-[11px] px-2 shrink-0"
             onClick={() => setLanguage(lang)}
           >
             {languageNames[lang] || lang.toUpperCase()}
           </Button>
         ))}
-      </Carousel>
+      </div>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-6 w-6 shrink-0"
+        onClick={() => scroll('right')}
+      >
+        <ChevronRight className="h-4 w-4" />
+      </Button>
     </div>
   )
 }
