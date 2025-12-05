@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Search, User, Settings, Star, LogOut, Loader2 } from 'lucide-react'
+import { Search, User, Settings, Star, LogOut, Loader2, Calendar, Tv } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
@@ -60,6 +60,22 @@ export function Header() {
             />
           </div>
         </div>
+
+        {/* Navigation */}
+        <nav className="hidden md:flex items-center gap-1">
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/watch" className="flex items-center gap-1.5">
+              <Tv className="h-4 w-4" />
+              Watch
+            </Link>
+          </Button>
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/guide" className="flex items-center gap-1.5">
+              <Calendar className="h-4 w-4" />
+              Guide
+            </Link>
+          </Button>
+        </nav>
 
         {/* Actions */}
         <div className="flex items-center gap-2">

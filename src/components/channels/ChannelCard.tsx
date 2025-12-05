@@ -1,13 +1,22 @@
 'use client'
 
-import { Channel } from '@/types'
+import { Channel, ChannelLabel, languageNames } from '@/types'
 import { useChannelStore } from '@/stores'
 import { Card } from '@/components/ui/card'
-import { Star, WifiOff } from 'lucide-react'
+import { Star, WifiOff, Globe } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface ChannelCardProps {
   channel: Channel
+}
+
+const labelColors: Record<ChannelLabel, string> = {
+  'HD': 'bg-blue-500/20 text-blue-400',
+  '4K': 'bg-purple-500/20 text-purple-400',
+  'Live': 'bg-red-500/20 text-red-400',
+  'New': 'bg-green-500/20 text-green-400',
+  'Premium': 'bg-amber-500/20 text-amber-400',
+  'Free': 'bg-emerald-500/20 text-emerald-400',
 }
 
 export function ChannelCard({ channel }: ChannelCardProps) {
@@ -15,6 +24,7 @@ export function ChannelCard({ channel }: ChannelCardProps) {
   const isActive = currentChannel?.id === channel.id
   const isFavorite = favorites.includes(channel.id)
   const isOffline = channel.isOffline
+  const languageName = channel.language ? languageNames[channel.language] || channel.language.toUpperCase() : null
 
   return (
     <Card
@@ -26,15 +36,28 @@ export function ChannelCard({ channel }: ChannelCardProps) {
       )}
       onClick={() => setCurrentChannel(channel)}
     >
-      {/* Offline indicator */}
-      {isOffline && (
-        <div className="absolute left-2 top-2 z-10">
+      {/* Top badges row */}
+      <div className="absolute left-2 top-2 z-10 flex flex-wrap gap-1 max-w-[70%]">
+        {/* Offline indicator */}
+        {isOffline && (
           <span className="inline-flex items-center gap-1 rounded bg-red-500/20 px-1.5 py-0.5 text-[10px] font-medium text-red-400">
             <WifiOff className="h-3 w-3" />
             Offline
           </span>
-        </div>
-      )}
+        )}
+        {/* Labels */}
+        {!isOffline && channel.labels?.map((label) => (
+          <span
+            key={label}
+            className={cn(
+              'rounded px-1.5 py-0.5 text-[10px] font-medium',
+              labelColors[label]
+            )}
+          >
+            {label}
+          </span>
+        ))}
+      </div>
 
       {/* Favorite button */}
       <button
@@ -52,7 +75,7 @@ export function ChannelCard({ channel }: ChannelCardProps) {
       </button>
 
       {/* Channel logo */}
-      <div className="mb-2 flex h-12 w-full items-center justify-center rounded bg-muted/50">
+      <div className="mb-2 mt-5 flex h-12 w-full items-center justify-center rounded bg-muted/50">
         {channel.logo ? (
           <img
             src={channel.logo}
@@ -74,9 +97,15 @@ export function ChannelCard({ channel }: ChannelCardProps) {
         <h3 className="text-sm font-medium leading-tight line-clamp-2">
           {channel.name}
         </h3>
-        <p className="text-xs text-muted-foreground capitalize">
-          {channel.group}
-        </p>
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span className="capitalize">{channel.group}</span>
+          {languageName && (
+            <span className="flex items-center gap-1">
+              <Globe className="h-3 w-3" />
+              {languageName}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Live indicator for active channel */}
