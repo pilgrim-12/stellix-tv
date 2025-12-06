@@ -19,6 +19,7 @@ export function VideoPlayer() {
     isLoading,
     error,
     setPlaying,
+    setMuted,
     setLoading,
     setError,
     setFullscreen,
@@ -51,8 +52,18 @@ export function VideoPlayer() {
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         setLoading(false)
         if (currentChannel) markChannelOnline(currentChannel.id)
-        video.play().catch(() => {
-          setPlaying(false)
+        // Try to autoplay - browsers may block this without user interaction
+        video.play().then(() => {
+          setPlaying(true)
+        }).catch(() => {
+          // Autoplay blocked - try muted autoplay as fallback (user will need to unmute manually)
+          video.muted = true
+          setMuted(true)
+          video.play().then(() => {
+            setPlaying(true)
+          }).catch(() => {
+            setPlaying(false)
+          })
         })
       })
 
@@ -93,12 +104,20 @@ export function VideoPlayer() {
       video.src = url
       video.addEventListener('loadedmetadata', () => {
         setLoading(false)
-        video.play().catch(() => setPlaying(false))
+        video.play().then(() => {
+          setPlaying(true)
+        }).catch(() => {
+          video.muted = true
+          setMuted(true)
+          video.play().then(() => {
+            setPlaying(true)
+          }).catch(() => setPlaying(false))
+        })
       })
     } else {
       setError('HLS is not supported in this browser')
     }
-  }, [setLoading, setError, setPlaying, currentChannel, markChannelOffline, markChannelOnline])
+  }, [setLoading, setError, setPlaying, setMuted, currentChannel, markChannelOffline, markChannelOnline])
 
   // Load channel when changed
   useEffect(() => {
