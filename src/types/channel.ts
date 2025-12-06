@@ -57,6 +57,9 @@ export const languageNames: Record<string, string> = {
   en: 'English',
   es: 'Español',
   ka: 'ქართული',
+  kk: 'Қazaқша',
+  hy: 'Հայdelays',
+  az: 'Azərbaycan',
   fr: 'Français',
   it: 'Italiano',
   de: 'Deutsch',
@@ -65,8 +68,6 @@ export const languageNames: Record<string, string> = {
   tr: 'Türkçe',
   uk: 'Українська',
   pl: 'Polski',
-  az: 'Azərbaycan',
-  hy: 'Հայdelays',
   zh: '中文',
   ja: '日本語',
   ko: '한국어',
@@ -97,8 +98,8 @@ export const languageNames: Record<string, string> = {
 
 // Ordered list for dropdowns (most common first)
 export const languageOrder = [
-  'ru', 'en', 'es', 'ka', 'fr', 'it', 'de', 'pt', 'ar', 'tr',
-  'uk', 'pl', 'az', 'hy', 'zh', 'ja', 'ko', 'hi', 'nl',
+  'ru', 'en', 'es', 'ka', 'kk', 'hy', 'az', 'fr', 'it', 'de', 'pt', 'ar', 'tr',
+  'uk', 'pl', 'zh', 'ja', 'ko', 'hi', 'nl',
   'bs', 'sr', 'hr', 'sq', 'bg', 'ro', 'el', 'cs', 'sk', 'hu',
   'sv', 'no', 'da', 'fi', 'he', 'fa', 'vi', 'th', 'id', 'ms', 'ca'
 ];
