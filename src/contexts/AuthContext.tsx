@@ -38,9 +38,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false)
 
       if (user) {
-        // Initialize user in Firestore and load favorites
+        // Initialize user in Firestore and load favorites + settings
         await initializeUser(user.uid, user.email || undefined)
         useChannelStore.getState().loadFavoritesFromFirebase(user.uid)
+        useChannelStore.getState().loadUserSettings(user.uid)
 
         // Get and save user IP
         try {

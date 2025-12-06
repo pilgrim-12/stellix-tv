@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { Channel, ChannelCategory } from '@/types';
-import { addFavorite, removeFavorite, getFavorites, setFavorites, addWatchHistory } from '@/lib/userService';
+import { addFavorite, removeFavorite, getFavorites, setFavorites, addWatchHistory, getUserSettings, updateUserSettings } from '@/lib/userService';
 import { getActiveChannels, setChannelOnlineStatus, toggleChannelActive, FirebaseChannel } from '@/lib/channelService';
 
 interface CustomPlaylist {
@@ -20,6 +20,7 @@ interface ChannelState {
   selectedLanguage: string; // 'all' or language code
   searchQuery: string;
   favorites: string[];
+  showOnlyFavorites: boolean;
   isLoading: boolean;
   error: string | null;
   offlineChannels: Set<string>;
@@ -37,7 +38,9 @@ interface ChannelState {
   setLanguage: (language: string) => void;
   setSearchQuery: (query: string) => void;
   toggleFavorite: (channelId: string, userId?: string) => void;
+  setShowOnlyFavorites: (show: boolean, userId?: string) => void;
   loadFavoritesFromFirebase: (userId: string) => Promise<void>;
+  loadUserSettings: (userId: string) => Promise<void>;
   syncFavoritesToFirebase: (userId: string) => Promise<void>;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -61,6 +64,7 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
   selectedLanguage: 'all',
   searchQuery: '',
   favorites: [],
+  showOnlyFavorites: false,
   isLoading: false,
   error: null,
   offlineChannels: new Set(),
@@ -201,6 +205,20 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
     }
   },
 
+  setShowOnlyFavorites: (show, userId) => {
+    set({ showOnlyFavorites: show });
+
+    // Save to localStorage as backup
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('stellix-show-only-favorites', JSON.stringify(show));
+    }
+
+    // Sync with Firebase if user is logged in
+    if (userId) {
+      updateUserSettings(userId, { showOnlyFavorites: show });
+    }
+  },
+
   loadFavoritesFromFirebase: async (userId) => {
     try {
       const firebaseFavorites = await getFavorites(userId);
@@ -212,6 +230,18 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
       }
     } catch (error) {
       console.error('Error loading favorites from Firebase:', error);
+    }
+  },
+
+  loadUserSettings: async (userId) => {
+    try {
+      const settings = await getUserSettings(userId);
+      set({ showOnlyFavorites: settings.showOnlyFavorites });
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('stellix-show-only-favorites', JSON.stringify(settings.showOnlyFavorites));
+      }
+    } catch (error) {
+      console.error('Error loading user settings:', error);
     }
   },
 
@@ -284,7 +314,7 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
   },
 
   getFilteredChannels: () => {
-    const { channels, selectedCategory, selectedLanguage, searchQuery, offlineChannels, disabledChannels } = get();
+    const { channels, selectedCategory, selectedLanguage, searchQuery, offlineChannels, disabledChannels, showOnlyFavorites, favorites } = get();
 
     return channels
       .filter((channel) => !disabledChannels.has(channel.id)) // exclude disabled channels
@@ -305,9 +335,20 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
           !searchQuery ||
           channel.name.toLowerCase().includes(searchQuery.toLowerCase());
 
-        return matchesCategory && matchesLanguage && matchesSearch;
+        const matchesFavorites =
+          !showOnlyFavorites ||
+          favorites.includes(channel.id);
+
+        return matchesCategory && matchesLanguage && matchesSearch && matchesFavorites;
       })
       .sort((a, b) => {
+        // Favorites first when not filtering by favorites
+        if (!showOnlyFavorites) {
+          const aFav = favorites.includes(a.id);
+          const bFav = favorites.includes(b.id);
+          if (aFav && !bFav) return -1;
+          if (!aFav && bFav) return 1;
+        }
         // Online channels first
         if (a.isOffline && !b.isOffline) return 1;
         if (!a.isOffline && b.isOffline) return -1;

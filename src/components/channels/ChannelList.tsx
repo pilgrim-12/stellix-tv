@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { useChannelStore } from '@/stores'
+import { useAuthContext } from '@/contexts/AuthContext'
 import { useChannelHealthCheck } from '@/hooks'
 import { sampleChannels } from '@/data/channels'
 import { ChannelCard } from './ChannelCard'
 import { Input } from '@/components/ui/input'
-import { Search, Tv, CheckCircle2, XCircle, Loader2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Search, Tv, CheckCircle2, XCircle, Loader2, Star } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 export function ChannelList() {
   const {
@@ -19,7 +22,11 @@ export function ChannelList() {
     loadCustomPlaylists,
     channels,
     isLoading,
+    showOnlyFavorites,
+    setShowOnlyFavorites,
+    favorites,
   } = useChannelStore()
+  const { user } = useAuthContext()
 
   const [initialized, setInitialized] = useState(false)
 
@@ -45,7 +52,7 @@ export function ChannelList() {
         setChannels(sampleChannels)
       }
 
-      // Load favorites from localStorage
+      // Load favorites and settings from localStorage
       if (typeof window !== 'undefined') {
         const savedFavorites = localStorage.getItem('stellix-favorites')
         if (savedFavorites) {
@@ -57,6 +64,19 @@ export function ChannelList() {
                 useChannelStore.getState().toggleFavorite(id)
               }
             })
+          } catch {
+            // Invalid JSON, ignore
+          }
+        }
+
+        // Load showOnlyFavorites setting
+        const savedShowFavorites = localStorage.getItem('stellix-show-only-favorites')
+        if (savedShowFavorites) {
+          try {
+            const parsed = JSON.parse(savedShowFavorites)
+            if (typeof parsed === 'boolean') {
+              useChannelStore.setState({ showOnlyFavorites: parsed })
+            }
           } catch {
             // Invalid JSON, ignore
           }
@@ -79,12 +99,29 @@ export function ChannelList() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Stats */}
+      {/* Stats + Favorites toggle */}
       <div className="px-2 py-1.5 border-b border-border/40 shrink-0">
         <div className="flex items-center justify-between text-[10px]">
-          <div className="flex items-center gap-1 text-muted-foreground">
-            <Tv className="h-3 w-3" />
-            <span>{totalChannels}</span>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 text-muted-foreground">
+              <Tv className="h-3 w-3" />
+              <span>{totalChannels}</span>
+            </div>
+            {/* Favorites toggle button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn(
+                'h-5 px-1.5 text-[10px] gap-1',
+                showOnlyFavorites
+                  ? 'text-yellow-500 bg-yellow-500/10'
+                  : 'text-muted-foreground hover:text-yellow-500'
+              )}
+              onClick={() => setShowOnlyFavorites(!showOnlyFavorites, user?.uid)}
+            >
+              <Star className={cn('h-3 w-3', showOnlyFavorites && 'fill-current')} />
+              {favorites.length > 0 && <span>{favorites.length}</span>}
+            </Button>
           </div>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1 text-green-500">

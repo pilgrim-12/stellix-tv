@@ -23,9 +23,14 @@ export interface WatchHistoryEntry {
   duration?: number // seconds
 }
 
+export interface UserSettings {
+  showOnlyFavorites: boolean
+}
+
 export interface UserData {
   favorites: string[]
   watchHistory: WatchHistoryEntry[]
+  settings?: UserSettings
   lastVisit: Timestamp
   totalVisits: number
   ipAddresses: string[]
@@ -198,5 +203,28 @@ export async function getRecentUsers(count: number = 10): Promise<Array<{ id: st
   } catch (error) {
     console.error('Error getting recent users:', error)
     return []
+  }
+}
+
+// User Settings
+export async function getUserSettings(userId: string): Promise<UserSettings> {
+  try {
+    const userData = await getUserData(userId)
+    return userData?.settings || { showOnlyFavorites: false }
+  } catch (error) {
+    console.error('Error getting user settings:', error)
+    return { showOnlyFavorites: false }
+  }
+}
+
+export async function updateUserSettings(userId: string, settings: Partial<UserSettings>): Promise<void> {
+  try {
+    const userRef = doc(db, 'users', userId)
+    const currentSettings = await getUserSettings(userId)
+    await updateDoc(userRef, {
+      settings: { ...currentSettings, ...settings },
+    })
+  } catch (error) {
+    console.error('Error updating user settings:', error)
   }
 }
