@@ -167,14 +167,21 @@ export async function deleteChannel(channelId: string): Promise<void> {
 export async function deleteChannelsByPlaylist(playlistId: string): Promise<number> {
   try {
     const channels = await getChannelsByPlaylist(playlistId)
-    const batch = writeBatch(db)
 
-    channels.forEach((channel) => {
-      const channelRef = doc(db, CHANNELS_COLLECTION, channel.id)
-      batch.delete(channelRef)
-    })
+    // Split into batches of 500 (Firestore limit)
+    const batchSize = 500
+    for (let i = 0; i < channels.length; i += batchSize) {
+      const batch = writeBatch(db)
+      const chunk = channels.slice(i, i + batchSize)
 
-    await batch.commit()
+      chunk.forEach((channel) => {
+        const channelRef = doc(db, CHANNELS_COLLECTION, channel.id)
+        batch.delete(channelRef)
+      })
+
+      await batch.commit()
+    }
+
     return channels.length
   } catch (error) {
     console.error('Error deleting channels by playlist:', error)

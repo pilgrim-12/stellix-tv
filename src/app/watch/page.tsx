@@ -1,7 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { Header } from '@/components/layout'
 import { VideoPlayer } from '@/components/player'
 import { ChannelList, CategoryFilter, LanguageFilter } from '@/components/channels'
@@ -25,7 +24,6 @@ function formatTime(date: Date): string {
 function WatchContent() {
   const { currentChannel, channels, setCurrentChannel } = useChannelStore()
   const [currentTime, setCurrentTime] = useState(new Date())
-  const searchParams = useSearchParams()
 
   // Update time every minute
   useEffect(() => {
@@ -33,39 +31,38 @@ function WatchContent() {
     return () => clearInterval(interval)
   }, [])
 
-  // Load channel from URL param or localStorage on mount
+  // Load channel from URL param or localStorage (once on mount)
+  const initialLoadDone = useRef(false)
+
   useEffect(() => {
-    if (channels.length === 0) return // Wait for channels to load
+    if (initialLoadDone.current) return
+    if (channels.length === 0) return
 
-    const channelId = searchParams.get('channel')
+    const params = new URLSearchParams(window.location.search)
+    const targetId = params.get('channel') || localStorage.getItem('stellix-last-channel')
 
-    if (channelId) {
-      // URL has channel param - find and select it
-      const channel = channels.find((ch) => ch.id === channelId)
-      if (channel && (!currentChannel || currentChannel.id !== channelId)) {
+    if (targetId) {
+      const channel = channels.find((ch) => ch.id === targetId)
+      if (channel) {
         setCurrentChannel(channel)
+        initialLoadDone.current = true
       }
-    } else if (!currentChannel) {
-      // No URL param and no current channel - try localStorage
-      const lastChannelId = localStorage.getItem('stellix-last-channel')
-      if (lastChannelId) {
-        const channel = channels.find((ch) => ch.id === lastChannelId)
-        if (channel) {
-          setCurrentChannel(channel)
-        }
-      }
+    } else {
+      initialLoadDone.current = true
     }
-  }, [channels, searchParams, currentChannel, setCurrentChannel])
+  }, [channels, setCurrentChannel])
 
-  // Update URL when channel changes
+  // Update URL when channel changes (but don't depend on searchParams to avoid loops)
   useEffect(() => {
     if (currentChannel) {
-      const currentParam = searchParams.get('channel')
+      // Get current URL param directly from window to avoid stale React state
+      const urlParams = new URLSearchParams(window.location.search)
+      const currentParam = urlParams.get('channel')
       if (currentParam !== currentChannel.id) {
         window.history.replaceState(null, '', `/watch?channel=${currentChannel.id}`)
       }
     }
-  }, [currentChannel, searchParams])
+  }, [currentChannel])
 
   const currentProgram = useMemo(() => {
     if (!currentChannel) return undefined

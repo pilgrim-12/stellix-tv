@@ -101,6 +101,9 @@ export default function AdminPage() {
   // Language recalculation state
   const [isRecalculating, setIsRecalculating] = useState(false)
 
+  // Deleting playlist state
+  const [deletingPlaylistId, setDeletingPlaylistId] = useState<string | null>(null)
+
   // Player state
   const [selectedChannel, setSelectedChannel] = useState<FirebaseChannel | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -287,14 +290,22 @@ export default function AdminPage() {
   }
 
   // Delete playlist
-  const handleDeletePlaylist = async (playlistId: string) => {
-    if (!confirm('Удалить плейлист и все его каналы?')) return
+  const handleDeletePlaylist = async (playlistId: string, channelCount: number) => {
+    if (!confirm(`Удалить плейлист и все его ${channelCount} каналов? Это может занять некоторое время.`)) return
+
+    setDeletingPlaylistId(playlistId)
+    setImportError(null)
+    setImportSuccess(null)
 
     try {
       await deletePlaylist(playlistId)
+      setImportSuccess(`Плейлист и ${channelCount} каналов удалены`)
       await loadData()
     } catch (error) {
       console.error('Error deleting playlist:', error)
+      setImportError('Ошибка при удалении плейлиста')
+    } finally {
+      setDeletingPlaylistId(null)
     }
   }
 
@@ -571,20 +582,29 @@ export default function AdminPage() {
                     const pendingCount = playlistChannels.filter((ch) => !ch.status || ch.status === 'pending').length
                     const inactiveCount = playlistChannels.filter((ch) => ch.status === 'inactive').length
 
+                    const isDeleting = deletingPlaylistId === playlist.id
+
                     return (
-                      <div key={playlist.id} className="p-3 rounded-lg bg-muted/50 space-y-2">
+                      <div key={playlist.id} className={cn("p-3 rounded-lg bg-muted/50 space-y-2", isDeleting && "opacity-50")}>
                         <div className="flex items-center justify-between">
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium truncate">{playlist.name}</p>
-                            <p className="text-xs text-muted-foreground">{playlistChannels.length} каналов</p>
+                            <p className="text-xs text-muted-foreground">
+                              {isDeleting ? "Удаление..." : `${playlistChannels.length} каналов`}
+                            </p>
                           </div>
                           <Button
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-500/10"
-                            onClick={() => handleDeletePlaylist(playlist.id)}
+                            onClick={() => handleDeletePlaylist(playlist.id, playlistChannels.length)}
+                            disabled={isDeleting || deletingPlaylistId !== null}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            {isDeleting ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
                           </Button>
                         </div>
                         {/* Playlist stats */}
