@@ -77,6 +77,7 @@ export default function AdminPage() {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
+  const hlsRef = useRef<{ destroy: () => void } | null>(null)
 
   // Data state
   const [channels, setChannels] = useState<FirebaseChannel[]>([])
@@ -130,6 +131,12 @@ export default function AdminPage() {
 
   // Play channel in preview
   const playChannel = async (channel: FirebaseChannel) => {
+    // Cleanup previous HLS instance
+    if (hlsRef.current) {
+      hlsRef.current.destroy()
+      hlsRef.current = null
+    }
+
     setSelectedChannel(channel)
     setPlayerError(false)
     setIsPlaying(true)
@@ -140,10 +147,16 @@ export default function AdminPage() {
         const Hls = (await import('hls.js')).default
         if (Hls.isSupported()) {
           const hls = new Hls()
+          hlsRef.current = hls
           hls.loadSource(channel.url)
           hls.attachMedia(videoRef.current)
-          hls.on(Hls.Events.ERROR, () => {
-            setPlayerError(true)
+          hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            setPlayerError(false)
+          })
+          hls.on(Hls.Events.ERROR, (_, data) => {
+            if (data.fatal) {
+              setPlayerError(true)
+            }
           })
         } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
           videoRef.current.src = channel.url
@@ -329,7 +342,9 @@ export default function AdminPage() {
                         className="w-full h-full"
                         controls
                         autoPlay
-                        onError={() => setPlayerError(true)}
+                        playsInline
+                        onCanPlay={() => setPlayerError(false)}
+                        onPlaying={() => setPlayerError(false)}
                       />
                       {playerError && (
                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-red-500">
