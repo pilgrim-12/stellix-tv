@@ -190,15 +190,15 @@ function WatchContent() {
           <div className="w-full lg:w-72 xl:w-80 border-t lg:border-t-0 lg:border-l border-border/40 flex flex-col overflow-hidden mobile-landscape:hidden">
             {/* Language filter */}
             <LanguageFilter />
-            {/* Ad banner in sidebar */}
-            <div className="p-1.5 border-b border-border/40 shrink-0">
+            {/* Ad banner in sidebar - hidden for now */}
+            {/* <div className="p-1.5 border-b border-border/40 shrink-0">
               <div className="rounded bg-muted/30 border border-border/40 p-1.5 text-center">
                 <p className="text-[9px] text-muted-foreground mb-0.5">Реклама</p>
                 <div className="h-[40px] bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded flex items-center justify-center">
                   <span className="text-[10px] text-muted-foreground">300x50 Banner</span>
                 </div>
               </div>
-            </div>
+            </div> */}
             <div className="flex-1 overflow-auto">
               <ChannelList />
             </div>
@@ -206,13 +206,13 @@ function WatchContent() {
         </div>
       </div>
 
-      {/* Ad banner fixed at bottom - hidden in mobile landscape */}
-      <div className="shrink-0 border-t border-border/40 bg-background p-2 text-center mobile-landscape:hidden">
+      {/* Ad banner fixed at bottom - hidden for now */}
+      {/* <div className="shrink-0 border-t border-border/40 bg-background p-2 text-center mobile-landscape:hidden">
         <p className="text-[10px] text-muted-foreground mb-0.5">Реклама</p>
         <div className="h-[50px] bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded flex items-center justify-center">
           <span className="text-xs text-muted-foreground">728x90 Banner</span>
         </div>
-      </div>
+      </div> */}
     </div>
   )
 }
