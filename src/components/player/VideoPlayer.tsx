@@ -210,15 +210,13 @@ export function VideoPlayer() {
     }
   }, [currentChannel, setPlaying])
 
-  // Detect if device is touch-enabled
-  const isTouchDevice = useCallback(() => {
-    return 'ontouchstart' in window || navigator.maxTouchPoints > 0
-  }, [])
+  // Track if last interaction was touch
+  const lastWasTouchRef = useRef<boolean>(false)
 
   // Handle touch tap with double tap detection
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-    // Prevent default to avoid ghost clicks
     e.preventDefault()
+    lastWasTouchRef.current = true
 
     const now = Date.now()
     const timeSinceLastTap = now - lastTapRef.current
@@ -244,10 +242,13 @@ export function VideoPlayer() {
     lastTapRef.current = now
   }, [toggleFullscreen, togglePlayPause])
 
-  // Handle mouse click (desktop only)
-  const handleClick = useCallback((e: React.MouseEvent) => {
-    // Skip if this is a touch device - let touchEnd handle it
-    if (isTouchDevice()) return
+  // Handle mouse click
+  const handleClick = useCallback(() => {
+    // Skip if this click was triggered by touch (ghost click)
+    if (lastWasTouchRef.current) {
+      lastWasTouchRef.current = false
+      return
+    }
 
     const now = Date.now()
     const timeSinceLastClick = now - lastTapRef.current
@@ -271,7 +272,7 @@ export function VideoPlayer() {
     }
 
     lastTapRef.current = now
-  }, [isTouchDevice, toggleFullscreen, togglePlayPause])
+  }, [toggleFullscreen, togglePlayPause])
 
   // Cleanup timeout on unmount
   useEffect(() => {
