@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Channel, languageNames } from '@/types'
 import { useChannelStore } from '@/stores'
+import { useAuthContext } from '@/contexts/AuthContext'
 import { Star, WifiOff, Radio } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -35,6 +36,7 @@ const categoryNames: Record<string, string> = {
 
 export function ChannelCard({ channel }: ChannelCardProps) {
   const { currentChannel, setCurrentChannel, favorites, toggleFavorite } = useChannelStore()
+  const { user } = useAuthContext()
   const isActive = currentChannel?.id === channel.id
   const isFavorite = favorites.includes(channel.id)
   const isOffline = channel.isOffline
@@ -51,7 +53,7 @@ export function ChannelCard({ channel }: ChannelCardProps) {
         isActive && 'bg-primary/15 ring-1 ring-primary',
         isOffline && 'opacity-40'
       )}
-      onClick={() => setCurrentChannel(channel)}
+      onClick={() => setCurrentChannel(channel, user?.uid)}
     >
       <div className="flex items-center gap-3">
         {/* Large channel logo */}
@@ -118,7 +120,7 @@ export function ChannelCard({ channel }: ChannelCardProps) {
           )}
           onClick={(e) => {
             e.stopPropagation()
-            toggleFavorite(channel.id)
+            toggleFavorite(channel.id, user?.uid)
           }}
         >
           <Star className={cn('h-4 w-4', isFavorite && 'fill-current')} />

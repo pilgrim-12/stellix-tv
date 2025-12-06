@@ -10,6 +10,8 @@ import {
   signOut,
   resetPassword,
 } from '@/lib/auth'
+import { initializeUser, saveUserIP } from '@/lib/userService'
+import { useChannelStore } from '@/stores'
 
 interface AuthContextType {
   user: User | null
@@ -31,9 +33,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user)
       setLoading(false)
+
+      if (user) {
+        // Initialize user in Firestore and load favorites
+        await initializeUser(user.uid, user.email || undefined)
+        useChannelStore.getState().loadFavoritesFromFirebase(user.uid)
+
+        // Get and save user IP
+        try {
+          const res = await fetch('https://api.ipify.org?format=json')
+          const data = await res.json()
+          if (data.ip) {
+            await saveUserIP(user.uid, data.ip)
+          }
+        } catch {
+          // IP fetch failed, ignore
+        }
+      }
     })
 
     return () => unsubscribe()

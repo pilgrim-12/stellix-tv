@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { Channel, ChannelCategory } from '@/types';
+import { addFavorite, removeFavorite, getFavorites, setFavorites, addWatchHistory } from '@/lib/userService';
+import { getActiveChannels, setChannelOnlineStatus, toggleChannelActive, FirebaseChannel } from '@/lib/channelService';
 
 interface CustomPlaylist {
   id: string;
@@ -25,15 +27,18 @@ interface ChannelState {
 
   // Actions
   setChannels: (channels: Channel[]) => void;
+  loadChannelsFromFirebase: () => Promise<void>;
   addCustomPlaylist: (playlist: CustomPlaylist) => void;
   removeCustomPlaylist: (playlistId: string) => void;
   togglePlaylistEnabled: (playlistId: string) => void;
   loadCustomPlaylists: () => void;
-  setCurrentChannel: (channel: Channel | null) => void;
+  setCurrentChannel: (channel: Channel | null, userId?: string) => void;
   setCategory: (category: ChannelCategory) => void;
   setLanguage: (language: string) => void;
   setSearchQuery: (query: string) => void;
-  toggleFavorite: (channelId: string) => void;
+  toggleFavorite: (channelId: string, userId?: string) => void;
+  loadFavoritesFromFirebase: (userId: string) => Promise<void>;
+  syncFavoritesToFirebase: (userId: string) => Promise<void>;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   markChannelOffline: (channelId: string) => void;
@@ -62,6 +67,27 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
   disabledChannels: new Set(),
 
   setChannels: (channels) => set({ channels }),
+
+  loadChannelsFromFirebase: async () => {
+    try {
+      set({ isLoading: true, error: null });
+      const firebaseChannels = await getActiveChannels();
+
+      if (firebaseChannels.length > 0) {
+        // Merge Firebase data with offline status
+        const channels = firebaseChannels.map((ch) => ({
+          ...ch,
+          isOffline: ch.isOffline || false,
+        }));
+        set({ channels, isLoading: false });
+      } else {
+        set({ isLoading: false });
+      }
+    } catch (error) {
+      console.error('Error loading channels from Firebase:', error);
+      set({ error: 'Failed to load channels', isLoading: false });
+    }
+  },
 
   addCustomPlaylist: (playlist) => {
     const { customPlaylists, channels } = get();
@@ -140,19 +166,61 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
       }
     }
   },
-  setCurrentChannel: (channel) => set({ currentChannel: channel }),
+  setCurrentChannel: (channel, userId) => {
+    set({ currentChannel: channel });
+
+    // Track watch history in Firebase if user is logged in
+    if (channel && userId) {
+      addWatchHistory(userId, channel.id, channel.name);
+    }
+  },
   setCategory: (category) => set({ selectedCategory: category }),
   setLanguage: (language) => set({ selectedLanguage: language }),
   setSearchQuery: (query) => set({ searchQuery: query }),
 
-  toggleFavorite: (channelId) => {
+  toggleFavorite: (channelId, userId) => {
     const { favorites } = get();
-    const newFavorites = favorites.includes(channelId)
+    const isFavorite = favorites.includes(channelId);
+    const newFavorites = isFavorite
       ? favorites.filter((id) => id !== channelId)
       : [...favorites, channelId];
     set({ favorites: newFavorites });
+
+    // Save to localStorage as backup
     if (typeof window !== 'undefined') {
       localStorage.setItem('stellix-favorites', JSON.stringify(newFavorites));
+    }
+
+    // Sync with Firebase if user is logged in
+    if (userId) {
+      if (isFavorite) {
+        removeFavorite(userId, channelId);
+      } else {
+        addFavorite(userId, channelId);
+      }
+    }
+  },
+
+  loadFavoritesFromFirebase: async (userId) => {
+    try {
+      const firebaseFavorites = await getFavorites(userId);
+      if (firebaseFavorites.length > 0) {
+        set({ favorites: firebaseFavorites });
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('stellix-favorites', JSON.stringify(firebaseFavorites));
+        }
+      }
+    } catch (error) {
+      console.error('Error loading favorites from Firebase:', error);
+    }
+  },
+
+  syncFavoritesToFirebase: async (userId) => {
+    try {
+      const { favorites } = get();
+      await setFavorites(userId, favorites);
+    } catch (error) {
+      console.error('Error syncing favorites to Firebase:', error);
     }
   },
 
@@ -182,6 +250,9 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
       newOffline.add(channelId);
     }
     set({ offlineChannels: newOffline });
+
+    // Sync status to Firebase
+    setChannelOnlineStatus(channelId, isOnline);
   },
 
   toggleChannelEnabled: (channelId) => {

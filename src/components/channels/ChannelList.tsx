@@ -1,48 +1,72 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useChannelStore } from '@/stores'
 import { useChannelHealthCheck } from '@/hooks'
 import { sampleChannels } from '@/data/channels'
 import { ChannelCard } from './ChannelCard'
 import { Input } from '@/components/ui/input'
-import { Search, Tv, CheckCircle2, XCircle } from 'lucide-react'
+import { Search, Tv, CheckCircle2, XCircle, Loader2 } from 'lucide-react'
 
 export function ChannelList() {
   const {
     setChannels,
+    loadChannelsFromFirebase,
     getFilteredChannels,
     searchQuery,
     setSearchQuery,
     loadDisabledChannels,
     loadCustomPlaylists,
-    offlineChannels,
+    channels,
+    isLoading,
   } = useChannelStore()
+
+  const [initialized, setInitialized] = useState(false)
 
   // Фоновая проверка доступности каналов
   useChannelHealthCheck()
 
   useEffect(() => {
-    setChannels(sampleChannels)
-    loadDisabledChannels()
-    loadCustomPlaylists()
+    const initChannels = async () => {
+      loadDisabledChannels()
+      loadCustomPlaylists()
 
-    if (typeof window !== 'undefined') {
-      const savedFavorites = localStorage.getItem('stellix-favorites')
-      if (savedFavorites) {
-        try {
-          const parsed = JSON.parse(savedFavorites)
-          const currentFavorites = useChannelStore.getState().favorites
-          parsed.forEach((id: string) => {
-            if (!currentFavorites.includes(id)) {
-              useChannelStore.getState().toggleFavorite(id)
-            }
-          })
-        } catch {
-          // Invalid JSON, ignore
+      // Try loading from Firebase first
+      try {
+        await loadChannelsFromFirebase()
+        const { channels: loadedChannels } = useChannelStore.getState()
+
+        // If no channels from Firebase, use sample channels as fallback
+        if (loadedChannels.length === 0) {
+          setChannels(sampleChannels)
+        }
+      } catch {
+        // Firebase failed, use sample channels
+        setChannels(sampleChannels)
+      }
+
+      // Load favorites from localStorage
+      if (typeof window !== 'undefined') {
+        const savedFavorites = localStorage.getItem('stellix-favorites')
+        if (savedFavorites) {
+          try {
+            const parsed = JSON.parse(savedFavorites)
+            const currentFavorites = useChannelStore.getState().favorites
+            parsed.forEach((id: string) => {
+              if (!currentFavorites.includes(id)) {
+                useChannelStore.getState().toggleFavorite(id)
+              }
+            })
+          } catch {
+            // Invalid JSON, ignore
+          }
         }
       }
+
+      setInitialized(true)
     }
+
+    initChannels()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -91,16 +115,24 @@ export function ChannelList() {
 
       {/* Channels list */}
       <div className="flex-1 overflow-auto p-1.5">
-        <div className="space-y-0.5">
-          {filteredChannels.map((channel) => (
-            <ChannelCard key={channel.id} channel={channel} />
-          ))}
-        </div>
-
-        {filteredChannels.length === 0 && (
+        {isLoading && !initialized ? (
           <div className="flex items-center justify-center h-32">
-            <p className="text-sm text-muted-foreground">Каналы не найдены</p>
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
+        ) : (
+          <>
+            <div className="space-y-0.5">
+              {filteredChannels.map((channel) => (
+                <ChannelCard key={channel.id} channel={channel} />
+              ))}
+            </div>
+
+            {filteredChannels.length === 0 && (
+              <div className="flex items-center justify-center h-32">
+                <p className="text-sm text-muted-foreground">Каналы не найдены</p>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

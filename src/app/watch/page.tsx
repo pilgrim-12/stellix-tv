@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Header } from '@/components/layout'
 import { VideoPlayer } from '@/components/player'
 import { ChannelList, CategoryFilter, LanguageFilter } from '@/components/channels'
 import { ProtectedRoute } from '@/components/auth'
 import { useChannelStore } from '@/stores'
 import { sampleChannels } from '@/data/channels'
+import { getCurrentProgram, getUpcomingPrograms } from '@/data/programs'
 
 export default function WatchPage() {
   return (
@@ -16,8 +17,30 @@ export default function WatchPage() {
   )
 }
 
+function formatTime(date: Date): string {
+  return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+}
+
 function WatchContent() {
   const { currentChannel } = useChannelStore()
+  const [currentTime, setCurrentTime] = useState(new Date())
+
+  // Update time every minute
+  useEffect(() => {
+    const interval = setInterval(() => setCurrentTime(new Date()), 60000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const currentProgram = useMemo(() => {
+    if (!currentChannel) return undefined
+    return getCurrentProgram(currentChannel.id)
+  }, [currentChannel, currentTime])
+
+  const nextProgram = useMemo(() => {
+    if (!currentChannel) return undefined
+    const upcoming = getUpcomingPrograms(currentChannel.id, 1)
+    return upcoming[0]
+  }, [currentChannel, currentTime])
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -90,11 +113,36 @@ function WatchContent() {
             <div className="p-2 flex flex-col gap-2">
               <VideoPlayer />
               {currentChannel && (
-                <div>
-                  <h1 className="text-sm font-semibold">{currentChannel.name}</h1>
-                  <p className="text-[10px] text-muted-foreground capitalize">
-                    {currentChannel.group} • {currentChannel.country}
-                  </p>
+                <div className="flex items-start gap-3">
+                  <div className="shrink-0">
+                    <h1 className="text-sm font-semibold">{currentChannel.name}</h1>
+                    <p className="text-[10px] text-muted-foreground capitalize">
+                      {currentChannel.group} • {currentChannel.country}
+                    </p>
+                  </div>
+
+                  {/* Current & next program - inline */}
+                  {(currentProgram || nextProgram) && (
+                    <div className="flex items-center gap-3 text-[10px] min-w-0">
+                      {currentProgram && (
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="shrink-0 px-1 py-0.5 rounded bg-red-500/20 text-red-400 font-medium">
+                            СЕЙЧАС
+                          </span>
+                          <span className="truncate">{currentProgram.title}</span>
+                          <span className="shrink-0 text-muted-foreground">
+                            {formatTime(currentProgram.endTime)}
+                          </span>
+                        </div>
+                      )}
+                      {nextProgram && (
+                        <div className="flex items-center gap-1.5 text-muted-foreground min-w-0">
+                          <span className="shrink-0">→</span>
+                          <span className="truncate">{nextProgram.title}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

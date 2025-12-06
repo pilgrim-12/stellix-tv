@@ -1,5 +1,7 @@
 export type ChannelLabel = 'HD' | '4K' | 'Live' | 'New' | 'Premium' | 'Free';
 
+export type ChannelStatus = 'pending' | 'active' | 'inactive' | 'broken';
+
 export interface Channel {
   id: string;
   name: string;
@@ -12,6 +14,7 @@ export interface Channel {
   isNSFW?: boolean;
   isOffline?: boolean;
   enabled?: boolean; // for admin panel - default true
+  status?: ChannelStatus; // pending = not checked, active = working, inactive = disabled by admin, broken = not working
 }
 
 export interface ChannelGroup {
