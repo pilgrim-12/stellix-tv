@@ -3,6 +3,7 @@
 
 @custom-variant dark (&:is(.dark *));
 @custom-variant landscape (@media (orientation: landscape));
+@custom-variant mobile-landscape (@media (orientation: landscape) and (max-width: 900px));
 
 @theme inline {
   --color-background: var(--background);

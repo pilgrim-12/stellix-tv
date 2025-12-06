@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useState } from 'react'
 import Hls from 'hls.js'
 import { usePlayerStore, useChannelStore } from '@/stores'
 import { PlayerControls } from './PlayerControls'
@@ -149,8 +149,30 @@ export function VideoPlayer() {
   const handlePlay = () => setPlaying(true)
   const handlePause = () => setPlaying(false)
 
-  // Toggle play/pause on single click
-  const handleClick = useCallback(() => {
+  // Track tap timing for double tap detection on mobile
+  const lastTapRef = useRef<number>(0)
+  const tapTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Toggle fullscreen
+  const toggleFullscreen = useCallback(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    if (document.fullscreenElement) {
+      document.exitFullscreen()
+    } else {
+      container.requestFullscreen().catch(() => {
+        // Fallback for iOS - use webkitEnterFullscreen on video element
+        const video = videoRef.current as HTMLVideoElement & { webkitEnterFullscreen?: () => void }
+        if (video?.webkitEnterFullscreen) {
+          video.webkitEnterFullscreen()
+        }
+      })
+    }
+  }, [])
+
+  // Toggle play/pause
+  const togglePlayPause = useCallback(() => {
     const video = videoRef.current
     if (!video || !currentChannel) return
 
@@ -161,15 +183,40 @@ export function VideoPlayer() {
     }
   }, [currentChannel, setPlaying])
 
-  // Toggle fullscreen on double click
-  const handleDoubleClick = useCallback(() => {
-    const container = containerRef.current
-    if (!container) return
+  // Handle click/tap with double tap detection
+  const handleClick = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault()
 
-    if (document.fullscreenElement) {
-      document.exitFullscreen()
+    const now = Date.now()
+    const timeSinceLastTap = now - lastTapRef.current
+
+    if (timeSinceLastTap < 300 && timeSinceLastTap > 0) {
+      // Double tap/click - fullscreen
+      if (tapTimeoutRef.current) {
+        clearTimeout(tapTimeoutRef.current)
+        tapTimeoutRef.current = null
+      }
+      toggleFullscreen()
     } else {
-      container.requestFullscreen()
+      // Single tap - wait to see if it's a double tap
+      if (tapTimeoutRef.current) {
+        clearTimeout(tapTimeoutRef.current)
+      }
+      tapTimeoutRef.current = setTimeout(() => {
+        togglePlayPause()
+        tapTimeoutRef.current = null
+      }, 300)
+    }
+
+    lastTapRef.current = now
+  }, [toggleFullscreen, togglePlayPause])
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (tapTimeoutRef.current) {
+        clearTimeout(tapTimeoutRef.current)
+      }
     }
   }, [])
 
@@ -179,7 +226,7 @@ export function VideoPlayer() {
       <div
         className="relative w-full min-h-[200px] bg-black rounded-lg overflow-hidden cursor-pointer"
         onClick={handleClick}
-        onDoubleClick={handleDoubleClick}
+        onTouchEnd={handleClick}
       >
         <video
           ref={videoRef}
