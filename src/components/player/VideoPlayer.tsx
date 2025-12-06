@@ -149,10 +149,38 @@ export function VideoPlayer() {
   const handlePlay = () => setPlaying(true)
   const handlePause = () => setPlaying(false)
 
+  // Toggle play/pause on single click
+  const handleClick = useCallback(() => {
+    const video = videoRef.current
+    if (!video || !currentChannel) return
+
+    if (video.paused) {
+      video.play().catch(() => setPlaying(false))
+    } else {
+      video.pause()
+    }
+  }, [currentChannel, setPlaying])
+
+  // Toggle fullscreen on double click
+  const handleDoubleClick = useCallback(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    if (document.fullscreenElement) {
+      document.exitFullscreen()
+    } else {
+      container.requestFullscreen()
+    }
+  }, [])
+
   return (
     <div ref={containerRef} className="video-container group">
       {/* Video wrapper with minimum height to prevent layout shift */}
-      <div className="relative w-full min-h-[200px] bg-black rounded-lg overflow-hidden">
+      <div
+        className="relative w-full min-h-[200px] bg-black rounded-lg overflow-hidden cursor-pointer"
+        onClick={handleClick}
+        onDoubleClick={handleDoubleClick}
+      >
         <video
           ref={videoRef}
           className="w-full h-auto"
