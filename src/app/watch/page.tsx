@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Header } from '@/components/layout'
 import { VideoPlayer } from '@/components/player'
 import { ChannelList, CategoryFilter, LanguageFilter } from '@/components/channels'
@@ -22,14 +23,49 @@ function formatTime(date: Date): string {
 }
 
 function WatchContent() {
-  const { currentChannel } = useChannelStore()
+  const { currentChannel, channels, setCurrentChannel } = useChannelStore()
   const [currentTime, setCurrentTime] = useState(new Date())
+  const searchParams = useSearchParams()
 
   // Update time every minute
   useEffect(() => {
     const interval = setInterval(() => setCurrentTime(new Date()), 60000)
     return () => clearInterval(interval)
   }, [])
+
+  // Load channel from URL param or localStorage on mount
+  useEffect(() => {
+    if (channels.length === 0) return // Wait for channels to load
+
+    const channelId = searchParams.get('channel')
+
+    if (channelId) {
+      // URL has channel param - find and select it
+      const channel = channels.find((ch) => ch.id === channelId)
+      if (channel && (!currentChannel || currentChannel.id !== channelId)) {
+        setCurrentChannel(channel)
+      }
+    } else if (!currentChannel) {
+      // No URL param and no current channel - try localStorage
+      const lastChannelId = localStorage.getItem('stellix-last-channel')
+      if (lastChannelId) {
+        const channel = channels.find((ch) => ch.id === lastChannelId)
+        if (channel) {
+          setCurrentChannel(channel)
+        }
+      }
+    }
+  }, [channels, searchParams, currentChannel, setCurrentChannel])
+
+  // Update URL when channel changes
+  useEffect(() => {
+    if (currentChannel) {
+      const currentParam = searchParams.get('channel')
+      if (currentParam !== currentChannel.id) {
+        window.history.replaceState(null, '', `/watch?channel=${currentChannel.id}`)
+      }
+    }
+  }, [currentChannel, searchParams])
 
   const currentProgram = useMemo(() => {
     if (!currentChannel) return undefined

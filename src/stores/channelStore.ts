@@ -173,6 +173,11 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
   setCurrentChannel: (channel, userId) => {
     set({ currentChannel: channel });
 
+    // Save last channel to localStorage
+    if (typeof window !== 'undefined' && channel) {
+      localStorage.setItem('stellix-last-channel', channel.id);
+    }
+
     // Track watch history in Firebase if user is logged in
     if (channel && userId) {
       addWatchHistory(userId, channel.id, channel.name);
