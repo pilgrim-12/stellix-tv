@@ -213,6 +213,16 @@ function WatchContent() {
           <span className="text-xs text-muted-foreground">728x90 Banner</span>
         </div>
       </div> */}
+
+      {/* Status bar - desktop only */}
+      <div className="hidden lg:flex shrink-0 border-t border-border/40 bg-muted/30 px-3 py-1 items-center justify-between text-[10px] text-muted-foreground">
+        <div className="flex items-center gap-3">
+          <span>{channels.length} каналов</span>
+        </div>
+        <div>
+          {currentTime.toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'short' })} • {currentTime.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+        </div>
+      </div>
     </div>
   )
 }
