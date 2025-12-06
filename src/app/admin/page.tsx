@@ -178,6 +178,12 @@ export default function AdminPage() {
     setImportSuccess(null)
 
     try {
+      // Check if playlist with this URL already exists
+      const existingPlaylist = playlists.find((p) => p.url === playlistUrl.trim())
+      if (existingPlaylist) {
+        throw new Error(`Плейлист "${existingPlaylist.name}" с этим URL уже добавлен`)
+      }
+
       const content = await fetchM3UPlaylist(playlistUrl.trim())
       const m3uChannels = parseM3U(content)
 
@@ -189,6 +195,12 @@ export default function AdminPage() {
       const urlParts = playlistUrl.split('/')
       const fileName = urlParts[urlParts.length - 1] || 'Плейлист'
       const playlistName = fileName.replace('.m3u8', '').replace('.m3u', '')
+
+      // Check if playlist with same name exists
+      const existingByName = playlists.find((p) => p.name.toLowerCase() === playlistName.toLowerCase())
+      if (existingByName) {
+        throw new Error(`Плейлист с именем "${playlistName}" уже существует`)
+      }
 
       // Create playlist in Firebase
       const playlistId = await createPlaylist(playlistName, m3uChannels.length, playlistUrl)
@@ -219,14 +231,20 @@ export default function AdminPage() {
     setImportSuccess(null)
 
     try {
+      const playlistName = file.name.replace('.m3u8', '').replace('.m3u', '')
+
+      // Check if playlist with same name already exists
+      const existingByName = playlists.find((p) => p.name.toLowerCase() === playlistName.toLowerCase())
+      if (existingByName) {
+        throw new Error(`Плейлист с именем "${playlistName}" уже существует`)
+      }
+
       const content = await file.text()
       const m3uChannels = parseM3U(content)
 
       if (m3uChannels.length === 0) {
         throw new Error('Файл пуст или имеет неверный формат')
       }
-
-      const playlistName = file.name.replace('.m3u8', '').replace('.m3u', '')
 
       // Create playlist in Firebase
       const playlistId = await createPlaylist(playlistName, m3uChannels.length)
@@ -457,23 +475,55 @@ export default function AdminPage() {
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base">Плейлисты ({playlists.length})</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2 max-h-60 overflow-auto">
-                  {playlists.map((playlist) => (
-                    <div key={playlist.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">{playlist.name}</p>
-                        <p className="text-xs text-muted-foreground">{playlist.channelCount} каналов</p>
+                <CardContent className="space-y-2 max-h-80 overflow-auto">
+                  {playlists.map((playlist) => {
+                    // Calculate stats for this playlist
+                    const playlistChannels = channels.filter((ch) => ch.playlistId === playlist.id)
+                    const activeCount = playlistChannels.filter((ch) => ch.status === 'active').length
+                    const brokenCount = playlistChannels.filter((ch) => ch.status === 'broken').length
+                    const pendingCount = playlistChannels.filter((ch) => !ch.status || ch.status === 'pending').length
+                    const inactiveCount = playlistChannels.filter((ch) => ch.status === 'inactive').length
+
+                    return (
+                      <div key={playlist.id} className="p-3 rounded-lg bg-muted/50 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">{playlist.name}</p>
+                            <p className="text-xs text-muted-foreground">{playlistChannels.length} каналов</p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                            onClick={() => handleDeletePlaylist(playlist.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        {/* Playlist stats */}
+                        <div className="flex items-center gap-3 text-[10px]">
+                          <span className="flex items-center gap-1 text-green-500">
+                            <CheckCircle2 className="h-3 w-3" />
+                            {activeCount}
+                          </span>
+                          <span className="flex items-center gap-1 text-red-500">
+                            <XCircle className="h-3 w-3" />
+                            {brokenCount}
+                          </span>
+                          <span className="flex items-center gap-1 text-yellow-500">
+                            <Clock className="h-3 w-3" />
+                            {pendingCount}
+                          </span>
+                          {inactiveCount > 0 && (
+                            <span className="flex items-center gap-1 text-gray-500">
+                              <Ban className="h-3 w-3" />
+                              {inactiveCount}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-500/10"
-                        onClick={() => handleDeletePlaylist(playlist.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </CardContent>
               </Card>
             )}
