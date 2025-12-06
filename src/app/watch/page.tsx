@@ -146,9 +146,9 @@ function WatchContent() {
       <div className="flex flex-1 overflow-hidden">
         {/* Main content */}
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-          {/* Player section - full width in mobile landscape */}
-          <div className="lg:flex-1 flex flex-col overflow-hidden">
-            <div className="flex-1 flex flex-col p-2 mobile-landscape:p-1 gap-2 mobile-landscape:gap-0 min-h-0">
+          {/* Player section - shrink on mobile portrait, expand on desktop */}
+          <div className="shrink-0 lg:shrink lg:flex-1 flex flex-col overflow-hidden">
+            <div className="flex flex-col p-2 mobile-landscape:p-1 gap-2 mobile-landscape:gap-0 lg:flex-1 lg:min-h-0">
               <VideoPlayer />
               {currentChannel && (
                 <div className="shrink-0 flex items-start gap-3 mobile-landscape:hidden">

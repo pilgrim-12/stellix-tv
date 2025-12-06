@@ -149,11 +149,17 @@
 .video-container {
   position: relative;
   width: 100%;
-  flex: 1;
-  min-height: 0;
   border-radius: var(--radius);
   display: flex;
   flex-direction: column;
+}
+
+/* On desktop (lg+), video container fills available space */
+@media (min-width: 1024px) {
+  .video-container {
+    flex: 1;
+    min-height: 0;
+  }
 }
 
 .video-container video {

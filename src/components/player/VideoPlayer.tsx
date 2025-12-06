@@ -304,9 +304,9 @@ export function VideoPlayer() {
 
   return (
     <div ref={containerRef} className="video-container group">
-      {/* Video wrapper - fills available space */}
+      {/* Video wrapper - aspect-video on mobile, flex-1 on desktop */}
       <div
-        className="relative flex-1 min-h-[200px] bg-black rounded-t-lg overflow-hidden cursor-pointer"
+        className="relative aspect-video lg:aspect-auto lg:flex-1 lg:min-h-[200px] bg-black rounded-t-lg overflow-hidden cursor-pointer"
         onClick={handleClick}
         onTouchEnd={handleTouchEnd}
       >
