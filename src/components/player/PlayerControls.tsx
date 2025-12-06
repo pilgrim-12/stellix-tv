@@ -78,7 +78,7 @@ export function PlayerControls({ videoRef, containerRef }: PlayerControlsProps) 
   }
 
   return (
-    <div className="bg-black px-2 py-1.5">
+    <div className="shrink-0 bg-black px-2 py-1.5 rounded-b-lg">
 
       {/* Controls row */}
       <div className="flex items-center gap-1">

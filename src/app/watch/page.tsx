@@ -147,11 +147,11 @@ function WatchContent() {
         {/* Main content */}
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
           {/* Player section - full width in mobile landscape */}
-          <div className="lg:flex-1 flex flex-col overflow-auto">
-            <div className="p-2 mobile-landscape:p-1 flex flex-col gap-2 mobile-landscape:gap-0">
+          <div className="lg:flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 flex flex-col p-2 mobile-landscape:p-1 gap-2 mobile-landscape:gap-0 min-h-0">
               <VideoPlayer />
               {currentChannel && (
-                <div className="flex items-start gap-3 mobile-landscape:hidden">
+                <div className="shrink-0 flex items-start gap-3 mobile-landscape:hidden">
                   <div className="shrink-0">
                     <h1 className="text-sm font-semibold">{currentChannel.name}</h1>
                     <p className="text-[10px] text-muted-foreground capitalize">

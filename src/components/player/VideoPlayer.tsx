@@ -304,15 +304,15 @@ export function VideoPlayer() {
 
   return (
     <div ref={containerRef} className="video-container group">
-      {/* Video wrapper with minimum height to prevent layout shift */}
+      {/* Video wrapper - fills available space */}
       <div
-        className="relative w-full min-h-[200px] bg-black rounded-lg overflow-hidden cursor-pointer"
+        className="relative flex-1 min-h-[200px] bg-black rounded-t-lg overflow-hidden cursor-pointer"
         onClick={handleClick}
         onTouchEnd={handleTouchEnd}
       >
         <video
           ref={videoRef}
-          className="w-full h-auto"
+          className="absolute inset-0 w-full h-full object-contain"
           playsInline
           onPlay={handlePlay}
           onPause={handlePause}
