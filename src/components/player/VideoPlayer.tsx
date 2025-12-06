@@ -153,21 +153,48 @@ export function VideoPlayer() {
   const lastTapRef = useRef<number>(0)
   const tapTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Toggle fullscreen
+  // Toggle fullscreen - with iOS Safari/Chrome support
   const toggleFullscreen = useCallback(() => {
     const container = containerRef.current
-    if (!container) return
+    const video = videoRef.current as HTMLVideoElement & {
+      webkitEnterFullscreen?: () => void
+      webkitExitFullscreen?: () => void
+      webkitDisplayingFullscreen?: boolean
+    }
 
-    if (document.fullscreenElement) {
-      document.exitFullscreen()
+    if (!container || !video) return
+
+    // Check if we're in fullscreen (including webkit)
+    const isInFullscreen = !!(
+      document.fullscreenElement ||
+      (document as { webkitFullscreenElement?: Element }).webkitFullscreenElement ||
+      video.webkitDisplayingFullscreen
+    )
+
+    if (isInFullscreen) {
+      // Exit fullscreen
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {})
+      } else if ((document as { webkitExitFullscreen?: () => void }).webkitExitFullscreen) {
+        (document as { webkitExitFullscreen?: () => void }).webkitExitFullscreen?.()
+      } else if (video.webkitExitFullscreen) {
+        video.webkitExitFullscreen()
+      }
     } else {
-      container.requestFullscreen().catch(() => {
-        // Fallback for iOS - use webkitEnterFullscreen on video element
-        const video = videoRef.current as HTMLVideoElement & { webkitEnterFullscreen?: () => void }
-        if (video?.webkitEnterFullscreen) {
-          video.webkitEnterFullscreen()
-        }
-      })
+      // Enter fullscreen - try container first, then video element for iOS
+      if (container.requestFullscreen) {
+        container.requestFullscreen().catch(() => {
+          // Fallback to video element fullscreen for iOS
+          if (video.webkitEnterFullscreen) {
+            video.webkitEnterFullscreen()
+          }
+        })
+      } else if ((container as { webkitRequestFullscreen?: () => void }).webkitRequestFullscreen) {
+        (container as { webkitRequestFullscreen?: () => void }).webkitRequestFullscreen?.()
+      } else if (video.webkitEnterFullscreen) {
+        // iOS Safari/Chrome - use video element's native fullscreen
+        video.webkitEnterFullscreen()
+      }
     }
   }, [])
 
@@ -183,15 +210,21 @@ export function VideoPlayer() {
     }
   }, [currentChannel, setPlaying])
 
-  // Handle click/tap with double tap detection
-  const handleClick = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+  // Detect if device is touch-enabled
+  const isTouchDevice = useCallback(() => {
+    return 'ontouchstart' in window || navigator.maxTouchPoints > 0
+  }, [])
+
+  // Handle touch tap with double tap detection
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    // Prevent default to avoid ghost clicks
     e.preventDefault()
 
     const now = Date.now()
     const timeSinceLastTap = now - lastTapRef.current
 
     if (timeSinceLastTap < 300 && timeSinceLastTap > 0) {
-      // Double tap/click - fullscreen
+      // Double tap - fullscreen
       if (tapTimeoutRef.current) {
         clearTimeout(tapTimeoutRef.current)
         tapTimeoutRef.current = null
@@ -211,6 +244,35 @@ export function VideoPlayer() {
     lastTapRef.current = now
   }, [toggleFullscreen, togglePlayPause])
 
+  // Handle mouse click (desktop only)
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    // Skip if this is a touch device - let touchEnd handle it
+    if (isTouchDevice()) return
+
+    const now = Date.now()
+    const timeSinceLastClick = now - lastTapRef.current
+
+    if (timeSinceLastClick < 300 && timeSinceLastClick > 0) {
+      // Double click - fullscreen
+      if (tapTimeoutRef.current) {
+        clearTimeout(tapTimeoutRef.current)
+        tapTimeoutRef.current = null
+      }
+      toggleFullscreen()
+    } else {
+      // Single click - wait to see if it's a double click
+      if (tapTimeoutRef.current) {
+        clearTimeout(tapTimeoutRef.current)
+      }
+      tapTimeoutRef.current = setTimeout(() => {
+        togglePlayPause()
+        tapTimeoutRef.current = null
+      }, 300)
+    }
+
+    lastTapRef.current = now
+  }, [isTouchDevice, toggleFullscreen, togglePlayPause])
+
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
@@ -226,7 +288,7 @@ export function VideoPlayer() {
       <div
         className="relative w-full min-h-[200px] bg-black rounded-lg overflow-hidden cursor-pointer"
         onClick={handleClick}
-        onTouchEnd={handleClick}
+        onTouchEnd={handleTouchEnd}
       >
         <video
           ref={videoRef}
