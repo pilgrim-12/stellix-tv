@@ -100,20 +100,25 @@ function WatchContent() {
 
   return (
     <div className="flex h-screen flex-col bg-background overflow-hidden">
-      <Header />
+      {/* Header - hidden in mobile landscape */}
+      <div className="landscape:hidden sm:landscape:block">
+        <Header />
+      </div>
 
-      {/* Filters bar */}
-      <CategoryFilter />
+      {/* Filters bar - hidden in mobile landscape */}
+      <div className="landscape:hidden sm:landscape:block">
+        <CategoryFilter />
+      </div>
 
       <div className="flex flex-1 overflow-hidden">
         {/* Main content */}
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-          {/* Player section */}
-          <div className="lg:flex-1 flex flex-col overflow-auto">
-            <div className="p-2 flex flex-col gap-2">
+          {/* Player section - full width in mobile landscape */}
+          <div className="lg:flex-1 flex flex-col overflow-auto landscape:flex-1">
+            <div className="p-2 landscape:p-1 flex flex-col gap-2 landscape:gap-1">
               <VideoPlayer />
               {currentChannel && (
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-3 landscape:hidden sm:landscape:flex">
                   <div className="shrink-0">
                     <h1 className="text-sm font-semibold">{currentChannel.name}</h1>
                     <p className="text-[10px] text-muted-foreground capitalize">
@@ -148,12 +153,14 @@ function WatchContent() {
             </div>
           </div>
 
-          {/* Channels section - scrollable */}
-          <div className="w-full lg:w-72 xl:w-80 border-t lg:border-t-0 lg:border-l border-border/40 flex flex-col overflow-hidden">
-            {/* Language filter */}
-            <LanguageFilter />
-            {/* Ad banner in sidebar */}
-            <div className="p-1.5 border-b border-border/40 shrink-0">
+          {/* Channels section - hidden in mobile landscape, narrow sidebar */}
+          <div className="w-full lg:w-72 xl:w-80 border-t lg:border-t-0 lg:border-l border-border/40 flex flex-col overflow-hidden landscape:w-48 landscape:border-t-0 landscape:border-l">
+            {/* Language filter - hidden in mobile landscape */}
+            <div className="landscape:hidden sm:landscape:block">
+              <LanguageFilter />
+            </div>
+            {/* Ad banner in sidebar - hidden in mobile landscape */}
+            <div className="p-1.5 border-b border-border/40 shrink-0 landscape:hidden sm:landscape:block">
               <div className="rounded bg-muted/30 border border-border/40 p-1.5 text-center">
                 <p className="text-[9px] text-muted-foreground mb-0.5">Реклама</p>
                 <div className="h-[40px] bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded flex items-center justify-center">
@@ -168,8 +175,8 @@ function WatchContent() {
         </div>
       </div>
 
-      {/* Ad banner fixed at bottom */}
-      <div className="shrink-0 border-t border-border/40 bg-background p-2 text-center">
+      {/* Ad banner fixed at bottom - hidden in mobile landscape */}
+      <div className="shrink-0 border-t border-border/40 bg-background p-2 text-center landscape:hidden sm:landscape:block">
         <p className="text-[10px] text-muted-foreground mb-0.5">Реклама</p>
         <div className="h-[50px] bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded flex items-center justify-center">
           <span className="text-xs text-muted-foreground">728x90 Banner</span>

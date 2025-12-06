@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant landscape (@media (orientation: landscape));
 
 @theme inline {
   --color-background: var(--background);
@@ -156,6 +157,13 @@
   width: 100%;
   max-height: calc(100vh - 280px);
   object-fit: contain;
+}
+
+/* Landscape mode - maximize video height */
+@media (orientation: landscape) and (max-width: 900px) {
+  .video-container video {
+    max-height: calc(100vh - 80px);
+  }
 }
 
 /* Fullscreen video */
