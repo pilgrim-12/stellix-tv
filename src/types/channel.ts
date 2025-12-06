@@ -51,28 +51,54 @@ export interface TVProgram {
   isLive?: boolean;
 }
 
+// Language names in display order (most common first)
 export const languageNames: Record<string, string> = {
-  en: 'English',
   ru: 'Русский',
-  de: 'Deutsch',
-  fr: 'Français',
+  en: 'English',
   es: 'Español',
+  ka: 'ქართული',
+  fr: 'Français',
   it: 'Italiano',
+  de: 'Deutsch',
   pt: 'Português',
   ar: 'العربية',
+  tr: 'Türkçe',
+  uk: 'Українська',
+  pl: 'Polski',
+  az: 'Azərbaycan',
+  hy: 'Հայdelays',
   zh: '中文',
   ja: '日本語',
   ko: '한국어',
   hi: 'हिन्दी',
-  tr: 'Türkçe',
-  pl: 'Polski',
   nl: 'Nederlands',
-  uk: 'Українська',
-  az: 'Azərbaycan',
-  hy: 'Հայերdelays',
   bs: 'Bosanski',
   sr: 'Српски',
+  hr: 'Hrvatski',
   sq: 'Shqip',
   bg: 'Български',
+  ro: 'Română',
+  el: 'Ελληνικά',
+  cs: 'Čeština',
+  sk: 'Slovenčina',
+  hu: 'Magyar',
+  sv: 'Svenska',
+  no: 'Norsk',
+  da: 'Dansk',
+  fi: 'Suomi',
+  he: 'עברית',
+  fa: 'فارسی',
+  vi: 'Tiếng Việt',
+  th: 'ไทย',
+  id: 'Indonesia',
+  ms: 'Melayu',
   ca: 'Català',
 };
+
+// Ordered list for dropdowns (most common first)
+export const languageOrder = [
+  'ru', 'en', 'es', 'ka', 'fr', 'it', 'de', 'pt', 'ar', 'tr',
+  'uk', 'pl', 'az', 'hy', 'zh', 'ja', 'ko', 'hi', 'nl',
+  'bs', 'sr', 'hr', 'sq', 'bg', 'ro', 'el', 'cs', 'sk', 'hu',
+  'sv', 'no', 'da', 'fi', 'he', 'fa', 'vi', 'th', 'id', 'ms', 'ca'
+];

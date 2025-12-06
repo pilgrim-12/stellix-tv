@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
-import { parseM3U, convertToAppChannels, fetchM3UPlaylist } from '@/lib/m3uParser'
+import { parseM3U, convertToAppChannels, fetchM3UPlaylist, recalculateChannelLanguage } from '@/lib/m3uParser'
 import {
   Search,
   Tv,
@@ -28,6 +28,7 @@ import {
   Ban,
   Check,
   X,
+  Languages,
 } from 'lucide-react'
 import {
   getAllChannels,
@@ -37,12 +38,14 @@ import {
   importChannels,
   getChannelsStats,
   setChannelStatus,
+  recalculateAllLanguages,
+  updateChannelLanguage,
   FirebaseChannel,
   Playlist,
 } from '@/lib/channelService'
 import { getTotalUsersCount } from '@/lib/userService'
 import { cn } from '@/lib/utils'
-import { languageNames, ChannelStatus } from '@/types'
+import { languageNames, languageOrder, ChannelStatus } from '@/types'
 
 const categoryNamesRu: Record<string, string> = {
   all: 'Все',
@@ -94,6 +97,9 @@ export default function AdminPage() {
   const [isImporting, setIsImporting] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
   const [importSuccess, setImportSuccess] = useState<string | null>(null)
+
+  // Language recalculation state
+  const [isRecalculating, setIsRecalculating] = useState(false)
 
   // Player state
   const [selectedChannel, setSelectedChannel] = useState<FirebaseChannel | null>(null)
@@ -292,6 +298,26 @@ export default function AdminPage() {
     }
   }
 
+  // Recalculate languages for all channels
+  const handleRecalculateLanguages = async () => {
+    if (!confirm('Пересчитать языки для всех каналов? Это обновит только поле языка, остальные данные останутся без изменений.')) return
+
+    setIsRecalculating(true)
+    setImportError(null)
+    setImportSuccess(null)
+
+    try {
+      const result = await recalculateAllLanguages(recalculateChannelLanguage)
+      setImportSuccess(`Обновлено ${result.updated} каналов, ${result.unchanged} без изменений`)
+      await loadData()
+    } catch (error) {
+      setImportError('Ошибка при пересчёте языков')
+      console.error('Error recalculating languages:', error)
+    } finally {
+      setIsRecalculating(false)
+    }
+  }
+
   // Filter channels
   const filteredChannels = channels.filter((channel) => {
     const matchesSearch = !searchQuery || channel.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -398,6 +424,36 @@ export default function AdminPage() {
                         Отключить
                       </Button>
                     </div>
+
+                    {/* Language selector */}
+                    <div className="flex items-center gap-2">
+                      <Globe className="h-4 w-4 text-muted-foreground" />
+                      <select
+                        className="flex-1 h-8 rounded-md border border-input bg-background px-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                        value={selectedChannel.language || ''}
+                        onChange={async (e) => {
+                          const newLanguage = e.target.value
+                          try {
+                            await updateChannelLanguage(selectedChannel.id, newLanguage)
+                            setChannels((prev) =>
+                              prev.map((ch) =>
+                                ch.id === selectedChannel.id ? { ...ch, language: newLanguage } : ch
+                              )
+                            )
+                            setSelectedChannel({ ...selectedChannel, language: newLanguage })
+                          } catch (error) {
+                            console.error('Error updating language:', error)
+                          }
+                        }}
+                      >
+                        <option value="">Неизвестный язык</option>
+                        {languageOrder.map((code) => (
+                          <option key={code} value={code}>
+                            {languageNames[code]}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 )}
               </CardContent>
@@ -406,10 +462,26 @@ export default function AdminPage() {
             {/* Stats */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Cloud className="h-4 w-4" />
-                  Статистика
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Cloud className="h-4 w-4" />
+                    Статистика
+                  </CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRecalculateLanguages}
+                    disabled={isRecalculating || channels.length === 0}
+                    className="h-7 text-xs"
+                  >
+                    {isRecalculating ? (
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    ) : (
+                      <Languages className="h-3 w-3 mr-1" />
+                    )}
+                    Пересчитать языки
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="grid grid-cols-2 gap-3">
                 <div className="p-3 rounded-lg bg-muted/50 text-center">

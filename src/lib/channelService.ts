@@ -340,6 +340,67 @@ export async function togglePlaylistEnabled(playlistId: string): Promise<boolean
   }
 }
 
+// ==================== BULK OPERATIONS ====================
+
+// Update language for a single channel
+export async function updateChannelLanguage(channelId: string, language: string): Promise<void> {
+  try {
+    const channelRef = doc(db, CHANNELS_COLLECTION, channelId)
+    await updateDoc(channelRef, {
+      language,
+      updatedAt: Timestamp.now(),
+    })
+  } catch (error) {
+    console.error('Error updating channel language:', error)
+    throw error
+  }
+}
+
+// Bulk update languages for all channels using recalculation function
+export async function recalculateAllLanguages(
+  recalcFn: (channel: { name: string; country?: string; group?: string; language?: string }) => string
+): Promise<{ updated: number; unchanged: number }> {
+  try {
+    const channels = await getAllChannels()
+    let updated = 0
+    let unchanged = 0
+
+    // Process in batches
+    const batchSize = 500
+    for (let i = 0; i < channels.length; i += batchSize) {
+      const batch = writeBatch(db)
+      const chunk = channels.slice(i, i + batchSize)
+
+      for (const channel of chunk) {
+        const newLanguage = recalcFn({
+          name: channel.name,
+          country: channel.country,
+          group: channel.group,
+          language: channel.language,
+        })
+
+        if (newLanguage !== channel.language) {
+          const channelRef = doc(db, CHANNELS_COLLECTION, channel.id)
+          batch.update(channelRef, {
+            language: newLanguage,
+            updatedAt: Timestamp.now(),
+          })
+          updated++
+        } else {
+          unchanged++
+        }
+      }
+
+      await batch.commit()
+    }
+
+    return { updated, unchanged }
+  } catch (error) {
+    console.error('Error recalculating languages:', error)
+    throw error
+  }
+}
+
 // ==================== STATS ====================
 
 // Get channels statistics
