@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { useChannelStore } from '@/stores'
 import { useAuthContext } from '@/contexts/AuthContext'
-import { useChannelHealthCheck } from '@/hooks'
 import { sampleChannels } from '@/data/channels'
 import { ChannelCard } from './ChannelCard'
 import { Input } from '@/components/ui/input'
@@ -29,9 +28,6 @@ export function ChannelList() {
   const { user } = useAuthContext()
 
   const [initialized, setInitialized] = useState(false)
-
-  // Фоновая проверка доступности каналов
-  useChannelHealthCheck()
 
   useEffect(() => {
     const initChannels = async () => {

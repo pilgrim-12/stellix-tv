@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { Channel, ChannelCategory } from '@/types';
 import { addFavorite, removeFavorite, getFavorites, setFavorites, addWatchHistory, getUserSettings, updateUserSettings } from '@/lib/userService';
-import { getActiveChannels, setChannelOnlineStatus, toggleChannelActive, FirebaseChannel } from '@/lib/channelService';
+import { getActiveChannels } from '@/lib/channelService';
 
 interface CustomPlaylist {
   id: string;
@@ -285,9 +285,7 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
       newOffline.add(channelId);
     }
     set({ offlineChannels: newOffline });
-
-    // Sync status to Firebase
-    setChannelOnlineStatus(channelId, isOnline);
+    // Note: Firebase sync removed to reduce quota usage
   },
 
   toggleChannelEnabled: (channelId) => {
