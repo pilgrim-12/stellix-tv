@@ -447,30 +447,35 @@ export default function AdminPage() {
             {/* Stats - compact inline */}
             <Card>
               <CardContent className="py-3 px-4">
-                <div className="flex items-center justify-between flex-wrap gap-2 text-xs">
+                <div className="flex items-center justify-between flex-wrap gap-3 text-xs">
                   <div className="flex items-center gap-1">
-                    <Tv className="h-3 w-3 text-muted-foreground" />
                     <span className="font-bold">{stats?.total ?? '—'}</span>
+                    <span className="text-muted-foreground">всего</span>
                   </div>
                   <div className="flex items-center gap-1 text-green-500">
                     <CheckCircle2 className="h-3 w-3" />
                     <span className="font-bold">{stats?.active ?? '—'}</span>
+                    <span className="text-muted-foreground">рабочих</span>
                   </div>
                   <div className="flex items-center gap-1 text-red-500">
                     <XCircle className="h-3 w-3" />
                     <span className="font-bold">{stats?.broken ?? '—'}</span>
+                    <span className="text-muted-foreground">сломано</span>
                   </div>
                   <div className="flex items-center gap-1 text-yellow-500">
                     <Clock className="h-3 w-3" />
                     <span className="font-bold">{stats?.pending ?? '—'}</span>
+                    <span className="text-muted-foreground">ожидает</span>
                   </div>
                   <div className="flex items-center gap-1 text-gray-500">
                     <Ban className="h-3 w-3" />
                     <span className="font-bold">{stats?.inactive ?? '—'}</span>
+                    <span className="text-muted-foreground">откл.</span>
                   </div>
                   <div className="flex items-center gap-1 text-purple-500">
                     <Users className="h-3 w-3" />
                     <span className="font-bold">{usersCount ?? '—'}</span>
+                    <span className="text-muted-foreground">юзеров</span>
                   </div>
                 </div>
               </CardContent>
