@@ -532,64 +532,92 @@ export default function AdminPage() {
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base">Плейлисты ({playlists.length})</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2 max-h-80 overflow-auto">
-                  {playlists.map((playlist) => {
-                    // Calculate stats for this playlist
-                    const playlistChannels = channels.filter((ch) => ch.playlistId === playlist.id)
-                    const activeCount = playlistChannels.filter((ch) => ch.status === 'active').length
-                    const brokenCount = playlistChannels.filter((ch) => ch.status === 'broken').length
-                    const pendingCount = playlistChannels.filter((ch) => !ch.status || ch.status === 'pending').length
-                    const inactiveCount = playlistChannels.filter((ch) => ch.status === 'inactive').length
+                <CardContent className="p-0">
+                  <div className="overflow-auto max-h-96">
+                    <table className="w-full text-sm">
+                      <thead className="sticky top-0 bg-background border-b">
+                        <tr className="text-left text-xs text-muted-foreground">
+                          <th className="px-4 py-2 font-medium">Название</th>
+                          <th className="px-2 py-2 font-medium text-center">Всего</th>
+                          <th className="px-2 py-2 font-medium text-center text-green-500">
+                            <CheckCircle2 className="h-3 w-3 mx-auto" />
+                          </th>
+                          <th className="px-2 py-2 font-medium text-center text-red-500">
+                            <XCircle className="h-3 w-3 mx-auto" />
+                          </th>
+                          <th className="px-2 py-2 font-medium text-center text-yellow-500">
+                            <Clock className="h-3 w-3 mx-auto" />
+                          </th>
+                          <th className="px-2 py-2 font-medium text-center text-gray-500">
+                            <Ban className="h-3 w-3 mx-auto" />
+                          </th>
+                          <th className="px-2 py-2"></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {playlists.map((playlist) => {
+                          const playlistChannels = channels.filter((ch) => ch.playlistId === playlist.id)
+                          const activeCount = playlistChannels.filter((ch) => ch.status === 'active').length
+                          const brokenCount = playlistChannels.filter((ch) => ch.status === 'broken').length
+                          const pendingCount = playlistChannels.filter((ch) => !ch.status || ch.status === 'pending').length
+                          const inactiveCount = playlistChannels.filter((ch) => ch.status === 'inactive').length
+                          const isDeleting = deletingPlaylistId === playlist.id
 
-                    const isDeleting = deletingPlaylistId === playlist.id
-
-                    return (
-                      <div key={playlist.id} className={cn("p-3 rounded-lg bg-muted/50 space-y-2", isDeleting && "opacity-50")}>
-                        <div className="flex items-center justify-between">
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium truncate">{playlist.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {isDeleting ? "Удаление..." : `${playlistChannels.length} каналов`}
-                            </p>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-500/10"
-                            onClick={() => handleDeletePlaylist(playlist.id, playlistChannels.length)}
-                            disabled={isDeleting || deletingPlaylistId !== null}
-                          >
-                            {isDeleting ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </div>
-                        {/* Playlist stats */}
-                        <div className="flex items-center gap-3 text-[10px]">
-                          <span className="flex items-center gap-1 text-green-500">
-                            <CheckCircle2 className="h-3 w-3" />
-                            {activeCount}
-                          </span>
-                          <span className="flex items-center gap-1 text-red-500">
-                            <XCircle className="h-3 w-3" />
-                            {brokenCount}
-                          </span>
-                          <span className="flex items-center gap-1 text-yellow-500">
-                            <Clock className="h-3 w-3" />
-                            {pendingCount}
-                          </span>
-                          {inactiveCount > 0 && (
-                            <span className="flex items-center gap-1 text-gray-500">
-                              <Ban className="h-3 w-3" />
-                              {inactiveCount}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
+                          return (
+                            <tr
+                              key={playlist.id}
+                              className={cn(
+                                "hover:bg-muted/50 transition-colors",
+                                isDeleting && "opacity-50",
+                                selectedPlaylist === playlist.id && "bg-primary/10"
+                              )}
+                            >
+                              <td className="px-4 py-2">
+                                <button
+                                  className="text-left hover:text-primary transition-colors"
+                                  onClick={() => setSelectedPlaylist(selectedPlaylist === playlist.id ? 'all' : playlist.id)}
+                                >
+                                  <span className="font-medium truncate block max-w-[120px]" title={playlist.name}>
+                                    {playlist.name}
+                                  </span>
+                                </button>
+                              </td>
+                              <td className="px-2 py-2 text-center text-muted-foreground">
+                                {playlistChannels.length}
+                              </td>
+                              <td className="px-2 py-2 text-center text-green-500 font-medium">
+                                {activeCount || '-'}
+                              </td>
+                              <td className="px-2 py-2 text-center text-red-500 font-medium">
+                                {brokenCount || '-'}
+                              </td>
+                              <td className="px-2 py-2 text-center text-yellow-500 font-medium">
+                                {pendingCount || '-'}
+                              </td>
+                              <td className="px-2 py-2 text-center text-gray-500 font-medium">
+                                {inactiveCount || '-'}
+                              </td>
+                              <td className="px-2 py-2">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                                  onClick={() => handleDeletePlaylist(playlist.id, playlistChannels.length)}
+                                  disabled={isDeleting || deletingPlaylistId !== null}
+                                >
+                                  {isDeleting ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="h-3 w-3" />
+                                  )}
+                                </Button>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </CardContent>
               </Card>
             )}
