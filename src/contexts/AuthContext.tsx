@@ -10,13 +10,14 @@ import {
   signOut,
   resetPassword,
 } from '@/lib/auth'
-import { initializeUser, saveUserIP } from '@/lib/userService'
+import { initializeUser, saveUserIP, isUserAdmin } from '@/lib/userService'
 import { useChannelStore } from '@/stores'
 
 interface AuthContextType {
   user: User | null
   loading: boolean
   error: string | null
+  isAdmin: boolean
   login: (email: string, password: string) => Promise<void>
   loginWithGoogle: () => Promise<void>
   register: (email: string, password: string, displayName: string) => Promise<void>
@@ -31,6 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -43,6 +45,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         useChannelStore.getState().loadFavoritesFromFirebase(user.uid)
         useChannelStore.getState().loadUserSettings(user.uid)
 
+        // Check admin status
+        const adminStatus = await isUserAdmin(user.uid)
+        setIsAdmin(adminStatus)
+
         // Get and save user IP
         try {
           const res = await fetch('https://api.ipify.org?format=json')
@@ -53,6 +59,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch {
           // IP fetch failed, ignore
         }
+      } else {
+        setIsAdmin(false)
       }
     })
 
@@ -121,6 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         loading,
         error,
+        isAdmin,
         login,
         loginWithGoogle,
         register,

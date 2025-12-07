@@ -35,6 +35,7 @@ export interface UserData {
   totalVisits: number
   ipAddresses: string[]
   createdAt: Timestamp
+  isAdmin?: boolean
 }
 
 // Get or create user document
@@ -226,5 +227,59 @@ export async function updateUserSettings(userId: string, settings: Partial<UserS
     })
   } catch (error) {
     console.error('Error updating user settings:', error)
+  }
+}
+
+// Check if user is admin
+export async function isUserAdmin(userId: string): Promise<boolean> {
+  try {
+    const userData = await getUserData(userId)
+    return userData?.isAdmin === true
+  } catch (error) {
+    console.error('Error checking admin status:', error)
+    return false
+  }
+}
+
+// Set user as admin
+export async function setUserAsAdmin(userId: string): Promise<void> {
+  try {
+    const userRef = doc(db, 'users', userId)
+    await updateDoc(userRef, {
+      isAdmin: true,
+    })
+  } catch (error) {
+    console.error('Error setting user as admin:', error)
+    throw error
+  }
+}
+
+// Remove admin status from user
+export async function removeUserAdmin(userId: string): Promise<void> {
+  try {
+    const userRef = doc(db, 'users', userId)
+    await updateDoc(userRef, {
+      isAdmin: false,
+    })
+  } catch (error) {
+    console.error('Error removing admin status:', error)
+    throw error
+  }
+}
+
+// Get all users with basic info
+export async function getAllUsers(): Promise<Array<{ id: string; email?: string; isAdmin?: boolean; lastVisit?: Timestamp }>> {
+  try {
+    const usersRef = collection(db, 'users')
+    const snapshot = await getDocs(usersRef)
+    return snapshot.docs.map((doc) => ({
+      id: doc.id,
+      email: doc.data().email,
+      isAdmin: doc.data().isAdmin,
+      lastVisit: doc.data().lastVisit,
+    }))
+  } catch (error) {
+    console.error('Error getting all users:', error)
+    return []
   }
 }

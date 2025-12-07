@@ -16,7 +16,7 @@ import { useAuthContext } from '@/contexts/AuthContext'
 
 export function Header() {
   const router = useRouter()
-  const { user, loading, logout } = useAuthContext()
+  const { user, loading, logout, isAdmin } = useAuthContext()
 
   const handleLogout = async () => {
     await logout()
@@ -58,12 +58,14 @@ export function Header() {
               <span className="hidden sm:inline">Программа</span>
             </Link>
           </Button>
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/admin" className="flex items-center gap-1.5">
-              <Shield className="h-4 w-4" />
-              <span className="hidden sm:inline">Админ</span>
-            </Link>
-          </Button>
+          {isAdmin && (
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/admin" className="flex items-center gap-1.5">
+                <Shield className="h-4 w-4" />
+                <span className="hidden sm:inline">Админ</span>
+              </Link>
+            </Button>
+          )}
         </nav>
 
         {/* Actions */}
@@ -97,12 +99,14 @@ export function Header() {
                     Favorites
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/admin">
-                    <Shield className="mr-2 h-4 w-4" />
-                    Админ панель
-                  </Link>
-                </DropdownMenuItem>
+                {isAdmin && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin">
+                      <Shield className="mr-2 h-4 w-4" />
+                      Админ панель
+                    </Link>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem>
                   <Settings className="mr-2 h-4 w-4" />
                   Settings

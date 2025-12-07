@@ -43,7 +43,9 @@ import {
   FirebaseChannel,
   Playlist,
 } from '@/lib/channelService'
-import { getTotalUsersCount } from '@/lib/userService'
+import { getTotalUsersCount, setUserAsAdmin, removeUserAdmin, getAllUsers } from '@/lib/userService'
+import { Timestamp } from 'firebase/firestore'
+import { useAuthContext } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
 import { languageNames, languageOrder, ChannelStatus } from '@/types'
 
@@ -78,6 +80,7 @@ const statusNames: Record<ChannelStatus, string> = {
 
 export default function AdminPage() {
   const router = useRouter()
+  const { user, isAdmin, loading } = useAuthContext()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const hlsRef = useRef<{ destroy: () => void } | null>(null)
@@ -120,6 +123,24 @@ export default function AdminPage() {
   const [duplicates, setDuplicates] = useState<DuplicateInfo[]>([])
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [showDuplicates, setShowDuplicates] = useState(false)
+
+  // Users management
+  interface UserInfo {
+    id: string
+    email?: string
+    isAdmin?: boolean
+    lastVisit?: Timestamp
+  }
+  const [allUsers, setAllUsers] = useState<UserInfo[]>([])
+  const [showUsers, setShowUsers] = useState(false)
+  const [loadingUsers, setLoadingUsers] = useState(false)
+
+  // Redirect non-admins
+  useEffect(() => {
+    if (!loading && !isAdmin) {
+      router.push('/watch')
+    }
+  }, [loading, isAdmin, router])
 
   // Load data
   const loadData = async () => {
@@ -369,6 +390,36 @@ export default function AdminPage() {
     setDuplicates(duplicatesList)
     setShowDuplicates(true)
     setIsAnalyzing(false)
+  }
+
+  // Load users for admin management
+  const loadUsers = async () => {
+    setLoadingUsers(true)
+    try {
+      const users = await getAllUsers()
+      setAllUsers(users)
+      setShowUsers(true)
+    } catch (error) {
+      console.error('Error loading users:', error)
+    } finally {
+      setLoadingUsers(false)
+    }
+  }
+
+  // Toggle admin status
+  const toggleAdmin = async (userId: string, currentIsAdmin: boolean) => {
+    try {
+      if (currentIsAdmin) {
+        await removeUserAdmin(userId)
+      } else {
+        await setUserAsAdmin(userId)
+      }
+      // Reload users
+      const users = await getAllUsers()
+      setAllUsers(users)
+    } catch (error) {
+      console.error('Error toggling admin:', error)
+    }
   }
 
   // Filter channels
@@ -982,6 +1033,95 @@ export default function AdminPage() {
               <CardContent>
                 <p className="text-center text-muted-foreground py-4">
                   Дубликаты не найдены
+                </p>
+              </CardContent>
+            )}
+          </Card>
+        </div>
+
+        {/* Users Management Section */}
+        <div className="mt-6">
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Управление пользователями
+                </CardTitle>
+                <Button
+                  onClick={loadUsers}
+                  disabled={loadingUsers}
+                  size="sm"
+                >
+                  {loadingUsers ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Загрузка...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      {showUsers ? 'Обновить' : 'Загрузить пользователей'}
+                    </>
+                  )}
+                </Button>
+              </div>
+              <CardDescription>
+                Назначение и удаление прав администратора
+              </CardDescription>
+            </CardHeader>
+
+            {showUsers && allUsers.length > 0 && (
+              <CardContent className="p-0">
+                <div className="overflow-auto max-h-[400px]">
+                  <table className="w-full text-sm">
+                    <thead className="sticky top-0 bg-background border-b">
+                      <tr className="text-left text-xs text-muted-foreground">
+                        <th className="px-4 py-2 font-medium">Email</th>
+                        <th className="px-4 py-2 font-medium">ID</th>
+                        <th className="px-4 py-2 font-medium text-center">Админ</th>
+                        <th className="px-4 py-2 font-medium">Действие</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {allUsers.map((u) => (
+                        <tr key={u.id} className="hover:bg-muted/50">
+                          <td className="px-4 py-2">
+                            <span className="font-medium">{u.email || '—'}</span>
+                          </td>
+                          <td className="px-4 py-2">
+                            <span className="text-xs text-muted-foreground font-mono">{u.id.slice(0, 12)}...</span>
+                          </td>
+                          <td className="px-4 py-2 text-center">
+                            {u.isAdmin ? (
+                              <span className="text-green-500 font-medium">Да</span>
+                            ) : (
+                              <span className="text-muted-foreground">Нет</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-2">
+                            <Button
+                              variant={u.isAdmin ? "destructive" : "outline"}
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() => toggleAdmin(u.id, u.isAdmin || false)}
+                              disabled={u.id === user?.uid}
+                            >
+                              {u.isAdmin ? 'Убрать админа' : 'Сделать админом'}
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            )}
+
+            {showUsers && allUsers.length === 0 && (
+              <CardContent>
+                <p className="text-center text-muted-foreground py-4">
+                  Пользователи не найдены
                 </p>
               </CardContent>
             )}
