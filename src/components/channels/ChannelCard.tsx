@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { Channel, languageNames } from '@/types'
 import { useChannelStore } from '@/stores'
 import { useAuthContext } from '@/contexts/AuthContext'
@@ -39,6 +40,7 @@ export function ChannelCard({ channel }: ChannelCardProps) {
   const isActive = currentChannel?.id === channel.id
   const isFavorite = favorites.includes(channel.id)
   const isOffline = channel.isOffline
+  const [imgError, setImgError] = useState(false)
 
   const categoryName = categoryNames[channel.group] || channel.group
   const langName = channel.language ? (languageNames[channel.language] || channel.language.toUpperCase()) : null
@@ -54,11 +56,20 @@ export function ChannelCard({ channel }: ChannelCardProps) {
       onClick={() => setCurrentChannel(channel, user?.uid)}
     >
       <div className="flex items-center gap-3">
-        {/* Channel logo - disabled to reduce network requests */}
+        {/* Channel logo */}
         <div className="shrink-0 h-12 w-12 flex items-center justify-center rounded-md bg-black/40 overflow-hidden">
-          <span className="text-xl font-bold text-muted-foreground">
-            {channel.name.charAt(0)}
-          </span>
+          {channel.logo && !imgError ? (
+            <img
+              src={channel.logo}
+              alt={channel.name}
+              className="h-full w-full object-cover"
+              onError={() => setImgError(true)}
+            />
+          ) : (
+            <span className="text-xl font-bold text-muted-foreground">
+              {channel.name.charAt(0)}
+            </span>
+          )}
         </div>
 
         {/* Channel info */}
