@@ -707,13 +707,11 @@ export default function AdminPage() {
                         )}
                         onClick={() => playChannel(channel)}
                       >
-                        {/* Logo */}
+                        {/* Logo - disabled to reduce network errors */}
                         <div className="w-10 h-10 rounded bg-muted flex items-center justify-center overflow-hidden shrink-0">
-                          {channel.logo ? (
-                            <img src={channel.logo} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <Tv className="h-5 w-5 text-muted-foreground" />
-                          )}
+                          <span className="text-sm font-bold text-muted-foreground">
+                            {channel.name.charAt(0)}
+                          </span>
                         </div>
 
                         {/* Info */}
