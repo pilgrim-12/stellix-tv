@@ -21,7 +21,6 @@ import {
   FileText,
   Loader2,
   Users,
-  Cloud,
   Play,
   AlertCircle,
   Clock,
@@ -445,38 +444,34 @@ export default function AdminPage() {
               </CardContent>
             </Card>
 
-            {/* Stats */}
+            {/* Stats - compact inline */}
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Cloud className="h-4 w-4" />
-                  Статистика
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-3">
-                <div className="p-3 rounded-lg bg-muted/50 text-center">
-                  <p className="text-2xl font-bold">{stats?.total ?? '—'}</p>
-                  <p className="text-xs text-muted-foreground">Всего</p>
-                </div>
-                <div className="p-3 rounded-lg bg-yellow-500/10 text-center">
-                  <p className="text-2xl font-bold text-yellow-500">{stats?.pending ?? '—'}</p>
-                  <p className="text-xs text-muted-foreground">Ожидает</p>
-                </div>
-                <div className="p-3 rounded-lg bg-green-500/10 text-center">
-                  <p className="text-2xl font-bold text-green-500">{stats?.active ?? '—'}</p>
-                  <p className="text-xs text-muted-foreground">Рабочих</p>
-                </div>
-                <div className="p-3 rounded-lg bg-red-500/10 text-center">
-                  <p className="text-2xl font-bold text-red-500">{stats?.broken ?? '—'}</p>
-                  <p className="text-xs text-muted-foreground">Нерабочих</p>
-                </div>
-                <div className="p-3 rounded-lg bg-gray-500/10 text-center">
-                  <p className="text-2xl font-bold text-gray-500">{stats?.inactive ?? '—'}</p>
-                  <p className="text-xs text-muted-foreground">Отключено</p>
-                </div>
-                <div className="p-3 rounded-lg bg-purple-500/10 text-center">
-                  <p className="text-2xl font-bold text-purple-500">{usersCount ?? '—'}</p>
-                  <p className="text-xs text-muted-foreground">Пользователей</p>
+              <CardContent className="py-3 px-4">
+                <div className="flex items-center justify-between flex-wrap gap-2 text-xs">
+                  <div className="flex items-center gap-1">
+                    <Tv className="h-3 w-3 text-muted-foreground" />
+                    <span className="font-bold">{stats?.total ?? '—'}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-green-500">
+                    <CheckCircle2 className="h-3 w-3" />
+                    <span className="font-bold">{stats?.active ?? '—'}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-red-500">
+                    <XCircle className="h-3 w-3" />
+                    <span className="font-bold">{stats?.broken ?? '—'}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-yellow-500">
+                    <Clock className="h-3 w-3" />
+                    <span className="font-bold">{stats?.pending ?? '—'}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-gray-500">
+                    <Ban className="h-3 w-3" />
+                    <span className="font-bold">{stats?.inactive ?? '—'}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-purple-500">
+                    <Users className="h-3 w-3" />
+                    <span className="font-bold">{usersCount ?? '—'}</span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
