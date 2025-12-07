@@ -104,6 +104,10 @@ export default function AdminPage() {
   // Deleting playlist state
   const [deletingPlaylistId, setDeletingPlaylistId] = useState<string | null>(null)
 
+  // Status update loading state
+  const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null)
+  const [updatingLanguageId, setUpdatingLanguageId] = useState<string | null>(null)
+
   // Player state
   const [selectedChannel, setSelectedChannel] = useState<FirebaseChannel | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -134,6 +138,7 @@ export default function AdminPage() {
   const [allUsers, setAllUsers] = useState<UserInfo[]>([])
   const [showUsers, setShowUsers] = useState(false)
   const [loadingUsers, setLoadingUsers] = useState(false)
+  const [togglingAdminId, setTogglingAdminId] = useState<string | null>(null)
 
   // Redirect non-admins
   useEffect(() => {
@@ -207,6 +212,7 @@ export default function AdminPage() {
 
   // Update channel status
   const handleSetStatus = async (channelId: string, status: ChannelStatus) => {
+    setUpdatingStatusId(channelId)
     try {
       await setChannelStatus(channelId, status)
       setChannels((prev) =>
@@ -217,6 +223,8 @@ export default function AdminPage() {
       setStats(newStats)
     } catch (error) {
       console.error('Error setting status:', error)
+    } finally {
+      setUpdatingStatusId(null)
     }
   }
 
@@ -408,6 +416,7 @@ export default function AdminPage() {
 
   // Toggle admin status
   const toggleAdmin = async (userId: string, currentIsAdmin: boolean) => {
+    setTogglingAdminId(userId)
     try {
       if (currentIsAdmin) {
         await removeUserAdmin(userId)
@@ -419,6 +428,8 @@ export default function AdminPage() {
       setAllUsers(users)
     } catch (error) {
       console.error('Error toggling admin:', error)
+    } finally {
+      setTogglingAdminId(null)
     }
   }
 
@@ -505,8 +516,13 @@ export default function AdminPage() {
                         variant="outline"
                         className="flex-1 text-green-500 hover:bg-green-500/10"
                         onClick={() => handleSetStatus(selectedChannel.id, 'active')}
+                        disabled={updatingStatusId === selectedChannel.id}
                       >
-                        <Check className="h-4 w-4 mr-1" />
+                        {updatingStatusId === selectedChannel.id ? (
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        ) : (
+                          <Check className="h-4 w-4 mr-1" />
+                        )}
                         Рабочий
                       </Button>
                       <Button
@@ -514,8 +530,13 @@ export default function AdminPage() {
                         variant="outline"
                         className="flex-1 text-red-500 hover:bg-red-500/10"
                         onClick={() => handleSetStatus(selectedChannel.id, 'broken')}
+                        disabled={updatingStatusId === selectedChannel.id}
                       >
-                        <X className="h-4 w-4 mr-1" />
+                        {updatingStatusId === selectedChannel.id ? (
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        ) : (
+                          <X className="h-4 w-4 mr-1" />
+                        )}
                         Нерабочий
                       </Button>
                       <Button
@@ -523,20 +544,31 @@ export default function AdminPage() {
                         variant="outline"
                         className="flex-1 text-gray-500 hover:bg-gray-500/10"
                         onClick={() => handleSetStatus(selectedChannel.id, 'inactive')}
+                        disabled={updatingStatusId === selectedChannel.id}
                       >
-                        <Ban className="h-4 w-4 mr-1" />
+                        {updatingStatusId === selectedChannel.id ? (
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        ) : (
+                          <Ban className="h-4 w-4 mr-1" />
+                        )}
                         Отключить
                       </Button>
                     </div>
 
                     {/* Language selector */}
                     <div className="flex items-center gap-2">
-                      <Globe className="h-4 w-4 text-muted-foreground" />
+                      {updatingLanguageId === selectedChannel.id ? (
+                        <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />
+                      ) : (
+                        <Globe className="h-4 w-4 text-muted-foreground" />
+                      )}
                       <select
-                        className="flex-1 h-8 rounded-md border border-input bg-background px-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                        className="flex-1 h-8 rounded-md border border-input bg-background px-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:opacity-50"
                         value={selectedChannel.language || ''}
+                        disabled={updatingLanguageId === selectedChannel.id}
                         onChange={async (e) => {
                           const newLanguage = e.target.value
+                          setUpdatingLanguageId(selectedChannel.id)
                           try {
                             await updateChannelLanguage(selectedChannel.id, newLanguage)
                             setChannels((prev) =>
@@ -547,6 +579,8 @@ export default function AdminPage() {
                             setSelectedChannel({ ...selectedChannel, language: newLanguage })
                           } catch (error) {
                             console.error('Error updating language:', error)
+                          } finally {
+                            setUpdatingLanguageId(null)
                           }
                         }}
                       >
@@ -884,28 +918,36 @@ export default function AdminPage() {
 
                         {/* Quick actions */}
                         <div className="flex gap-1 shrink-0">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-green-500 hover:bg-green-500/10"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleSetStatus(channel.id, 'active')
-                            }}
-                          >
-                            <Check className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-red-500 hover:bg-red-500/10"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleSetStatus(channel.id, 'broken')
-                            }}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
+                          {updatingStatusId === channel.id ? (
+                            <div className="h-7 w-7 flex items-center justify-center">
+                              <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                            </div>
+                          ) : (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-green-500 hover:bg-green-500/10"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleSetStatus(channel.id, 'active')
+                                }}
+                              >
+                                <Check className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-red-500 hover:bg-red-500/10"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleSetStatus(channel.id, 'broken')
+                                }}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -1105,9 +1147,16 @@ export default function AdminPage() {
                               size="sm"
                               className="h-7 text-xs"
                               onClick={() => toggleAdmin(u.id, u.isAdmin || false)}
-                              disabled={u.id === user?.uid}
+                              disabled={u.id === user?.uid || togglingAdminId === u.id}
                             >
-                              {u.isAdmin ? 'Убрать админа' : 'Сделать админом'}
+                              {togglingAdminId === u.id ? (
+                                <>
+                                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                  Обновление...
+                                </>
+                              ) : (
+                                u.isAdmin ? 'Убрать админа' : 'Сделать админом'
+                              )}
                             </Button>
                           </td>
                         </tr>
