@@ -134,6 +134,10 @@ export function LanguageFilter() {
     getAvailableLanguages,
   } = useChannelStore()
 
+  const [isOpen, setIsOpen] = useState(false)
+  const popoverRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+
   const availableLanguages = getAvailableLanguages()
 
   // Сортировка языков по заданному порядку
@@ -146,7 +150,18 @@ export function LanguageFilter() {
     return indexA - indexB
   })
 
-  const containerRef = useRef<HTMLDivElement>(null)
+  // Close popover on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isOpen])
 
   const scroll = (direction: 'left' | 'right') => {
     const el = containerRef.current
@@ -157,49 +172,96 @@ export function LanguageFilter() {
     })
   }
 
+  const selectedLabel = selectedLanguage === 'all'
+    ? 'Все'
+    : (languageNames[selectedLanguage] || selectedLanguage.toUpperCase())
+
   return (
     <div className="flex items-center gap-1 px-1 py-1.5 border-b border-border/40 bg-muted/10 shrink-0">
       <Globe className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-6 w-6 shrink-0"
-        onClick={() => scroll('left')}
-      >
-        <ChevronLeft className="h-4 w-4" />
-      </Button>
-      <div
-        ref={containerRef}
-        className="flex-1 flex items-center gap-1 overflow-x-auto scrollbar-hide"
-      >
+
+      {/* Desktop: Popover button */}
+      <div className="hidden lg:block relative" ref={popoverRef}>
         <Button
-          variant={selectedLanguage === 'all' ? 'default' : 'outline'}
+          variant="outline"
           size="sm"
-          className="h-6 text-[11px] px-2 shrink-0"
-          onClick={() => setLanguage('all')}
+          className="h-6 text-[11px] px-3 gap-1"
+          onClick={() => setIsOpen(!isOpen)}
         >
-          Все
+          {selectedLabel}
+          <ChevronRight className={cn("h-3 w-3 transition-transform", isOpen && "rotate-90")} />
         </Button>
-        {sortedLanguages.map((lang) => (
+
+        {isOpen && (
+          <div className="absolute top-full left-0 mt-1 z-50 bg-popover border rounded-lg shadow-lg p-2 min-w-[280px] max-w-[400px]">
+            <div className="flex flex-wrap gap-1">
+              <Button
+                variant={selectedLanguage === 'all' ? 'default' : 'outline'}
+                size="sm"
+                className="h-7 text-xs px-3"
+                onClick={() => { setLanguage('all'); setIsOpen(false) }}
+              >
+                Все
+              </Button>
+              {sortedLanguages.map((lang) => (
+                <Button
+                  key={lang}
+                  variant={selectedLanguage === lang ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-7 text-xs px-3"
+                  onClick={() => { setLanguage(lang); setIsOpen(false) }}
+                >
+                  {languageNames[lang] || lang.toUpperCase()}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Mobile: Horizontal scroll */}
+      <div className="lg:hidden flex-1 flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6 shrink-0"
+          onClick={() => scroll('left')}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <div
+          ref={containerRef}
+          className="flex-1 flex items-center gap-1 overflow-x-auto scrollbar-hide"
+        >
           <Button
-            key={lang}
-            variant={selectedLanguage === lang ? 'default' : 'outline'}
+            variant={selectedLanguage === 'all' ? 'default' : 'outline'}
             size="sm"
             className="h-6 text-[11px] px-2 shrink-0"
-            onClick={() => setLanguage(lang)}
+            onClick={() => setLanguage('all')}
           >
-            {languageNames[lang] || lang.toUpperCase()}
+            Все
           </Button>
-        ))}
+          {sortedLanguages.map((lang) => (
+            <Button
+              key={lang}
+              variant={selectedLanguage === lang ? 'default' : 'outline'}
+              size="sm"
+              className="h-6 text-[11px] px-2 shrink-0"
+              onClick={() => setLanguage(lang)}
+            >
+              {languageNames[lang] || lang.toUpperCase()}
+            </Button>
+          ))}
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6 shrink-0"
+          onClick={() => scroll('right')}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
       </div>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-6 w-6 shrink-0"
-        onClick={() => scroll('right')}
-      >
-        <ChevronRight className="h-4 w-4" />
-      </Button>
     </div>
   )
 }
