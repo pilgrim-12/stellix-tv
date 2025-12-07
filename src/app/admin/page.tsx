@@ -27,6 +27,9 @@ import {
   Ban,
   Check,
   X,
+  Copy,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
 import {
   getAllChannels,
@@ -106,6 +109,17 @@ export default function AdminPage() {
   // Stats
   const [usersCount, setUsersCount] = useState<number | null>(null)
   const [stats, setStats] = useState<{ total: number; pending: number; active: number; inactive: number; broken: number } | null>(null)
+
+  // Duplicates analysis
+  interface DuplicateInfo {
+    name: string
+    normalizedName: string
+    count: number
+    channels: { id: string; playlistId: string; playlistName: string; status: string }[]
+  }
+  const [duplicates, setDuplicates] = useState<DuplicateInfo[]>([])
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [showDuplicates, setShowDuplicates] = useState(false)
 
   // Load data
   const loadData = async () => {
@@ -301,6 +315,60 @@ export default function AdminPage() {
     } finally {
       setDeletingPlaylistId(null)
     }
+  }
+
+  // Analyze duplicates
+  const analyzeDuplicates = () => {
+    setIsAnalyzing(true)
+
+    // Normalize channel name for comparison
+    const normalizeName = (name: string): string => {
+      return name
+        .toLowerCase()
+        .replace(/\s*(hd|sd|fhd|4k|uhd|\d+p)\s*/gi, '')
+        .replace(/\s*\([^)]*\)\s*/g, '')
+        .replace(/\s*\[[^\]]*\]\s*/g, '')
+        .replace(/[^a-zа-яё0-9]/gi, '')
+        .trim()
+    }
+
+    // Create playlist map for quick lookup
+    const playlistMap = new Map(playlists.map(p => [p.id, p.name]))
+
+    // Group channels by normalized name
+    const groups = new Map<string, DuplicateInfo>()
+
+    channels.forEach(channel => {
+      const normalized = normalizeName(channel.name)
+      if (!normalized) return
+
+      if (!groups.has(normalized)) {
+        groups.set(normalized, {
+          name: channel.name,
+          normalizedName: normalized,
+          count: 0,
+          channels: []
+        })
+      }
+
+      const group = groups.get(normalized)!
+      group.count++
+      group.channels.push({
+        id: channel.id,
+        playlistId: channel.playlistId || '',
+        playlistName: playlistMap.get(channel.playlistId || '') || 'Неизвестный',
+        status: channel.status || 'pending'
+      })
+    })
+
+    // Filter only duplicates (count > 1) and sort by count
+    const duplicatesList = Array.from(groups.values())
+      .filter(g => g.count > 1)
+      .sort((a, b) => b.count - a.count)
+
+    setDuplicates(duplicatesList)
+    setShowDuplicates(true)
+    setIsAnalyzing(false)
   }
 
   // Filter channels
@@ -795,6 +863,129 @@ export default function AdminPage() {
               </CardContent>
             </Card>
           </div>
+        </div>
+
+        {/* Duplicates Analysis Section */}
+        <div className="mt-6">
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Copy className="h-4 w-4" />
+                  Анализ дубликатов
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  {duplicates.length > 0 && (
+                    <span className="text-sm text-muted-foreground">
+                      Найдено {duplicates.length} групп дубликатов
+                    </span>
+                  )}
+                  <Button
+                    onClick={analyzeDuplicates}
+                    disabled={isAnalyzing || channels.length === 0}
+                    size="sm"
+                  >
+                    {isAnalyzing ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Анализ...
+                      </>
+                    ) : (
+                      <>
+                        <Search className="h-4 w-4 mr-2" />
+                        Найти дубликаты
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+              <CardDescription>
+                Поиск каналов с одинаковыми или похожими названиями в разных плейлистах
+              </CardDescription>
+            </CardHeader>
+
+            {showDuplicates && duplicates.length > 0 && (
+              <CardContent className="p-0">
+                <div className="overflow-auto max-h-[500px]">
+                  <table className="w-full text-sm">
+                    <thead className="sticky top-0 bg-background border-b">
+                      <tr className="text-left text-xs text-muted-foreground">
+                        <th className="px-4 py-2 font-medium">Канал</th>
+                        <th className="px-2 py-2 font-medium text-center">Повторов</th>
+                        <th className="px-4 py-2 font-medium">Плейлисты</th>
+                        <th className="px-4 py-2 font-medium">Статусы</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {duplicates.map((dup, idx) => (
+                        <tr key={idx} className="hover:bg-muted/50">
+                          <td className="px-4 py-2">
+                            <div>
+                              <span className="font-medium">{dup.name}</span>
+                              <span className="text-xs text-muted-foreground ml-2">
+                                ({dup.normalizedName})
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-2 py-2 text-center">
+                            <span className={cn(
+                              "font-bold",
+                              dup.count >= 5 ? "text-red-500" : dup.count >= 3 ? "text-yellow-500" : "text-muted-foreground"
+                            )}>
+                              {dup.count}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2">
+                            <div className="flex flex-wrap gap-1">
+                              {[...new Set(dup.channels.map(c => c.playlistName))].map((name, i) => (
+                                <span key={i} className="text-xs px-1.5 py-0.5 rounded bg-muted">
+                                  {name}
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="px-4 py-2">
+                            <div className="flex gap-2 text-xs">
+                              {(() => {
+                                const statusCounts = dup.channels.reduce((acc, c) => {
+                                  acc[c.status] = (acc[c.status] || 0) + 1
+                                  return acc
+                                }, {} as Record<string, number>)
+                                return (
+                                  <>
+                                    {statusCounts.active && (
+                                      <span className="text-green-500">{statusCounts.active} рабочих</span>
+                                    )}
+                                    {statusCounts.broken && (
+                                      <span className="text-red-500">{statusCounts.broken} сломано</span>
+                                    )}
+                                    {statusCounts.pending && (
+                                      <span className="text-yellow-500">{statusCounts.pending} ожидает</span>
+                                    )}
+                                    {statusCounts.inactive && (
+                                      <span className="text-gray-500">{statusCounts.inactive} откл.</span>
+                                    )}
+                                  </>
+                                )
+                              })()}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            )}
+
+            {showDuplicates && duplicates.length === 0 && (
+              <CardContent>
+                <p className="text-center text-muted-foreground py-4">
+                  Дубликаты не найдены
+                </p>
+              </CardContent>
+            )}
+          </Card>
         </div>
       </main>
     </div>
