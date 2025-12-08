@@ -969,9 +969,40 @@ export default function AdminPage() {
           {/* Right column - Channels list */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">
-                Каналы {selectedPlaylist ? `(${filteredChannels.length})` : ''}
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">
+                  Каналы {selectedPlaylist ? `(${filteredChannels.length})` : ''}
+                </CardTitle>
+                {selectedPlaylist && (() => {
+                  const currentPlaylist = playlists.find(p => p.id === selectedPlaylist)
+                  const stats = currentPlaylist?.stats
+                  return (
+                    <div className="flex items-center gap-3 text-xs">
+                      <span className="text-muted-foreground font-medium truncate max-w-[150px]" title={currentPlaylist?.name}>
+                        {currentPlaylist?.name}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 text-green-500">
+                          <CheckCircle2 className="h-3 w-3" />
+                          <span className="font-medium">{stats?.active ?? 0}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-red-500">
+                          <XCircle className="h-3 w-3" />
+                          <span className="font-medium">{stats?.broken ?? 0}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-yellow-500">
+                          <Clock className="h-3 w-3" />
+                          <span className="font-medium">{stats?.pending ?? 0}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-gray-500">
+                          <Ban className="h-3 w-3" />
+                          <span className="font-medium">{stats?.inactive ?? 0}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })()}
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               {isLoadingChannels ? (
