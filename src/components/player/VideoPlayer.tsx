@@ -229,8 +229,8 @@ export function VideoPlayer() {
           onPause={handlePause}
         />
 
-        {/* Loading overlay */}
-        {isLoading && (
+        {/* Loading overlay - hide when there's an error */}
+        {isLoading && !error && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50 pointer-events-none">
             <Loader2 className="h-12 w-12 animate-spin text-white" />
           </div>
@@ -238,8 +238,11 @@ export function VideoPlayer() {
 
         {/* Error overlay */}
         {error && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/80">
-            <p className="text-red-500">{error}</p>
+          <div className="absolute inset-0 flex items-center justify-center bg-black/80 pointer-events-none">
+            <div className="flex flex-col items-center gap-2">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <p className="text-red-500">{error}</p>
+            </div>
           </div>
         )}
 
