@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Settings, Star, LogOut, Loader2, Calendar, Tv, Shield } from 'lucide-react'
@@ -13,10 +14,14 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useAuthContext } from '@/contexts/AuthContext'
+import { useSettings } from '@/contexts/SettingsContext'
+import { SettingsModal } from '@/components/settings/SettingsModal'
 
 export function Header() {
   const router = useRouter()
   const { user, loading, logout, isAdmin } = useAuthContext()
+  const { t } = useSettings()
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   const handleLogout = async () => {
     await logout()
@@ -49,20 +54,20 @@ export function Header() {
           <Button variant="ghost" size="sm" asChild>
             <Link href="/watch" className="flex items-center gap-1.5">
               <Tv className="h-4 w-4" />
-              <span className="hidden sm:inline">Смотреть</span>
+              <span className="hidden sm:inline">{t('watch')}</span>
             </Link>
           </Button>
           <Button variant="ghost" size="sm" asChild>
             <Link href="/guide" className="flex items-center gap-1.5">
               <Calendar className="h-4 w-4" />
-              <span className="hidden sm:inline">Программа</span>
+              <span className="hidden sm:inline">{t('program')}</span>
             </Link>
           </Button>
           {isAdmin && (
             <Button variant="ghost" size="sm" asChild>
               <Link href="/admin" className="flex items-center gap-1.5">
                 <Shield className="h-4 w-4" />
-                <span className="hidden sm:inline">Админ</span>
+                <span className="hidden sm:inline">{t('admin')}</span>
               </Link>
             </Button>
           )}
@@ -96,40 +101,41 @@ export function Header() {
                 <DropdownMenuItem asChild>
                   <Link href="/watch">
                     <Star className="mr-2 h-4 w-4" />
-                    Favorites
+                    {t('favorites')}
                   </Link>
                 </DropdownMenuItem>
                 {isAdmin && (
                   <DropdownMenuItem asChild>
                     <Link href="/admin">
                       <Shield className="mr-2 h-4 w-4" />
-                      Админ панель
+                      {t('adminPanel')}
                     </Link>
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
                   <Settings className="mr-2 h-4 w-4" />
-                  Settings
+                  {t('settings')}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-red-400 focus:text-red-400">
                   <LogOut className="mr-2 h-4 w-4" />
-                  Sign Out
+                  {t('signOut')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" asChild className="hidden sm:flex">
-                <Link href="/login">Sign In</Link>
+                <Link href="/login">{t('signIn')}</Link>
               </Button>
               <Button size="sm" asChild className="bg-purple-600 hover:bg-purple-700">
-                <Link href="/register">Sign Up</Link>
+                <Link href="/register">{t('signUp')}</Link>
               </Button>
             </div>
           )}
         </div>
       </div>
+      <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
     </header>
   )
 }

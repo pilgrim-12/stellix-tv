@@ -3,6 +3,7 @@
 import { useEffect, useRef, useCallback } from 'react'
 import Hls from 'hls.js'
 import { usePlayerStore, useChannelStore } from '@/stores'
+import { useSettings } from '@/contexts/SettingsContext'
 import { Loader2 } from 'lucide-react'
 
 export function VideoPlayer() {
@@ -11,6 +12,7 @@ export function VideoPlayer() {
   const containerRef = useRef<HTMLDivElement>(null)
 
   const { currentChannel, markChannelOffline, markChannelOnline } = useChannelStore()
+  const { t } = useSettings()
   const {
     isPlaying,
     isMuted,
@@ -249,7 +251,7 @@ export function VideoPlayer() {
         {/* No channel selected */}
         {!currentChannel && !isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-black">
-            <p className="text-muted-foreground">Select a channel to start watching</p>
+            <p className="text-muted-foreground">{t('selectChannel')}</p>
           </div>
         )}
       </div>

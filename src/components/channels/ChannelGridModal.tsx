@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useChannelStore } from '@/stores'
 import { useAuthContext } from '@/contexts/AuthContext'
+import { useSettings } from '@/contexts/SettingsContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -33,6 +34,7 @@ interface ChannelGridModalProps {
 
 export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) {
   const { user } = useAuthContext()
+  const { t } = useSettings()
   const {
     channels,
     currentChannel,
@@ -90,9 +92,10 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
     })
   }, [channels, searchQuery, selectedCategory, selectedLanguage, showOnlyFavorites, favorites])
 
-  // Stats
+  // Stats - count working channels from total channels (not just filtered)
   const totalCount = filteredChannels.length
   const onlineCount = filteredChannels.filter(ch => !ch.isOffline).length
+  const totalWorkingChannels = channels.filter(ch => !ch.isOffline).length
 
   const handleSelectChannel = (channel: Channel) => {
     setCurrentChannel(channel, user?.uid)
@@ -111,7 +114,10 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
           <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-2">
               <Grid3X3 className="h-5 w-5" />
-              Все каналы
+              {t('allChannels')}
+              <span className="text-sm font-normal text-muted-foreground">
+                ({channels.length} {t('channels')}, {totalWorkingChannels} {t('workingChannels')})
+              </span>
             </DialogTitle>
           </div>
         </DialogHeader>
@@ -124,7 +130,7 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Поиск каналов..."
+                placeholder={t('searchChannels')}
                 className="pl-9"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -150,7 +156,7 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
               onClick={() => setShowOnlyFavorites(!showOnlyFavorites)}
             >
               <Star className={cn('h-4 w-4', showOnlyFavorites && 'fill-current')} />
-              Избранное ({favorites.length})
+              {t('favorites')} ({favorites.length})
             </Button>
           </div>
 
@@ -163,7 +169,7 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
               onClick={() => setShowCategories(!showCategories)}
             >
               <LayoutGrid className="h-3.5 w-3.5" />
-              <span>Категория: {categoryNames[selectedCategory] || selectedCategory}</span>
+              <span>{t('category')}: {categoryNames[selectedCategory] || selectedCategory}</span>
               {showCategories ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
             </Button>
 
@@ -193,7 +199,7 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
               onClick={() => setShowLanguages(!showLanguages)}
             >
               <Globe className="h-3.5 w-3.5" />
-              <span>Язык: {selectedLanguage === 'all' ? 'Все' : (languageNames[selectedLanguage] || selectedLanguage)}</span>
+              <span>{t('language')}: {selectedLanguage === 'all' ? t('allCategories') : (languageNames[selectedLanguage] || selectedLanguage)}</span>
               {showLanguages ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
             </Button>
 
@@ -205,7 +211,7 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
                   className="h-7 text-xs"
                   onClick={() => { setLanguage('all'); setShowLanguages(false) }}
                 >
-                  Все языки
+                  {t('allLanguages')}
                 </Button>
                 {sortedLanguages.map((lang) => (
                   <Button
@@ -227,7 +233,7 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
         <div className="flex-1 overflow-auto p-4">
           {filteredChannels.length === 0 ? (
             <div className="flex items-center justify-center h-full text-muted-foreground">
-              Каналы не найдены
+              {t('noChannelsFound')}
             </div>
           ) : (
             <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 2xl:grid-cols-9 gap-2">
@@ -305,17 +311,21 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
 export function ChannelGridTrigger() {
   const [open, setOpen] = useState(false)
   const { channels } = useChannelStore()
+  const { t } = useSettings()
+  const workingCount = channels.filter(ch => !ch.isOffline).length
 
   return (
     <>
       <Button
-        variant="ghost"
+        variant="outline"
         size="sm"
-        className="h-5 px-1.5 text-[10px] gap-1 text-muted-foreground hover:text-foreground"
+        className="h-7 px-3 text-xs gap-1.5 border-primary/30 hover:border-primary hover:bg-primary/10"
         onClick={() => setOpen(true)}
+        title={t('openChannelGrid')}
       >
-        <Grid3X3 className="h-3 w-3" />
-        <span>{channels.length} каналов</span>
+        <Grid3X3 className="h-4 w-4" />
+        <span>{channels.length} {t('channels')}</span>
+        <span className="text-green-500">({workingCount})</span>
       </Button>
       <ChannelGridModal open={open} onOpenChange={setOpen} />
     </>
