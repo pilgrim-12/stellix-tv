@@ -1,9 +1,8 @@
 'use client'
 
-import { useEffect, useRef, useCallback, useState } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 import Hls from 'hls.js'
 import { usePlayerStore, useChannelStore } from '@/stores'
-import { PlayerControls } from './PlayerControls'
 import { Loader2 } from 'lucide-react'
 
 export function VideoPlayer() {
@@ -168,10 +167,6 @@ export function VideoPlayer() {
   const handlePlay = () => setPlaying(true)
   const handlePause = () => setPlaying(false)
 
-  // Track tap timing for double tap detection on mobile
-  const lastTapRef = useRef<number>(0)
-  const tapTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-
   // Toggle fullscreen - with iOS Safari/Chrome support
   const toggleFullscreen = useCallback(() => {
     const container = containerRef.current
@@ -217,110 +212,26 @@ export function VideoPlayer() {
     }
   }, [])
 
-  // Toggle play/pause
-  const togglePlayPause = useCallback(() => {
-    const video = videoRef.current
-    if (!video || !currentChannel) return
-
-    if (video.paused) {
-      video.play().catch(() => setPlaying(false))
-    } else {
-      video.pause()
-    }
-  }, [currentChannel, setPlaying])
-
-  // Track if last interaction was touch
-  const lastWasTouchRef = useRef<boolean>(false)
-
-  // Handle touch tap with double tap detection
-  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-    e.preventDefault()
-    lastWasTouchRef.current = true
-
-    const now = Date.now()
-    const timeSinceLastTap = now - lastTapRef.current
-
-    if (timeSinceLastTap < 300 && timeSinceLastTap > 0) {
-      // Double tap - fullscreen
-      if (tapTimeoutRef.current) {
-        clearTimeout(tapTimeoutRef.current)
-        tapTimeoutRef.current = null
-      }
-      toggleFullscreen()
-    } else {
-      // Single tap - wait to see if it's a double tap
-      if (tapTimeoutRef.current) {
-        clearTimeout(tapTimeoutRef.current)
-      }
-      tapTimeoutRef.current = setTimeout(() => {
-        togglePlayPause()
-        tapTimeoutRef.current = null
-      }, 300)
-    }
-
-    lastTapRef.current = now
-  }, [toggleFullscreen, togglePlayPause])
-
-  // Handle mouse click
-  const handleClick = useCallback(() => {
-    // Skip if this click was triggered by touch (ghost click)
-    if (lastWasTouchRef.current) {
-      lastWasTouchRef.current = false
-      return
-    }
-
-    const now = Date.now()
-    const timeSinceLastClick = now - lastTapRef.current
-
-    if (timeSinceLastClick < 300 && timeSinceLastClick > 0) {
-      // Double click - fullscreen
-      if (tapTimeoutRef.current) {
-        clearTimeout(tapTimeoutRef.current)
-        tapTimeoutRef.current = null
-      }
-      toggleFullscreen()
-    } else {
-      // Single click - wait to see if it's a double click
-      if (tapTimeoutRef.current) {
-        clearTimeout(tapTimeoutRef.current)
-      }
-      tapTimeoutRef.current = setTimeout(() => {
-        togglePlayPause()
-        tapTimeoutRef.current = null
-      }, 300)
-    }
-
-    lastTapRef.current = now
-  }, [toggleFullscreen, togglePlayPause])
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (tapTimeoutRef.current) {
-        clearTimeout(tapTimeoutRef.current)
-      }
-    }
-  }, [])
-
   return (
     <div ref={containerRef} className="video-container group">
       {/* Video wrapper - aspect-video on mobile, flex-1 on desktop */}
       <div
-        className="relative aspect-video lg:aspect-auto lg:flex-1 lg:min-h-[200px] bg-black rounded-t-lg overflow-hidden cursor-pointer"
-        onClick={handleClick}
-        onTouchEnd={handleTouchEnd}
+        className="relative aspect-video lg:aspect-auto lg:flex-1 lg:min-h-[200px] bg-black rounded-lg overflow-hidden"
+        onDoubleClick={toggleFullscreen}
       >
         <video
           ref={videoRef}
           className="absolute inset-0 w-full h-full object-contain"
           playsInline
+          controls
+          autoPlay
           onPlay={handlePlay}
           onPause={handlePause}
         />
 
         {/* Loading overlay */}
         {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50 pointer-events-none">
             <Loader2 className="h-12 w-12 animate-spin text-white" />
           </div>
         )}
@@ -339,9 +250,6 @@ export function VideoPlayer() {
           </div>
         )}
       </div>
-
-      {/* Controls - positioned below video */}
-      <PlayerControls videoRef={videoRef} containerRef={containerRef} />
     </div>
   )
 }
