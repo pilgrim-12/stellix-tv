@@ -24,7 +24,7 @@ import {
   LayoutGrid,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { languageNames, languageOrder, categoryNames } from '@/types'
+import { languageNames, languageOrder } from '@/types'
 import type { Channel, ChannelCategory } from '@/types'
 
 interface ChannelGridModalProps {
@@ -34,7 +34,7 @@ interface ChannelGridModalProps {
 
 export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) {
   const { user } = useAuthContext()
-  const { t } = useSettings()
+  const { t, getCategoryName } = useSettings()
   const {
     channels,
     currentChannel,
@@ -169,7 +169,7 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
               onClick={() => setShowCategories(!showCategories)}
             >
               <LayoutGrid className="h-3.5 w-3.5" />
-              <span>{t('category')}: {categoryNames[selectedCategory] || selectedCategory}</span>
+              <span>{t('category')}: {getCategoryName(selectedCategory)}</span>
               {showCategories ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
             </Button>
 
@@ -183,7 +183,7 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
                     className="h-7 text-xs"
                     onClick={() => { setCategory(cat); setShowCategories(false) }}
                   >
-                    {categoryNames[cat] || cat}
+                    {getCategoryName(cat)}
                   </Button>
                 ))}
               </div>

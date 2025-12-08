@@ -1,12 +1,13 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { UILanguage, translations, TranslationKey, t as translate } from '@/lib/i18n'
+import { UILanguage, translations, TranslationKey, t as translate, getCategoryName as getCatName } from '@/lib/i18n'
 
 interface SettingsContextType {
   uiLanguage: UILanguage
   setUILanguage: (lang: UILanguage) => void
   t: (key: TranslationKey, params?: Record<string, string | number>) => string
+  getCategoryName: (category: string) => string
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined)
@@ -25,7 +26,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     } else {
       // Try to detect browser language
       const browserLang = navigator.language.split('-')[0]
-      if (browserLang === 'uk' || browserLang === 'ru' || browserLang === 'en') {
+      if (['uk', 'ru', 'en', 'es', 'it'].includes(browserLang)) {
         setUILanguageState(browserLang as UILanguage)
       }
     }
@@ -41,17 +42,21 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     return translate(uiLanguage, key, params)
   }
 
+  const getCategoryName = (category: string) => {
+    return getCatName(uiLanguage, category)
+  }
+
   // Prevent hydration mismatch
   if (!mounted) {
     return (
-      <SettingsContext.Provider value={{ uiLanguage: 'ru', setUILanguage, t: (key) => translate('ru', key) }}>
+      <SettingsContext.Provider value={{ uiLanguage: 'ru', setUILanguage, t: (key) => translate('ru', key), getCategoryName: (cat) => getCatName('ru', cat) }}>
         {children}
       </SettingsContext.Provider>
     )
   }
 
   return (
-    <SettingsContext.Provider value={{ uiLanguage, setUILanguage, t }}>
+    <SettingsContext.Provider value={{ uiLanguage, setUILanguage, t, getCategoryName }}>
       {children}
     </SettingsContext.Provider>
   )

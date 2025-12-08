@@ -3,7 +3,7 @@
 
 @custom-variant dark (&:is(.dark *));
 @custom-variant landscape (@media (orientation: landscape));
-@custom-variant mobile-landscape (@media (orientation: landscape) and (max-width: 900px));
+@custom-variant mobile-landscape (@media (orientation: landscape) and (max-width: 900px) and (max-height: 500px));
 
 @theme inline {
   --color-background: var(--background);
@@ -166,8 +166,8 @@
   object-fit: contain;
 }
 
-/* Landscape mode - maximize video height */
-@media (orientation: landscape) and (max-width: 900px) {
+/* Landscape mode on small screens (phones) - maximize video height */
+@media (orientation: landscape) and (max-width: 900px) and (max-height: 500px) {
   .video-container {
     height: calc(100vh - 80px);
   }

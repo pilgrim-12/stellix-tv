@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useChannelStore } from '@/stores'
 import { useAuthContext } from '@/contexts/AuthContext'
+import { useSettings } from '@/contexts/SettingsContext'
 import { sampleChannels } from '@/data/channels'
 import { ChannelCard } from './ChannelCard'
 import { Input } from '@/components/ui/input'
@@ -27,6 +28,7 @@ export function ChannelList() {
     favorites,
   } = useChannelStore()
   const { user } = useAuthContext()
+  const { t } = useSettings()
 
   const [initialized, setInitialized] = useState(false)
 
@@ -140,7 +142,7 @@ export function ChannelList() {
           <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="search"
-            placeholder="Поиск каналов..."
+            placeholder={t('searchChannels')}
             className="pl-8 h-8 text-sm bg-muted/50"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -164,7 +166,7 @@ export function ChannelList() {
 
             {filteredChannels.length === 0 && (
               <div className="flex items-center justify-center h-32">
-                <p className="text-sm text-muted-foreground">Каналы не найдены</p>
+                <p className="text-sm text-muted-foreground">{t('noChannelsFound')}</p>
               </div>
             )}
           </>

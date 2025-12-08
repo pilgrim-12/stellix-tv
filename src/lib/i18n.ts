@@ -1,9 +1,11 @@
-export type UILanguage = 'ru' | 'en' | 'uk'
+export type UILanguage = 'ru' | 'en' | 'uk' | 'es' | 'it'
 
 export const uiLanguages: { code: UILanguage; name: string; nativeName: string }[] = [
   { code: 'ru', name: 'Russian', nativeName: 'Русский' },
   { code: 'en', name: 'English', nativeName: 'English' },
   { code: 'uk', name: 'Ukrainian', nativeName: 'Українська' },
+  { code: 'es', name: 'Spanish', nativeName: 'Español' },
+  { code: 'it', name: 'Italian', nativeName: 'Italiano' },
 ]
 
 export const translations = {
@@ -181,6 +183,122 @@ export const translations = {
     browseChannels: 'Огляд каналів',
     openChannelGrid: 'Відкрити всі канали',
   },
+  es: {
+    // Header
+    watch: 'Ver',
+    program: 'Guía',
+    admin: 'Admin',
+    signIn: 'Iniciar sesión',
+    signUp: 'Registrarse',
+    signOut: 'Cerrar sesión',
+    favorites: 'Favoritos',
+    adminPanel: 'Panel de admin',
+    settings: 'Configuración',
+
+    // Channel Grid
+    allChannels: 'Todos los canales',
+    searchChannels: 'Buscar canales...',
+    channels: 'canales',
+    channelsCount: '{count} canales',
+    workingChannels: 'activos',
+    noChannelsFound: 'No se encontraron canales',
+
+    // Categories
+    category: 'Categoría',
+    allCategories: 'Todos',
+    news: 'Noticias',
+    sports: 'Deportes',
+    movies: 'Películas',
+    kids: 'Infantil',
+    music: 'Música',
+    entertainment: 'Entretenimiento',
+    documentary: 'Documental',
+    nature: 'Naturaleza',
+    lifestyle: 'Estilo de vida',
+    cooking: 'Cocina',
+    gaming: 'Juegos',
+
+    // Language filter
+    language: 'Idioma',
+    allLanguages: 'Todos los idiomas',
+
+    // Settings
+    settingsTitle: 'Configuración',
+    interfaceLanguage: 'Idioma de interfaz',
+    theme: 'Tema',
+    themeSystem: 'Sistema',
+    themeLight: 'Claro',
+    themeDark: 'Oscuro',
+    saveSettings: 'Guardar',
+    close: 'Cerrar',
+
+    // Player
+    selectChannel: 'Selecciona un canal para ver',
+    channelOffline: 'Canal sin conexión',
+    loading: 'Cargando...',
+
+    // Misc
+    browseChannels: 'Explorar canales',
+    openChannelGrid: 'Abrir todos los canales',
+  },
+  it: {
+    // Header
+    watch: 'Guarda',
+    program: 'Guida',
+    admin: 'Admin',
+    signIn: 'Accedi',
+    signUp: 'Registrati',
+    signOut: 'Esci',
+    favorites: 'Preferiti',
+    adminPanel: 'Pannello admin',
+    settings: 'Impostazioni',
+
+    // Channel Grid
+    allChannels: 'Tutti i canali',
+    searchChannels: 'Cerca canali...',
+    channels: 'canali',
+    channelsCount: '{count} canali',
+    workingChannels: 'attivi',
+    noChannelsFound: 'Nessun canale trovato',
+
+    // Categories
+    category: 'Categoria',
+    allCategories: 'Tutti',
+    news: 'Notizie',
+    sports: 'Sport',
+    movies: 'Film',
+    kids: 'Bambini',
+    music: 'Musica',
+    entertainment: 'Intrattenimento',
+    documentary: 'Documentari',
+    nature: 'Natura',
+    lifestyle: 'Lifestyle',
+    cooking: 'Cucina',
+    gaming: 'Giochi',
+
+    // Language filter
+    language: 'Lingua',
+    allLanguages: 'Tutte le lingue',
+
+    // Settings
+    settingsTitle: 'Impostazioni',
+    interfaceLanguage: 'Lingua interfaccia',
+    theme: 'Tema',
+    themeSystem: 'Sistema',
+    themeLight: 'Chiaro',
+    themeDark: 'Scuro',
+    saveSettings: 'Salva',
+    close: 'Chiudi',
+
+    // Player
+    selectChannel: 'Seleziona un canale da guardare',
+    channelOffline: 'Canale offline',
+    loading: 'Caricamento...',
+
+    // Misc
+    browseChannels: 'Sfoglia canali',
+    openChannelGrid: 'Apri tutti i canali',
+  },
 } as const
 
 export type TranslationKey = keyof typeof translations.ru
@@ -197,4 +315,28 @@ export function t(lang: UILanguage, key: TranslationKey, params?: Record<string,
     })
   }
   return text
+}
+
+// Category key mapping for translations
+const categoryKeyMap: Record<string, TranslationKey> = {
+  all: 'allCategories',
+  news: 'news',
+  sports: 'sports',
+  movies: 'movies',
+  kids: 'kids',
+  music: 'music',
+  entertainment: 'entertainment',
+  documentary: 'documentary',
+  nature: 'nature',
+  lifestyle: 'lifestyle',
+  cooking: 'cooking',
+  gaming: 'gaming',
+}
+
+export function getCategoryName(lang: UILanguage, category: string): string {
+  const key = categoryKeyMap[category]
+  if (key) {
+    return getTranslation(lang, key)
+  }
+  return category
 }
