@@ -196,7 +196,7 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
               Каналы не найдены
             </div>
           ) : (
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4">
               {filteredChannels.map((channel) => {
                 const isActive = currentChannel?.id === channel.id
                 const isFavorite = favorites.includes(channel.id)
@@ -205,14 +205,14 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
                   <div
                     key={channel.id}
                     className={cn(
-                      'group relative cursor-pointer rounded-lg p-2 transition-all',
+                      'group relative cursor-pointer rounded-lg p-3 transition-all',
                       'hover:bg-muted/60 hover:scale-105',
                       isActive && 'bg-primary/15 ring-2 ring-primary'
                     )}
                     onClick={() => handleSelectChannel(channel)}
                   >
                     {/* Logo */}
-                    <div className="aspect-square rounded-md bg-black/40 overflow-hidden mb-1.5 flex items-center justify-center">
+                    <div className="aspect-square rounded-md bg-black/40 overflow-hidden mb-2 flex items-center justify-center">
                       {channel.logo ? (
                         <img
                           src={channel.logo}
@@ -225,7 +225,7 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
                         />
                       ) : null}
                       <span className={cn(
-                        'text-xl font-bold text-muted-foreground',
+                        'text-2xl font-bold text-muted-foreground',
                         channel.logo && 'hidden'
                       )}>
                         {channel.name.charAt(0)}
@@ -233,7 +233,7 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
                     </div>
 
                     {/* Name */}
-                    <p className="text-[10px] font-medium text-center truncate leading-tight">
+                    <p className="text-xs font-medium text-center line-clamp-2 leading-tight min-h-[2.5em]">
                       {channel.name}
                     </p>
 
