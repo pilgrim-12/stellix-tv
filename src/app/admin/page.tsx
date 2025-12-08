@@ -463,8 +463,81 @@ export default function AdminPage() {
       </header>
 
       <main className="container py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left column - Player + Stats */}
+        {/* Import M3U - top section */}
+        <div className="mb-6">
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Импорт M3U
+                  </CardTitle>
+                  <CardDescription>Добавьте плейлист по ссылке или файлу</CardDescription>
+                </div>
+                {/* Stats - inline in header */}
+                <div className="flex items-center gap-4 text-xs">
+                  <div className="flex items-center gap-1">
+                    <span className="font-bold">{stats?.total ?? '—'}</span>
+                    <span className="text-muted-foreground">всего</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-green-500">
+                    <CheckCircle2 className="h-3 w-3" />
+                    <span className="font-bold">{stats?.active ?? '—'}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-red-500">
+                    <XCircle className="h-3 w-3" />
+                    <span className="font-bold">{stats?.broken ?? '—'}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-yellow-500">
+                    <Clock className="h-3 w-3" />
+                    <span className="font-bold">{stats?.pending ?? '—'}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-purple-500">
+                    <Users className="h-3 w-3" />
+                    <span className="font-bold">{usersCount ?? '—'}</span>
+                  </div>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex gap-2">
+                <Input
+                  type="url"
+                  placeholder="https://example.com/playlist.m3u"
+                  className="text-sm"
+                  value={playlistUrl}
+                  onChange={(e) => setPlaylistUrl(e.target.value)}
+                  disabled={isImporting}
+                />
+                <Button onClick={handleImportFromUrl} disabled={isImporting || !playlistUrl.trim()} size="icon">
+                  {isImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link className="h-4 w-4" />}
+                </Button>
+                <input ref={fileInputRef} type="file" accept=".m3u,.m3u8" className="hidden" onChange={handleFileUpload} disabled={isImporting} />
+                <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isImporting}>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Файл
+                </Button>
+              </div>
+
+              {importError && (
+                <p className="text-sm text-red-500 flex items-center gap-2">
+                  <XCircle className="h-4 w-4" />
+                  {importError}
+                </p>
+              )}
+              {importSuccess && (
+                <p className="text-sm text-green-500 flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4" />
+                  {importSuccess}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Left column - Player */}
           <div className="space-y-6">
             {/* Preview Player */}
             <Card>
@@ -597,88 +670,6 @@ export default function AdminPage() {
               </CardContent>
             </Card>
 
-            {/* Stats - compact inline */}
-            <Card>
-              <CardContent className="py-3 px-4">
-                <div className="flex items-center justify-between flex-wrap gap-3 text-xs">
-                  <div className="flex items-center gap-1">
-                    <span className="font-bold">{stats?.total ?? '—'}</span>
-                    <span className="text-muted-foreground">всего</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-green-500">
-                    <CheckCircle2 className="h-3 w-3" />
-                    <span className="font-bold">{stats?.active ?? '—'}</span>
-                    <span className="text-muted-foreground">рабочих</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-red-500">
-                    <XCircle className="h-3 w-3" />
-                    <span className="font-bold">{stats?.broken ?? '—'}</span>
-                    <span className="text-muted-foreground">сломано</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-yellow-500">
-                    <Clock className="h-3 w-3" />
-                    <span className="font-bold">{stats?.pending ?? '—'}</span>
-                    <span className="text-muted-foreground">ожидает</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-gray-500">
-                    <Ban className="h-3 w-3" />
-                    <span className="font-bold">{stats?.inactive ?? '—'}</span>
-                    <span className="text-muted-foreground">откл.</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-purple-500">
-                    <Users className="h-3 w-3" />
-                    <span className="font-bold">{usersCount ?? '—'}</span>
-                    <span className="text-muted-foreground">юзеров</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Import M3U */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <FileText className="h-4 w-4" />
-                  Импорт M3U
-                </CardTitle>
-                <CardDescription>Добавьте плейлист по ссылке или файлу</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex gap-2">
-                  <Input
-                    type="url"
-                    placeholder="https://example.com/playlist.m3u"
-                    className="text-sm"
-                    value={playlistUrl}
-                    onChange={(e) => setPlaylistUrl(e.target.value)}
-                    disabled={isImporting}
-                  />
-                  <Button onClick={handleImportFromUrl} disabled={isImporting || !playlistUrl.trim()} size="icon">
-                    {isImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link className="h-4 w-4" />}
-                  </Button>
-                </div>
-
-                <input ref={fileInputRef} type="file" accept=".m3u,.m3u8" className="hidden" onChange={handleFileUpload} disabled={isImporting} />
-                <Button variant="outline" className="w-full" onClick={() => fileInputRef.current?.click()} disabled={isImporting}>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Загрузить файл
-                </Button>
-
-                {importError && (
-                  <p className="text-sm text-red-500 flex items-center gap-2">
-                    <XCircle className="h-4 w-4" />
-                    {importError}
-                  </p>
-                )}
-                {importSuccess && (
-                  <p className="text-sm text-green-500 flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4" />
-                    {importSuccess}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-
             {/* Playlists */}
             {playlists.length > 0 && (
               <Card>
@@ -777,7 +768,7 @@ export default function AdminPage() {
           </div>
 
           {/* Right column - Channels list */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="space-y-4">
             {/* Filters */}
             <Card>
               <CardContent className="p-4 space-y-4">

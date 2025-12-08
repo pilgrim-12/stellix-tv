@@ -20,6 +20,7 @@ import {
   Globe,
   ChevronDown,
   ChevronUp,
+  LayoutGrid,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { languageNames, languageOrder, categoryNames } from '@/types'
@@ -47,6 +48,7 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
 
   const [searchQuery, setSearchQuery] = useState('')
   const [showOnlyFavorites, setShowOnlyFavorites] = useState(false)
+  const [showCategories, setShowCategories] = useState(false)
   const [showLanguages, setShowLanguages] = useState(false)
 
   const availableLanguages = getAvailableLanguages()
@@ -152,19 +154,34 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
             </Button>
           </div>
 
-          {/* Categories */}
-          <div className="flex flex-wrap gap-1.5">
-            {categories.map((cat) => (
-              <Button
-                key={cat}
-                variant={selectedCategory === cat ? 'default' : 'outline'}
-                size="sm"
-                className="h-7 text-xs"
-                onClick={() => setCategory(cat)}
-              >
-                {categoryNames[cat] || cat}
-              </Button>
-            ))}
+          {/* Categories - collapsible */}
+          <div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs gap-1.5 px-2"
+              onClick={() => setShowCategories(!showCategories)}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+              <span>Категория: {categoryNames[selectedCategory] || selectedCategory}</span>
+              {showCategories ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            </Button>
+
+            {showCategories && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {categories.map((cat) => (
+                  <Button
+                    key={cat}
+                    variant={selectedCategory === cat ? 'default' : 'outline'}
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => { setCategory(cat); setShowCategories(false) }}
+                  >
+                    {categoryNames[cat] || cat}
+                  </Button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Languages - collapsible */}
