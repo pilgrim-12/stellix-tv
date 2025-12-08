@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
+import { GoogleAnalytics } from "@/components/analytics";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -18,6 +19,20 @@ export const metadata: Metadata = {
   title: "Stellix TV - Watch Free IPTV Online",
   description: "Modern IPTV web player with clean interface. Watch live TV channels from around the world.",
   keywords: ["IPTV", "TV", "streaming", "live TV", "channels"],
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Stellix TV",
+  },
+  icons: {
+    icon: "/icons/icon.svg",
+    apple: "/icons/icon-192.png",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#7c3aed",
 };
 
 export default function RootLayout({
@@ -30,6 +45,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <GoogleAnalytics />
         <AuthProvider>
           <SettingsProvider>
             {children}

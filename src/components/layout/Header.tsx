@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Settings, Star, LogOut, Loader2, Calendar, Tv, Shield } from 'lucide-react'
+import { Settings, Star, LogOut, Loader2, Calendar, Tv, Shield, Scale } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -115,6 +115,12 @@ export function Header() {
                 <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
                   <Settings className="mr-2 h-4 w-4" />
                   {t('settings')}
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/legal">
+                    <Scale className="mr-2 h-4 w-4" />
+                    Legal
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-red-400 focus:text-red-400">
