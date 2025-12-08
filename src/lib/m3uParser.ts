@@ -108,8 +108,8 @@ const languagePatterns: Array<{ pattern: RegExp; language: string }> = [
   { pattern: /\b(russian|rus|рус)\b/i, language: 'ru' },
   { pattern: /\[RU\]/i, language: 'ru' },
   { pattern: /\(RU\)/i, language: 'ru' },
-  // Georgian indicators
-  { pattern: /\b(georgian|geo|грузин)/i, language: 'ka' },
+  // Georgian indicators (exclude "geo-blocked", "geo-restricted" etc)
+  { pattern: /\b(georgian|грузин)/i, language: 'ka' },
   { pattern: /\[GE\]/i, language: 'ka' },
   { pattern: /\(GE\)/i, language: 'ka' },
   { pattern: /საქართველო/i, language: 'ka' }, // Georgian script
