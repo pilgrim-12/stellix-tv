@@ -168,8 +168,8 @@ export function LanguageFilter() {
     <div className="flex items-center gap-1 px-1 py-1.5 border-b border-border/40 bg-muted/10 shrink-0">
       <Globe className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
 
-      {/* Desktop/Tablet: Popover button */}
-      <div className="hidden tablet-landscape:block md:block relative" ref={popoverRef}>
+      {/* Desktop/Tablet landscape: Popover button */}
+      <div className="hidden md:block relative" ref={popoverRef}>
         <Button
           variant="outline"
           size="sm"
@@ -207,8 +207,8 @@ export function LanguageFilter() {
         )}
       </div>
 
-      {/* Mobile: Horizontal scroll (hidden on tablet landscape and md+) */}
-      <div className="tablet-landscape:hidden md:hidden flex-1 flex items-center gap-1">
+      {/* Mobile: Horizontal scroll (hidden on md+) */}
+      <div className="md:hidden flex-1 flex items-center gap-1">
         <Button
           variant="ghost"
           size="icon"
