@@ -239,12 +239,9 @@ export function VideoPlayer() {
         )}
 
         {/* Error overlay */}
-        {error && (
+        {error && !isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/80 pointer-events-none">
-            <div className="flex flex-col items-center gap-2">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              <p className="text-red-500">{error}</p>
-            </div>
+            <p className="text-red-500">{error}</p>
           </div>
         )}
 
