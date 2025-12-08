@@ -32,8 +32,8 @@ import {
   ChevronUp,
 } from 'lucide-react'
 import {
-  getAllChannels,
   getAllPlaylists,
+  getChannelsByPlaylist,
   createPlaylist,
   deletePlaylist,
   importChannels,
@@ -93,7 +93,13 @@ export default function AdminPage() {
   // Filter state
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedStatus, setSelectedStatus] = useState<ChannelStatus | 'all'>('all')
-  const [selectedPlaylist, setSelectedPlaylist] = useState<string>('all')
+  const [selectedPlaylist, setSelectedPlaylist] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('stellix-admin-playlist') || ''
+    }
+    return ''
+  })
+  const [isLoadingChannels, setIsLoadingChannels] = useState(false)
 
   // Import state
   const [playlistUrl, setPlaylistUrl] = useState('')
@@ -148,20 +154,25 @@ export default function AdminPage() {
     }
   }, [loading, isAdmin, router])
 
-  // Load data
+  // Load playlists and stats (without channels)
   const loadData = async () => {
     setIsLoading(true)
     try {
-      const [channelsData, playlistsData, usersData, statsData] = await Promise.all([
-        getAllChannels(),
+      const [playlistsData, usersData, statsData] = await Promise.all([
         getAllPlaylists(),
         getTotalUsersCount(),
         getChannelsStats(),
       ])
-      setChannels(channelsData)
       setPlaylists(playlistsData)
       setUsersCount(usersData)
       setStats(statsData)
+
+      // Auto-select first playlist if none selected
+      if (!selectedPlaylist && playlistsData.length > 0) {
+        const firstPlaylistId = playlistsData[0].id
+        setSelectedPlaylist(firstPlaylistId)
+        localStorage.setItem('stellix-admin-playlist', firstPlaylistId)
+      }
     } catch (error) {
       console.error('Error loading data:', error)
     } finally {
@@ -169,9 +180,41 @@ export default function AdminPage() {
     }
   }
 
+  // Load channels for selected playlist
+  const loadChannelsForPlaylist = async (playlistId: string) => {
+    if (!playlistId) return
+
+    setIsLoadingChannels(true)
+    try {
+      const channelsData = await getChannelsByPlaylist(playlistId)
+      setChannels(channelsData)
+    } catch (error) {
+      console.error('Error loading channels:', error)
+    } finally {
+      setIsLoadingChannels(false)
+    }
+  }
+
+  // Handle playlist selection change
+  const handlePlaylistChange = (playlistId: string) => {
+    setSelectedPlaylist(playlistId)
+    localStorage.setItem('stellix-admin-playlist', playlistId)
+    setShowPlaylists(false)
+    if (playlistId) {
+      loadChannelsForPlaylist(playlistId)
+    }
+  }
+
   useEffect(() => {
     loadData()
   }, [])
+
+  // Load channels when playlist changes or on initial load
+  useEffect(() => {
+    if (selectedPlaylist && playlists.length > 0) {
+      loadChannelsForPlaylist(selectedPlaylist)
+    }
+  }, [selectedPlaylist, playlists.length])
 
   // Play channel in preview
   const playChannel = async (channel: FirebaseChannel) => {
@@ -434,12 +477,11 @@ export default function AdminPage() {
     }
   }
 
-  // Filter channels
+  // Filter channels (only by search and status, playlist is already filtered on load)
   const filteredChannels = channels.filter((channel) => {
     const matchesSearch = !searchQuery || channel.name.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesStatus = selectedStatus === 'all' || channel.status === selectedStatus || (!channel.status && selectedStatus === 'pending')
-    const matchesPlaylist = selectedPlaylist === 'all' || channel.playlistId === selectedPlaylist
-    return matchesSearch && matchesStatus && matchesPlaylist
+    return matchesSearch && matchesStatus
   })
 
   return (
@@ -610,27 +652,27 @@ export default function AdminPage() {
                     size="sm"
                     className="h-7 text-xs gap-1.5 px-2"
                     onClick={() => setShowPlaylists(!showPlaylists)}
+                    disabled={isLoadingChannels}
                   >
                     <FileText className="h-3.5 w-3.5" />
-                    <span>Плейлист: {selectedPlaylist === 'all' ? 'Все' : playlists.find(p => p.id === selectedPlaylist)?.name || 'Все'}</span>
-                    {showPlaylists ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                    <span>Плейлист: {playlists.find(p => p.id === selectedPlaylist)?.name || 'Выберите'}</span>
+                    {isLoadingChannels ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : showPlaylists ? (
+                      <ChevronUp className="h-3.5 w-3.5" />
+                    ) : (
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    )}
                   </Button>
 
                   {showPlaylists && (
                     <div className="flex items-center gap-2 flex-wrap mt-2">
-                      <Button
-                        variant={selectedPlaylist === 'all' ? 'secondary' : 'ghost'}
-                        size="sm"
-                        onClick={() => { setSelectedPlaylist('all'); setShowPlaylists(false) }}
-                      >
-                        Все
-                      </Button>
                       {playlists.map((p) => (
                         <Button
                           key={p.id}
                           variant={selectedPlaylist === p.id ? 'secondary' : 'ghost'}
                           size="sm"
-                          onClick={() => { setSelectedPlaylist(p.id); setShowPlaylists(false) }}
+                          onClick={() => handlePlaylistChange(p.id)}
                         >
                           {p.name}
                         </Button>
@@ -808,53 +850,48 @@ export default function AdminPage() {
                       </thead>
                       <tbody className="divide-y">
                         {playlists.map((playlist) => {
-                          const playlistChannels = channels.filter((ch) => ch.playlistId === playlist.id)
-                          const activeCount = playlistChannels.filter((ch) => ch.status === 'active').length
-                          const brokenCount = playlistChannels.filter((ch) => ch.status === 'broken').length
-                          const pendingCount = playlistChannels.filter((ch) => !ch.status || ch.status === 'pending').length
-                          const inactiveCount = playlistChannels.filter((ch) => ch.status === 'inactive').length
                           const isDeleting = deletingPlaylistId === playlist.id
+                          const isSelected = selectedPlaylist === playlist.id
 
                           return (
                             <tr
                               key={playlist.id}
                               className={cn(
-                                "hover:bg-muted/50 transition-colors",
+                                "hover:bg-muted/50 transition-colors cursor-pointer",
                                 isDeleting && "opacity-50",
-                                selectedPlaylist === playlist.id && "bg-primary/10"
+                                isSelected && "bg-primary/10"
                               )}
+                              onClick={() => handlePlaylistChange(playlist.id)}
                             >
                               <td className="px-4 py-2">
-                                <button
-                                  className="text-left hover:text-primary transition-colors"
-                                  onClick={() => setSelectedPlaylist(selectedPlaylist === playlist.id ? 'all' : playlist.id)}
-                                >
-                                  <span className="font-medium truncate block max-w-[120px]" title={playlist.name}>
-                                    {playlist.name}
-                                  </span>
-                                </button>
+                                <span className="font-medium truncate block max-w-[120px]" title={playlist.name}>
+                                  {playlist.name}
+                                </span>
                               </td>
                               <td className="px-2 py-2 text-center text-muted-foreground">
-                                {playlistChannels.length}
+                                {playlist.channelCount || '-'}
                               </td>
                               <td className="px-2 py-2 text-center text-green-500 font-medium">
-                                {activeCount || '-'}
+                                -
                               </td>
                               <td className="px-2 py-2 text-center text-red-500 font-medium">
-                                {brokenCount || '-'}
+                                -
                               </td>
                               <td className="px-2 py-2 text-center text-yellow-500 font-medium">
-                                {pendingCount || '-'}
+                                -
                               </td>
                               <td className="px-2 py-2 text-center text-gray-500 font-medium">
-                                {inactiveCount || '-'}
+                                -
                               </td>
                               <td className="px-2 py-2">
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   className="h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-500/10"
-                                  onClick={() => handleDeletePlaylist(playlist.id, playlistChannels.length)}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleDeletePlaylist(playlist.id, playlist.channelCount || 0)
+                                  }}
                                   disabled={isDeleting || deletingPlaylistId !== null}
                                 >
                                   {isDeleting ? (
@@ -878,16 +915,23 @@ export default function AdminPage() {
           {/* Right column - Channels list */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Каналы ({filteredChannels.length})</CardTitle>
+              <CardTitle className="text-base">
+                Каналы {selectedPlaylist ? `(${filteredChannels.length})` : ''}
+              </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              {isLoading ? (
+              {isLoadingChannels ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  <span className="ml-2 text-muted-foreground">Загрузка каналов...</span>
+                </div>
+              ) : !selectedPlaylist ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  {playlists.length === 0 ? 'Импортируйте плейлист чтобы добавить каналы' : 'Выберите плейлист для просмотра каналов'}
                 </div>
               ) : filteredChannels.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
-                  {channels.length === 0 ? 'Импортируйте плейлист чтобы добавить каналы' : 'Каналы не найдены'}
+                  {channels.length === 0 ? 'В этом плейлисте нет каналов' : 'Каналы не найдены по заданным фильтрам'}
                 </div>
               ) : (
                 <div className="divide-y max-h-[600px] overflow-auto">
@@ -986,7 +1030,7 @@ export default function AdminPage() {
                   )}
                   <Button
                     onClick={analyzeDuplicates}
-                    disabled={isAnalyzing || channels.length === 0}
+                    disabled={isAnalyzing || channels.length === 0 || !selectedPlaylist}
                     size="sm"
                   >
                     {isAnalyzing ? (
