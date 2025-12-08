@@ -22,6 +22,13 @@ export interface FirebaseChannel extends Channel {
   checkedBy?: string // admin uid who checked the channel
 }
 
+export interface PlaylistStats {
+  pending: number
+  active: number
+  inactive: number
+  broken: number
+}
+
 export interface Playlist {
   id: string
   name: string
@@ -29,6 +36,7 @@ export interface Playlist {
   addedAt: number
   enabled: boolean
   channelCount: number
+  stats?: PlaylistStats
   createdAt?: Timestamp
   updatedAt?: Timestamp
 }
@@ -132,23 +140,72 @@ export async function saveChannel(channel: Channel, playlistId?: string): Promis
   }
 }
 
-// Update channel status
+// Update channel status and playlist stats
 export async function setChannelStatus(
   channelId: string,
   status: ChannelStatus,
   checkedBy?: string
 ): Promise<void> {
   try {
+    // Get channel to find old status and playlistId
     const channelRef = doc(db, CHANNELS_COLLECTION, channelId)
+    const channelSnap = await getDoc(channelRef)
+
+    if (!channelSnap.exists()) {
+      throw new Error('Channel not found')
+    }
+
+    const channelData = channelSnap.data()
+    const oldStatus = channelData.status || 'pending'
+    const playlistId = channelData.playlistId
+
+    // Update channel status
     await updateDoc(channelRef, {
       status,
       lastChecked: Timestamp.now(),
       checkedBy: checkedBy || null,
       updatedAt: Timestamp.now(),
     })
+
+    // Update playlist stats if status changed and channel belongs to a playlist
+    if (playlistId && oldStatus !== status) {
+      await updatePlaylistStatsOnStatusChange(playlistId, oldStatus, status)
+    }
   } catch (error) {
     console.error('Error setting channel status:', error)
     throw error
+  }
+}
+
+// Update playlist stats when channel status changes
+async function updatePlaylistStatsOnStatusChange(
+  playlistId: string,
+  oldStatus: ChannelStatus,
+  newStatus: ChannelStatus
+): Promise<void> {
+  try {
+    const playlistRef = doc(db, PLAYLISTS_COLLECTION, playlistId)
+    const playlistSnap = await getDoc(playlistRef)
+
+    if (!playlistSnap.exists()) return
+
+    const playlist = playlistSnap.data()
+    const stats: PlaylistStats = playlist.stats || { pending: 0, active: 0, inactive: 0, broken: 0 }
+
+    // Decrement old status count
+    if (stats[oldStatus] > 0) {
+      stats[oldStatus]--
+    }
+    // Increment new status count
+    stats[newStatus]++
+
+    await updateDoc(playlistRef, {
+      stats,
+      updatedAt: Timestamp.now(),
+    })
+  } catch (error) {
+    console.error('Error updating playlist stats:', error)
+    // Don't throw - this is a secondary operation
   }
 }
 
@@ -404,6 +461,54 @@ export async function recalculateAllLanguages(
     return { updated, unchanged }
   } catch (error) {
     console.error('Error recalculating languages:', error)
+    throw error
+  }
+}
+
+// ==================== PLAYLIST STATS ====================
+
+// Recalculate stats for a single playlist
+export async function recalculatePlaylistStats(playlistId: string): Promise<PlaylistStats> {
+  try {
+    const channels = await getChannelsByPlaylist(playlistId)
+
+    const stats: PlaylistStats = {
+      pending: 0,
+      active: 0,
+      inactive: 0,
+      broken: 0,
+    }
+
+    channels.forEach((ch) => {
+      const status = ch.status || 'pending'
+      stats[status]++
+    })
+
+    // Update playlist with new stats
+    const playlistRef = doc(db, PLAYLISTS_COLLECTION, playlistId)
+    await updateDoc(playlistRef, {
+      stats,
+      channelCount: channels.length,
+      updatedAt: Timestamp.now(),
+    })
+
+    return stats
+  } catch (error) {
+    console.error('Error recalculating playlist stats:', error)
+    throw error
+  }
+}
+
+// Recalculate stats for all playlists
+export async function recalculateAllPlaylistStats(): Promise<void> {
+  try {
+    const playlists = await getAllPlaylists()
+
+    for (const playlist of playlists) {
+      await recalculatePlaylistStats(playlist.id)
+    }
+  } catch (error) {
+    console.error('Error recalculating all playlist stats:', error)
     throw error
   }
 }

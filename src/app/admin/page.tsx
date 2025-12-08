@@ -40,6 +40,7 @@ import {
   getChannelsStats,
   setChannelStatus,
   updateChannelLanguage,
+  recalculateAllPlaylistStats,
   FirebaseChannel,
   Playlist,
 } from '@/lib/channelService'
@@ -141,6 +142,7 @@ export default function AdminPage() {
   const [loadingUsers, setLoadingUsers] = useState(false)
   const [togglingAdminId, setTogglingAdminId] = useState<string | null>(null)
   const [showPlaylists, setShowPlaylists] = useState(false)
+  const [isRecalculatingStats, setIsRecalculatingStats] = useState(false)
 
   // Redirect non-admins
   useEffect(() => {
@@ -256,11 +258,33 @@ export default function AdminPage() {
   const handleSetStatus = async (channelId: string, status: ChannelStatus) => {
     setUpdatingStatusId(channelId)
     try {
+      const channel = channels.find(ch => ch.id === channelId)
+      const oldStatus = channel?.status || 'pending'
+
       await setChannelStatus(channelId, status)
       setChannels((prev) =>
         prev.map((ch) => (ch.id === channelId ? { ...ch, status } : ch))
       )
-      // Update stats
+
+      // Update playlist stats in UI (optimistic update)
+      if (selectedPlaylist && oldStatus !== status) {
+        setPlaylists((prev) =>
+          prev.map((p) => {
+            if (p.id !== selectedPlaylist) return p
+            const stats = p.stats || { pending: 0, active: 0, inactive: 0, broken: 0 }
+            return {
+              ...p,
+              stats: {
+                ...stats,
+                [oldStatus]: Math.max(0, (stats[oldStatus] || 0) - 1),
+                [status]: (stats[status] || 0) + 1,
+              },
+            }
+          })
+        )
+      }
+
+      // Update global stats
       const newStats = await getChannelsStats()
       setStats(newStats)
     } catch (error) {
@@ -472,6 +496,21 @@ export default function AdminPage() {
       console.error('Error toggling admin:', error)
     } finally {
       setTogglingAdminId(null)
+    }
+  }
+
+  // Recalculate all playlist stats
+  const handleRecalculateStats = async () => {
+    setIsRecalculatingStats(true)
+    try {
+      await recalculateAllPlaylistStats()
+      // Reload playlists to get updated stats
+      const playlistsData = await getAllPlaylists()
+      setPlaylists(playlistsData)
+    } catch (error) {
+      console.error('Error recalculating stats:', error)
+    } finally {
+      setIsRecalculatingStats(false)
     }
   }
 
@@ -822,7 +861,23 @@ export default function AdminPage() {
             {playlists.length > 0 && (
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Плейлисты ({playlists.length})</CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">Плейлисты ({playlists.length})</CardTitle>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={handleRecalculateStats}
+                      disabled={isRecalculatingStats}
+                    >
+                      {isRecalculatingStats ? (
+                        <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                      ) : (
+                        <RefreshCw className="h-3 w-3 mr-1" />
+                      )}
+                      Пересчитать
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="overflow-auto max-h-64">
@@ -850,6 +905,7 @@ export default function AdminPage() {
                         {playlists.map((playlist) => {
                           const isDeleting = deletingPlaylistId === playlist.id
                           const isSelected = selectedPlaylist === playlist.id
+                          const stats = playlist.stats
 
                           return (
                             <tr
@@ -870,16 +926,16 @@ export default function AdminPage() {
                                 {playlist.channelCount || '-'}
                               </td>
                               <td className="px-2 py-2 text-center text-green-500 font-medium">
-                                -
+                                {stats?.active ?? '-'}
                               </td>
                               <td className="px-2 py-2 text-center text-red-500 font-medium">
-                                -
+                                {stats?.broken ?? '-'}
                               </td>
                               <td className="px-2 py-2 text-center text-yellow-500 font-medium">
-                                -
+                                {stats?.pending ?? '-'}
                               </td>
                               <td className="px-2 py-2 text-center text-gray-500 font-medium">
-                                -
+                                {stats?.inactive ?? '-'}
                               </td>
                               <td className="px-2 py-2">
                                 <Button
