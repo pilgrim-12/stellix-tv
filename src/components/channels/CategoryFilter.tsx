@@ -168,8 +168,8 @@ export function LanguageFilter() {
     <div className="flex items-center gap-1 px-1 py-1.5 border-b border-border/40 bg-muted/10 shrink-0">
       <Globe className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
 
-      {/* Desktop: Popover button */}
-      <div className="hidden lg:block relative" ref={popoverRef}>
+      {/* Desktop/Tablet: Popover button */}
+      <div className="hidden md:block relative" ref={popoverRef}>
         <Button
           variant="outline"
           size="sm"
@@ -208,7 +208,7 @@ export function LanguageFilter() {
       </div>
 
       {/* Mobile: Horizontal scroll */}
-      <div className="lg:hidden flex-1 flex items-center gap-1">
+      <div className="md:hidden flex-1 flex items-center gap-1">
         <Button
           variant="ghost"
           size="icon"
