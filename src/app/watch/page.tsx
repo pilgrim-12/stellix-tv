@@ -144,10 +144,10 @@ function WatchContent() {
       </div>
 
       <div className="flex-1 overflow-hidden">
-        {/* Main content - Grid on md+, flex-col on mobile */}
-        <div className="h-full flex flex-col md:grid md:grid-cols-[1fr_16rem] lg:grid-cols-[1fr_18rem] xl:grid-cols-[1fr_20rem] overflow-hidden">
+        {/* Main content - Grid on sm+ landscape, flex-col on mobile portrait */}
+        <div className="h-full flex flex-col landscape:grid landscape:grid-cols-[1fr_14rem] sm:landscape:grid-cols-[1fr_16rem] md:grid md:grid-cols-[1fr_16rem] lg:grid-cols-[1fr_18rem] xl:grid-cols-[1fr_20rem] overflow-hidden">
           {/* Player section */}
-          <div className="shrink-0 md:min-h-0 flex flex-col overflow-hidden">
+          <div className="shrink-0 landscape:min-h-0 md:min-h-0 flex flex-col overflow-hidden">
             <div className="flex flex-col p-2 mobile-landscape:p-1 gap-2 mobile-landscape:gap-0 lg:flex-1 lg:min-h-0">
               <VideoPlayer />
               {currentChannel && (
@@ -187,7 +187,7 @@ function WatchContent() {
           </div>
 
           {/* Channels section - hidden in mobile landscape */}
-          <div className="flex-1 md:flex-none border-t md:border-t-0 md:border-l border-border/40 flex flex-col overflow-hidden mobile-landscape:hidden">
+          <div className="flex-1 landscape:flex-none md:flex-none border-t landscape:border-t-0 landscape:border-l md:border-t-0 md:border-l border-border/40 flex flex-col overflow-hidden mobile-landscape:hidden">
             {/* Language filter */}
             <LanguageFilter />
             {/* Ad banner in sidebar - hidden for now */}
@@ -215,7 +215,7 @@ function WatchContent() {
       </div> */}
 
       {/* Status bar - tablet and desktop */}
-      <div className="hidden md:flex shrink-0 border-t border-border/40 bg-muted/30 px-3 py-1 items-center justify-between text-[10px] text-muted-foreground">
+      <div className="hidden landscape:flex md:flex shrink-0 border-t border-border/40 bg-muted/30 px-3 py-1 items-center justify-between text-[10px] text-muted-foreground mobile-landscape:hidden">
         <div className="flex items-center gap-3">
           <ChannelGridTrigger />
         </div>
