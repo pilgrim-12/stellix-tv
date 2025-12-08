@@ -4,7 +4,6 @@ import { useEffect, useRef, useCallback } from 'react'
 import Hls from 'hls.js'
 import { usePlayerStore, useChannelStore } from '@/stores'
 import { useSettings } from '@/contexts/SettingsContext'
-import { Loader2 } from 'lucide-react'
 
 export function VideoPlayer() {
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -231,12 +230,7 @@ export function VideoPlayer() {
           onPause={handlePause}
         />
 
-        {/* Loading overlay - hide when there's an error */}
-        {isLoading && !error && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/50 pointer-events-none">
-            <Loader2 className="h-12 w-12 animate-spin text-white" />
-          </div>
-        )}
+        {/* Loading overlay removed - browser's native video controls show loading state */}
 
         {/* Error overlay */}
         {error && !isLoading && (
