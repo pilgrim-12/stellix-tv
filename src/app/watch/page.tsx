@@ -6,6 +6,7 @@ import { VideoPlayer } from '@/components/player'
 import { ChannelList, CategoryFilter, LanguageFilter, ChannelGridTrigger } from '@/components/channels'
 import { ProtectedRoute } from '@/components/auth'
 import { useChannelStore } from '@/stores'
+import { useSettings } from '@/contexts/SettingsContext'
 import { sampleChannels } from '@/data/channels'
 import { getCurrentProgram, getUpcomingPrograms } from '@/data/programs'
 
@@ -21,9 +22,20 @@ function formatTime(date: Date): string {
   return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
 }
 
+// Map UI language to locale for date formatting
+const localeMap: Record<string, string> = {
+  ru: 'ru-RU',
+  en: 'en-US',
+  uk: 'uk-UA',
+  es: 'es-ES',
+  it: 'it-IT',
+}
+
 function WatchContent() {
   const { currentChannel, channels, setCurrentChannel } = useChannelStore()
+  const { uiLanguage } = useSettings()
   const [currentTime, setCurrentTime] = useState(new Date())
+  const locale = localeMap[uiLanguage] || 'ru-RU'
 
   // Update time every minute
   useEffect(() => {
@@ -220,7 +232,7 @@ function WatchContent() {
           <ChannelGridTrigger />
         </div>
         <div>
-          {currentTime.toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'short' })} • {currentTime.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+          {currentTime.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' })} • {currentTime.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
         </div>
       </div>
     </div>

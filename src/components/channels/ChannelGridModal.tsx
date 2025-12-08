@@ -313,6 +313,7 @@ export function ChannelGridTrigger() {
   const { channels } = useChannelStore()
   const { t } = useSettings()
   const workingCount = channels.filter(ch => !ch.isOffline).length
+  const hasOffline = workingCount < channels.length
 
   return (
     <>
@@ -325,7 +326,7 @@ export function ChannelGridTrigger() {
       >
         <Grid3X3 className="h-4 w-4" />
         <span>{channels.length} {t('channels')}</span>
-        <span className="text-green-500">({workingCount})</span>
+        {hasOffline && <span className="text-green-500">({workingCount})</span>}
       </Button>
       <ChannelGridModal open={open} onOpenChange={setOpen} />
     </>
