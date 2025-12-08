@@ -2,26 +2,12 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useChannelStore } from '@/stores'
+import { useSettings } from '@/contexts/SettingsContext'
 import { channelCategories } from '@/data/channels'
 import { Button } from '@/components/ui/button'
 import { ChannelCategory, languageNames } from '@/types'
 import { cn } from '@/lib/utils'
 import { Globe, ChevronLeft, ChevronRight } from 'lucide-react'
-
-const categoryNamesRu: Record<string, string> = {
-  all: 'Все',
-  news: 'Новости',
-  sports: 'Спорт',
-  movies: 'Кино',
-  kids: 'Детям',
-  music: 'Музыка',
-  entertainment: 'Развлечения',
-  documentary: 'Документальное',
-  nature: 'Природа',
-  lifestyle: 'Стиль жизни',
-  cooking: 'Кулинария',
-  gaming: 'Игры',
-}
 
 interface CarouselProps {
   children: React.ReactNode
@@ -99,6 +85,7 @@ export function CategoryFilter() {
     setLanguage,
     getAvailableLanguages,
   } = useChannelStore()
+  const { getCategoryName } = useSettings()
 
   const availableLanguages = getAvailableLanguages()
 
@@ -116,7 +103,7 @@ export function CategoryFilter() {
             )}
             onClick={() => setCategory(category.id as ChannelCategory)}
           >
-            {categoryNamesRu[category.id] || category.name}
+            {getCategoryName(category.id)}
           </Button>
         ))}
       </Carousel>
@@ -133,6 +120,7 @@ export function LanguageFilter() {
     setLanguage,
     getAvailableLanguages,
   } = useChannelStore()
+  const { t } = useSettings()
 
   const [isOpen, setIsOpen] = useState(false)
   const popoverRef = useRef<HTMLDivElement>(null)
@@ -173,7 +161,7 @@ export function LanguageFilter() {
   }
 
   const selectedLabel = selectedLanguage === 'all'
-    ? 'Все'
+    ? t('allCategories')
     : (languageNames[selectedLanguage] || selectedLanguage.toUpperCase())
 
   return (
@@ -201,7 +189,7 @@ export function LanguageFilter() {
                 className="h-7 text-xs px-3"
                 onClick={() => { setLanguage('all'); setIsOpen(false) }}
               >
-                Все
+                {t('allCategories')}
               </Button>
               {sortedLanguages.map((lang) => (
                 <Button
@@ -239,7 +227,7 @@ export function LanguageFilter() {
             className="h-6 text-[11px] px-2 shrink-0"
             onClick={() => setLanguage('all')}
           >
-            Все
+            {t('allCategories')}
           </Button>
           {sortedLanguages.map((lang) => (
             <Button
