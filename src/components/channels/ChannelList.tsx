@@ -123,16 +123,18 @@ export function ChannelList() {
               {favorites.length > 0 && <span>{favorites.length}</span>}
             </Button>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1 text-green-500">
-              <CheckCircle2 className="h-3 w-3" />
-              <span>{onlineCount}</span>
+          {offlineCount > 0 && (
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 text-green-500">
+                <CheckCircle2 className="h-3 w-3" />
+                <span>{onlineCount}</span>
+              </div>
+              <div className="flex items-center gap-1 text-red-500">
+                <XCircle className="h-3 w-3" />
+                <span>{offlineCount}</span>
+              </div>
             </div>
-            <div className="flex items-center gap-1 text-red-500">
-              <XCircle className="h-3 w-3" />
-              <span>{offlineCount}</span>
-            </div>
-          </div>
+          )}
         </div>
       </div>
 

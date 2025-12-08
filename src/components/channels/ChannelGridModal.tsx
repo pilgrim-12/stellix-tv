@@ -143,10 +143,12 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
                 <Tv className="h-4 w-4" />
                 <span>{totalCount}</span>
               </div>
-              <div className="flex items-center gap-1.5 text-green-500">
-                <CheckCircle2 className="h-4 w-4" />
-                <span>{onlineCount}</span>
-              </div>
+              {onlineCount < totalCount && (
+                <div className="flex items-center gap-1.5 text-green-500">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>{onlineCount}</span>
+                </div>
+              )}
             </div>
 
             <Button
