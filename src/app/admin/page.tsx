@@ -40,6 +40,7 @@ import {
   getChannelsStats,
   setChannelStatus,
   updateChannelLanguage,
+  updateChannelCategory,
   recalculateAllPlaylistStats,
   FirebaseChannel,
   Playlist,
@@ -63,7 +64,14 @@ const categoryNamesRu: Record<string, string> = {
   lifestyle: 'Стиль жизни',
   cooking: 'Кулинария',
   gaming: 'Игры',
+  radio: 'Радио',
 }
+
+// Category order for selector (excluding 'all')
+const categoryOrder = [
+  'news', 'sports', 'movies', 'kids', 'music', 'entertainment',
+  'documentary', 'nature', 'lifestyle', 'cooking', 'gaming', 'radio'
+]
 
 const statusColors: Record<ChannelStatus, string> = {
   pending: 'bg-yellow-500/20 text-yellow-500',
@@ -109,6 +117,7 @@ export default function AdminPage() {
   // Status update loading state
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null)
   const [updatingLanguageId, setUpdatingLanguageId] = useState<string | null>(null)
+  const [updatingCategoryId, setUpdatingCategoryId] = useState<string | null>(null)
 
   // Player state
   const [selectedChannel, setSelectedChannel] = useState<FirebaseChannel | null>(null)
@@ -850,6 +859,44 @@ export default function AdminPage() {
                         {languageOrder.map((code) => (
                           <option key={code} value={code}>
                             {languageNames[code]}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Category selector */}
+                    <div className="flex items-center gap-2">
+                      {updatingCategoryId === selectedChannel.id ? (
+                        <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />
+                      ) : (
+                        <Tv className="h-4 w-4 text-muted-foreground" />
+                      )}
+                      <select
+                        className="flex-1 h-8 rounded-md border border-input bg-background px-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:opacity-50"
+                        value={selectedChannel.group || ''}
+                        disabled={updatingCategoryId === selectedChannel.id}
+                        onChange={async (e) => {
+                          const newCategory = e.target.value
+                          setUpdatingCategoryId(selectedChannel.id)
+                          try {
+                            await updateChannelCategory(selectedChannel.id, newCategory)
+                            setChannels((prev) =>
+                              prev.map((ch) =>
+                                ch.id === selectedChannel.id ? { ...ch, group: newCategory } : ch
+                              )
+                            )
+                            setSelectedChannel({ ...selectedChannel, group: newCategory })
+                          } catch (error) {
+                            console.error('Error updating category:', error)
+                          } finally {
+                            setUpdatingCategoryId(null)
+                          }
+                        }}
+                      >
+                        <option value="">Неизвестная категория</option>
+                        {categoryOrder.map((cat) => (
+                          <option key={cat} value={cat}>
+                            {categoryNamesRu[cat]}
                           </option>
                         ))}
                       </select>

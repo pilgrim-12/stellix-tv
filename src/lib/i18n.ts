@@ -43,6 +43,7 @@ export const translations = {
     lifestyle: 'Стиль жизни',
     cooking: 'Кулинария',
     gaming: 'Игры',
+    radio: 'Радио',
 
     // Language filter
     language: 'Язык',
@@ -101,6 +102,7 @@ export const translations = {
     lifestyle: 'Lifestyle',
     cooking: 'Cooking',
     gaming: 'Gaming',
+    radio: 'Radio',
 
     // Language filter
     language: 'Language',
@@ -159,6 +161,7 @@ export const translations = {
     lifestyle: 'Стиль життя',
     cooking: 'Кулінарія',
     gaming: 'Ігри',
+    radio: 'Радіо',
 
     // Language filter
     language: 'Мова',
@@ -217,6 +220,7 @@ export const translations = {
     lifestyle: 'Estilo de vida',
     cooking: 'Cocina',
     gaming: 'Juegos',
+    radio: 'Radio',
 
     // Language filter
     language: 'Idioma',
@@ -275,6 +279,7 @@ export const translations = {
     lifestyle: 'Lifestyle',
     cooking: 'Cucina',
     gaming: 'Giochi',
+    radio: 'Radio',
 
     // Language filter
     language: 'Lingua',
@@ -331,6 +336,7 @@ const categoryKeyMap: Record<string, TranslationKey> = {
   lifestyle: 'lifestyle',
   cooking: 'cooking',
   gaming: 'gaming',
+  radio: 'radio',
 }
 
 export function getCategoryName(lang: UILanguage, category: string): string {

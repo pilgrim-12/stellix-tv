@@ -1466,4 +1466,5 @@ export const channelCategories = [
   { id: 'lifestyle', name: 'Lifestyle', icon: 'Heart' },
   { id: 'cooking', name: 'Cooking', icon: 'ChefHat' },
   { id: 'gaming', name: 'Gaming', icon: 'Gamepad2' },
+  { id: 'radio', name: 'Radio', icon: 'Radio' },
 ] as const;

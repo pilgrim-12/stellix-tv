@@ -38,7 +38,8 @@ export type ChannelCategory =
   | 'cooking'
   | 'nature'
   | 'science'
-  | 'religious';
+  | 'religious'
+  | 'radio';
 
 export interface TVProgram {
   id: string;
@@ -122,4 +123,5 @@ export const categoryNames: Record<string, string> = {
   travel: 'Путешествия',
   science: 'Наука',
   religious: 'Религия',
+  radio: 'Радио',
 };

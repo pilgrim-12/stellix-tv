@@ -420,6 +420,20 @@ export async function updateChannelLanguage(channelId: string, language: string)
   }
 }
 
+// Update category (group) for a single channel
+export async function updateChannelCategory(channelId: string, group: string): Promise<void> {
+  try {
+    const channelRef = doc(db, CHANNELS_COLLECTION, channelId)
+    await updateDoc(channelRef, {
+      group,
+      updatedAt: Timestamp.now(),
+    })
+  } catch (error) {
+    console.error('Error updating channel category:', error)
+    throw error
+  }
+}
+
 // Bulk update languages for all channels using recalculation function
 export async function recalculateAllLanguages(
   recalcFn: (channel: { name: string; country?: string; group?: string; language?: string }) => string
