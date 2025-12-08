@@ -968,7 +968,7 @@ export default function AdminPage() {
 
           {/* Right column - Channels list */}
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-3 space-y-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">
                   Каналы {selectedPlaylist ? `(${filteredChannels.length})` : ''}
@@ -1003,6 +1003,55 @@ export default function AdminPage() {
                   )
                 })()}
               </div>
+              {/* Status filter buttons */}
+              {selectedPlaylist && (
+                <div className="flex flex-wrap gap-1">
+                  <Button
+                    variant={selectedStatus === 'all' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="h-6 text-xs px-2"
+                    onClick={() => setSelectedStatus('all')}
+                  >
+                    Все
+                  </Button>
+                  <Button
+                    variant={selectedStatus === 'pending' ? 'default' : 'ghost'}
+                    size="sm"
+                    className={cn('h-6 text-xs px-2', selectedStatus !== 'pending' && 'text-yellow-500')}
+                    onClick={() => setSelectedStatus('pending')}
+                  >
+                    <Clock className="h-3 w-3 mr-1" />
+                    Ожидает
+                  </Button>
+                  <Button
+                    variant={selectedStatus === 'active' ? 'default' : 'ghost'}
+                    size="sm"
+                    className={cn('h-6 text-xs px-2', selectedStatus !== 'active' && 'text-green-500')}
+                    onClick={() => setSelectedStatus('active')}
+                  >
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    Рабочие
+                  </Button>
+                  <Button
+                    variant={selectedStatus === 'broken' ? 'default' : 'ghost'}
+                    size="sm"
+                    className={cn('h-6 text-xs px-2', selectedStatus !== 'broken' && 'text-red-500')}
+                    onClick={() => setSelectedStatus('broken')}
+                  >
+                    <AlertCircle className="h-3 w-3 mr-1" />
+                    Нерабочие
+                  </Button>
+                  <Button
+                    variant={selectedStatus === 'inactive' ? 'default' : 'ghost'}
+                    size="sm"
+                    className={cn('h-6 text-xs px-2', selectedStatus !== 'inactive' && 'text-gray-500')}
+                    onClick={() => setSelectedStatus('inactive')}
+                  >
+                    <Ban className="h-3 w-3 mr-1" />
+                    Откл.
+                  </Button>
+                </div>
+              )}
             </CardHeader>
             <CardContent className="p-0">
               {isLoadingChannels ? (
