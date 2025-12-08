@@ -139,6 +139,7 @@ export default function AdminPage() {
   const [showUsers, setShowUsers] = useState(false)
   const [loadingUsers, setLoadingUsers] = useState(false)
   const [togglingAdminId, setTogglingAdminId] = useState<string | null>(null)
+  const [showPlaylists, setShowPlaylists] = useState(false)
 
   // Redirect non-admins
   useEffect(() => {
@@ -463,8 +464,9 @@ export default function AdminPage() {
       </header>
 
       <main className="container py-6">
-        {/* Import M3U - top section */}
-        <div className="mb-6">
+        {/* Top row: Import + Search/Filters */}
+        <div className="mb-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Import M3U */}
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -476,7 +478,7 @@ export default function AdminPage() {
                   <CardDescription>Добавьте плейлист по ссылке или файлу</CardDescription>
                 </div>
                 {/* Stats - inline in header */}
-                <div className="flex items-center gap-4 text-xs">
+                <div className="flex items-center gap-3 text-xs">
                   <div className="flex items-center gap-1">
                     <span className="font-bold">{stats?.total ?? '—'}</span>
                     <span className="text-muted-foreground">всего</span>
@@ -534,10 +536,116 @@ export default function AdminPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Search and Playlist Filter */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Search className="h-4 w-4" />
+                Фильтры
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Поиск каналов..."
+                  className="pl-9"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant={selectedStatus === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSelectedStatus('all')}
+                >
+                  Все
+                </Button>
+                <Button
+                  variant={selectedStatus === 'pending' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSelectedStatus('pending')}
+                  className={selectedStatus !== 'pending' ? 'text-yellow-500 border-yellow-500/30' : ''}
+                >
+                  <Clock className="h-3 w-3 mr-1" />
+                  Ожидает
+                </Button>
+                <Button
+                  variant={selectedStatus === 'active' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSelectedStatus('active')}
+                  className={selectedStatus !== 'active' ? 'text-green-500 border-green-500/30' : ''}
+                >
+                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                  Рабочие
+                </Button>
+                <Button
+                  variant={selectedStatus === 'broken' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSelectedStatus('broken')}
+                  className={selectedStatus !== 'broken' ? 'text-red-500 border-red-500/30' : ''}
+                >
+                  <AlertCircle className="h-3 w-3 mr-1" />
+                  Нерабочие
+                </Button>
+                <Button
+                  variant={selectedStatus === 'inactive' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSelectedStatus('inactive')}
+                  className={selectedStatus !== 'inactive' ? 'text-gray-500 border-gray-500/30' : ''}
+                >
+                  <Ban className="h-3 w-3 mr-1" />
+                  Отключено
+                </Button>
+              </div>
+
+              {playlists.length > 0 && (
+                <div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs gap-1.5 px-2"
+                    onClick={() => setShowPlaylists(!showPlaylists)}
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    <span>Плейлист: {selectedPlaylist === 'all' ? 'Все' : playlists.find(p => p.id === selectedPlaylist)?.name || 'Все'}</span>
+                    {showPlaylists ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                  </Button>
+
+                  {showPlaylists && (
+                    <div className="flex items-center gap-2 flex-wrap mt-2">
+                      <Button
+                        variant={selectedPlaylist === 'all' ? 'secondary' : 'ghost'}
+                        size="sm"
+                        onClick={() => { setSelectedPlaylist('all'); setShowPlaylists(false) }}
+                      >
+                        Все
+                      </Button>
+                      {playlists.map((p) => (
+                        <Button
+                          key={p.id}
+                          variant={selectedPlaylist === p.id ? 'secondary' : 'ghost'}
+                          size="sm"
+                          onClick={() => { setSelectedPlaylist(p.id); setShowPlaylists(false) }}
+                        >
+                          {p.name}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
+        {/* Main content: Player + Channels */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left column - Player */}
+          {/* Left column - Player + Playlists */}
           <div className="space-y-6">
             {/* Preview Player */}
             <Card>
@@ -677,7 +785,7 @@ export default function AdminPage() {
                   <CardTitle className="text-base">Плейлисты ({playlists.length})</CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <div className="overflow-auto max-h-96">
+                  <div className="overflow-auto max-h-64">
                     <table className="w-full text-sm">
                       <thead className="sticky top-0 bg-background border-b">
                         <tr className="text-left text-xs text-muted-foreground">
@@ -768,185 +876,97 @@ export default function AdminPage() {
           </div>
 
           {/* Right column - Channels list */}
-          <div className="space-y-4">
-            {/* Filters */}
-            <Card>
-              <CardContent className="p-4 space-y-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    type="search"
-                    placeholder="Поиск каналов..."
-                    className="pl-9"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Каналы ({filteredChannels.length})</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {isLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant={selectedStatus === 'all' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setSelectedStatus('all')}
-                  >
-                    Все
-                  </Button>
-                  <Button
-                    variant={selectedStatus === 'pending' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setSelectedStatus('pending')}
-                    className={selectedStatus !== 'pending' ? 'text-yellow-500 border-yellow-500/30' : ''}
-                  >
-                    <Clock className="h-3 w-3 mr-1" />
-                    Ожидает
-                  </Button>
-                  <Button
-                    variant={selectedStatus === 'active' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setSelectedStatus('active')}
-                    className={selectedStatus !== 'active' ? 'text-green-500 border-green-500/30' : ''}
-                  >
-                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                    Рабочие
-                  </Button>
-                  <Button
-                    variant={selectedStatus === 'broken' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setSelectedStatus('broken')}
-                    className={selectedStatus !== 'broken' ? 'text-red-500 border-red-500/30' : ''}
-                  >
-                    <AlertCircle className="h-3 w-3 mr-1" />
-                    Нерабочие
-                  </Button>
-                  <Button
-                    variant={selectedStatus === 'inactive' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setSelectedStatus('inactive')}
-                    className={selectedStatus !== 'inactive' ? 'text-gray-500 border-gray-500/30' : ''}
-                  >
-                    <Ban className="h-3 w-3 mr-1" />
-                    Отключено
-                  </Button>
+              ) : filteredChannels.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  {channels.length === 0 ? 'Импортируйте плейлист чтобы добавить каналы' : 'Каналы не найдены'}
                 </div>
-
-                {playlists.length > 0 && (
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm text-muted-foreground">Плейлист:</span>
-                    <Button
-                      variant={selectedPlaylist === 'all' ? 'secondary' : 'ghost'}
-                      size="sm"
-                      onClick={() => setSelectedPlaylist('all')}
+              ) : (
+                <div className="divide-y max-h-[600px] overflow-auto">
+                  {filteredChannels.map((channel) => (
+                    <div
+                      key={channel.id}
+                      className={cn(
+                        'flex items-center gap-3 px-4 py-2 cursor-pointer transition-colors hover:bg-muted/50',
+                        selectedChannel?.id === channel.id && 'bg-primary/10'
+                      )}
+                      onClick={() => playChannel(channel)}
                     >
-                      Все
-                    </Button>
-                    {playlists.map((p) => (
-                      <Button
-                        key={p.id}
-                        variant={selectedPlaylist === p.id ? 'secondary' : 'ghost'}
-                        size="sm"
-                        onClick={() => setSelectedPlaylist(p.id)}
-                      >
-                        {p.name}
-                      </Button>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Channels */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Каналы ({filteredChannels.length})</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                {isLoading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : filteredChannels.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    {channels.length === 0 ? 'Импортируйте плейлист чтобы добавить каналы' : 'Каналы не найдены'}
-                  </div>
-                ) : (
-                  <div className="divide-y max-h-[600px] overflow-auto">
-                    {filteredChannels.map((channel) => (
-                      <div
-                        key={channel.id}
-                        className={cn(
-                          'flex items-center gap-3 px-4 py-2 cursor-pointer transition-colors hover:bg-muted/50',
-                          selectedChannel?.id === channel.id && 'bg-primary/10'
+                      {/* Logo */}
+                      <div className="w-10 h-10 rounded bg-muted flex items-center justify-center overflow-hidden shrink-0">
+                        {channel.logo ? (
+                          <img src={channel.logo} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <Tv className="h-5 w-5 text-muted-foreground" />
                         )}
-                        onClick={() => playChannel(channel)}
-                      >
-                        {/* Logo */}
-                        <div className="w-10 h-10 rounded bg-muted flex items-center justify-center overflow-hidden shrink-0">
-                          {channel.logo ? (
-                            <img src={channel.logo} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <Tv className="h-5 w-5 text-muted-foreground" />
-                          )}
-                        </div>
+                      </div>
 
-                        {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">{channel.name}</p>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <span>{categoryNamesRu[channel.group] || channel.group}</span>
-                            {channel.language && (
-                              <>
-                                <span>•</span>
-                                <span>{languageNames[channel.language] || channel.language}</span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Status badge */}
-                        <span className={cn('text-[10px] px-2 py-0.5 rounded font-medium shrink-0', statusColors[channel.status || 'pending'])}>
-                          {statusNames[channel.status || 'pending']}
-                        </span>
-
-                        {/* Quick actions */}
-                        <div className="flex gap-1 shrink-0">
-                          {updatingStatusId === channel.id ? (
-                            <div className="h-7 w-7 flex items-center justify-center">
-                              <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                            </div>
-                          ) : (
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{channel.name}</p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>{categoryNamesRu[channel.group] || channel.group}</span>
+                          {channel.language && (
                             <>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-green-500 hover:bg-green-500/10"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleSetStatus(channel.id, 'active')
-                                }}
-                              >
-                                <Check className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-red-500 hover:bg-red-500/10"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleSetStatus(channel.id, 'broken')
-                                }}
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
+                              <span>•</span>
+                              <span>{languageNames[channel.language] || channel.language}</span>
                             </>
                           )}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+
+                      {/* Status badge */}
+                      <span className={cn('text-[10px] px-2 py-0.5 rounded font-medium shrink-0', statusColors[channel.status || 'pending'])}>
+                        {statusNames[channel.status || 'pending']}
+                      </span>
+
+                      {/* Quick actions */}
+                      <div className="flex gap-1 shrink-0">
+                        {updatingStatusId === channel.id ? (
+                          <div className="h-7 w-7 flex items-center justify-center">
+                            <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                          </div>
+                        ) : (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-green-500 hover:bg-green-500/10"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleSetStatus(channel.id, 'active')
+                              }}
+                            >
+                              <Check className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-red-500 hover:bg-red-500/10"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleSetStatus(channel.id, 'broken')
+                              }}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Duplicates Analysis Section */}

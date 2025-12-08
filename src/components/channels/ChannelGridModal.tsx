@@ -106,7 +106,7 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[98vw] w-[1600px] h-[95vh] p-0 gap-0 flex flex-col">
+      <DialogContent className="max-w-[99vw] w-[1900px] h-[95vh] p-0 gap-0 flex flex-col">
         <DialogHeader className="px-4 py-3 border-b shrink-0">
           <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-2">

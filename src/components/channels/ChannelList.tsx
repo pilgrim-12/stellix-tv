@@ -19,6 +19,7 @@ export function ChannelList() {
     setSearchQuery,
     loadDisabledChannels,
     loadCustomPlaylists,
+    loadSavedFilters,
     channels,
     isLoading,
     showOnlyFavorites,
@@ -33,6 +34,7 @@ export function ChannelList() {
     const initChannels = async () => {
       loadDisabledChannels()
       loadCustomPlaylists()
+      loadSavedFilters()
 
       // Try loading from Firebase first
       try {

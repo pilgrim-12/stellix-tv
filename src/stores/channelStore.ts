@@ -49,6 +49,7 @@ interface ChannelState {
   setChannelStatus: (channelId: string, isOnline: boolean) => void;
   toggleChannelEnabled: (channelId: string) => void;
   loadDisabledChannels: () => void;
+  loadSavedFilters: () => void;
 
   // Computed
   getFilteredChannels: () => Channel[];
@@ -183,8 +184,18 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
       addWatchHistory(userId, channel.id, channel.name);
     }
   },
-  setCategory: (category) => set({ selectedCategory: category }),
-  setLanguage: (language) => set({ selectedLanguage: language }),
+  setCategory: (category) => {
+    set({ selectedCategory: category });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('stellix-selected-category', category);
+    }
+  },
+  setLanguage: (language) => {
+    set({ selectedLanguage: language });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('stellix-selected-language', language);
+    }
+  },
   setSearchQuery: (query) => set({ searchQuery: query }),
 
   toggleFavorite: (channelId, userId) => {
@@ -312,6 +323,24 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
         } catch {
           // Invalid JSON, ignore
         }
+      }
+    }
+  },
+
+  loadSavedFilters: () => {
+    if (typeof window !== 'undefined') {
+      const savedCategory = localStorage.getItem('stellix-selected-category');
+      const savedLanguage = localStorage.getItem('stellix-selected-language');
+
+      const updates: Partial<ChannelState> = {};
+      if (savedCategory) {
+        updates.selectedCategory = savedCategory as ChannelCategory;
+      }
+      if (savedLanguage) {
+        updates.selectedLanguage = savedLanguage;
+      }
+      if (Object.keys(updates).length > 0) {
+        set(updates);
       }
     }
   },
