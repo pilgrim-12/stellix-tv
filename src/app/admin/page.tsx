@@ -93,12 +93,7 @@ export default function AdminPage() {
   // Filter state
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedStatus, setSelectedStatus] = useState<ChannelStatus | 'all'>('all')
-  const [selectedPlaylist, setSelectedPlaylist] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('stellix-admin-playlist') || ''
-    }
-    return ''
-  })
+  const [selectedPlaylist, setSelectedPlaylist] = useState<string>('')
   const [isLoadingChannels, setIsLoadingChannels] = useState(false)
 
   // Import state
@@ -167,8 +162,11 @@ export default function AdminPage() {
       setUsersCount(usersData)
       setStats(statsData)
 
-      // Auto-select first playlist if none selected
-      if (!selectedPlaylist && playlistsData.length > 0) {
+      // Load saved playlist from localStorage or auto-select first
+      const savedPlaylist = localStorage.getItem('stellix-admin-playlist')
+      if (savedPlaylist && playlistsData.some(p => p.id === savedPlaylist)) {
+        setSelectedPlaylist(savedPlaylist)
+      } else if (playlistsData.length > 0) {
         const firstPlaylistId = playlistsData[0].id
         setSelectedPlaylist(firstPlaylistId)
         localStorage.setItem('stellix-admin-playlist', firstPlaylistId)
