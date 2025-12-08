@@ -208,7 +208,7 @@ export function LanguageFilter() {
       </div>
 
       {/* Mobile: Horizontal scroll (hidden on md+) */}
-      <div className="md:hidden flex-1 flex items-center gap-1">
+      <div className="md:hidden flex-1 flex items-center gap-1 min-w-0">
         <Button
           type="button"
           variant="ghost"
@@ -220,8 +220,12 @@ export function LanguageFilter() {
         </Button>
         <div
           ref={containerRef}
-          className="flex-1 flex items-center gap-1 overflow-x-auto scrollbar-hide touch-pan-x"
-          style={{ WebkitOverflowScrolling: 'touch' }}
+          className="flex-1 min-w-0 flex items-center gap-1 overflow-x-scroll overflow-y-hidden scrollbar-hide"
+          style={{
+            WebkitOverflowScrolling: 'touch',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+          }}
         >
           <Button
             variant={selectedLanguage === 'all' ? 'default' : 'outline'}
