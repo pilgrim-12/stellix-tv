@@ -106,7 +106,7 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[75vw] w-[75vw] h-[90vh] p-0 gap-0 flex flex-col">
+      <DialogContent className="max-w-[65vw] w-[65vw] h-[90vh] p-0 gap-0 flex flex-col">
         <DialogHeader className="px-4 py-3 border-b shrink-0">
           <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-2">
@@ -230,7 +230,7 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
               Каналы не найдены
             </div>
           ) : (
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-3">
+            <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 2xl:grid-cols-9 gap-2">
               {filteredChannels.map((channel) => {
                 const isActive = currentChannel?.id === channel.id
                 const isFavorite = favorites.includes(channel.id)
