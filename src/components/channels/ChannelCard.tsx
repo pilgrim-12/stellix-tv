@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Channel, languageNames } from '@/types'
 import { useChannelStore } from '@/stores'
 import { useAuthContext } from '@/contexts/AuthContext'
+import { useSettings } from '@/contexts/SettingsContext'
 import { Star, WifiOff, Radio } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -20,29 +21,16 @@ const labelColors: Record<string, string> = {
   Free: 'bg-emerald-500/20 text-emerald-400',
 }
 
-const categoryNames: Record<string, string> = {
-  news: 'Новости',
-  sports: 'Спорт',
-  movies: 'Кино',
-  kids: 'Детям',
-  music: 'Музыка',
-  entertainment: 'Развлечения',
-  documentary: 'Документальное',
-  nature: 'Природа',
-  lifestyle: 'Стиль жизни',
-  cooking: 'Кулинария',
-  gaming: 'Игры',
-}
-
 export function ChannelCard({ channel }: ChannelCardProps) {
   const { currentChannel, setCurrentChannel, favorites, toggleFavorite } = useChannelStore()
   const { user } = useAuthContext()
+  const { getCategoryName } = useSettings()
   const isActive = currentChannel?.id === channel.id
   const isFavorite = favorites.includes(channel.id)
   const isOffline = channel.isOffline
   const [imgError, setImgError] = useState(false)
 
-  const categoryName = categoryNames[channel.group] || channel.group
+  const categoryName = getCategoryName(channel.group)
   const langName = channel.language ? (languageNames[channel.language] || channel.language.toUpperCase()) : null
 
   return (
