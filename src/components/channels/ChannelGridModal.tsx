@@ -230,7 +230,7 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
               Каналы не найдены
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4">
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-3">
               {filteredChannels.map((channel) => {
                 const isActive = currentChannel?.id === channel.id
                 const isFavorite = favorites.includes(channel.id)
@@ -239,7 +239,7 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
                   <div
                     key={channel.id}
                     className={cn(
-                      'group relative cursor-pointer rounded-lg p-3 transition-all',
+                      'group relative cursor-pointer rounded-lg p-3 transition-all min-w-[100px]',
                       'hover:bg-muted/60 hover:scale-105',
                       isActive && 'bg-primary/15 ring-2 ring-primary'
                     )}
