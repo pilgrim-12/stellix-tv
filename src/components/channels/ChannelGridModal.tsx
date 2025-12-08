@@ -12,13 +12,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import {
-  X,
   Search,
   Grid3X3,
   Star,
   Tv,
   CheckCircle2,
-  XCircle,
+  Globe,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { languageNames, languageOrder, categoryNames } from '@/types'
@@ -46,6 +47,7 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
 
   const [searchQuery, setSearchQuery] = useState('')
   const [showOnlyFavorites, setShowOnlyFavorites] = useState(false)
+  const [showLanguages, setShowLanguages] = useState(false)
 
   const availableLanguages = getAvailableLanguages()
 
@@ -102,7 +104,7 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] w-[1400px] h-[90vh] p-0 gap-0 flex flex-col">
+      <DialogContent className="max-w-[98vw] w-[1600px] h-[95vh] p-0 gap-0 flex flex-col">
         <DialogHeader className="px-4 py-3 border-b shrink-0">
           <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-2">
@@ -165,27 +167,42 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
             ))}
           </div>
 
-          {/* Languages */}
-          <div className="flex flex-wrap gap-1.5">
+          {/* Languages - collapsible */}
+          <div>
             <Button
-              variant={selectedLanguage === 'all' ? 'default' : 'outline'}
+              variant="ghost"
               size="sm"
-              className="h-7 text-xs"
-              onClick={() => setLanguage('all')}
+              className="h-7 text-xs gap-1.5 px-2"
+              onClick={() => setShowLanguages(!showLanguages)}
             >
-              Все языки
+              <Globe className="h-3.5 w-3.5" />
+              <span>Язык: {selectedLanguage === 'all' ? 'Все' : (languageNames[selectedLanguage] || selectedLanguage)}</span>
+              {showLanguages ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
             </Button>
-            {sortedLanguages.map((lang) => (
-              <Button
-                key={lang}
-                variant={selectedLanguage === lang ? 'default' : 'outline'}
-                size="sm"
-                className="h-7 text-xs"
-                onClick={() => setLanguage(lang)}
-              >
-                {languageNames[lang] || lang.toUpperCase()}
-              </Button>
-            ))}
+
+            {showLanguages && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                <Button
+                  variant={selectedLanguage === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => { setLanguage('all'); setShowLanguages(false) }}
+                >
+                  Все языки
+                </Button>
+                {sortedLanguages.map((lang) => (
+                  <Button
+                    key={lang}
+                    variant={selectedLanguage === lang ? 'default' : 'outline'}
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => { setLanguage(lang); setShowLanguages(false) }}
+                  >
+                    {languageNames[lang] || lang.toUpperCase()}
+                  </Button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
