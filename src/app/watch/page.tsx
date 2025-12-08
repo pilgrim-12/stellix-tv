@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useRef } from 'react'
 import { Header } from '@/components/layout'
 import { VideoPlayer } from '@/components/player'
-import { ChannelList, CategoryFilter, LanguageFilter } from '@/components/channels'
+import { ChannelList, CategoryFilter, LanguageFilter, ChannelGridTrigger } from '@/components/channels'
 import { ProtectedRoute } from '@/components/auth'
 import { useChannelStore } from '@/stores'
 import { sampleChannels } from '@/data/channels'
@@ -217,7 +217,7 @@ function WatchContent() {
       {/* Status bar - desktop only */}
       <div className="hidden lg:flex shrink-0 border-t border-border/40 bg-muted/30 px-3 py-1 items-center justify-between text-[10px] text-muted-foreground">
         <div className="flex items-center gap-3">
-          <span>{channels.length} каналов</span>
+          <ChannelGridTrigger />
         </div>
         <div>
           {currentTime.toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'short' })} • {currentTime.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}

@@ -103,3 +103,23 @@ export const languageOrder = [
   'bs', 'sr', 'hr', 'sq', 'bg', 'ro', 'el', 'cs', 'sk', 'hu',
   'sv', 'no', 'da', 'fi', 'he', 'fa', 'vi', 'th', 'id', 'ms', 'ca'
 ];
+
+// Category names in Russian
+export const categoryNames: Record<string, string> = {
+  all: 'Все',
+  news: 'Новости',
+  sports: 'Спорт',
+  movies: 'Кино',
+  kids: 'Детям',
+  music: 'Музыка',
+  entertainment: 'Развлечения',
+  documentary: 'Документальное',
+  nature: 'Природа',
+  lifestyle: 'Стиль жизни',
+  cooking: 'Кулинария',
+  gaming: 'Игры',
+  education: 'Образование',
+  travel: 'Путешествия',
+  science: 'Наука',
+  religious: 'Религия',
+};
