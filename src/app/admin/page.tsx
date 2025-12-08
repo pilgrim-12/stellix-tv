@@ -542,185 +542,187 @@ export default function AdminPage() {
         </div>
       </header>
 
-      <main className="container py-6">
-        {/* Top row: Import + Search/Filters */}
-        <div className="mb-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Import M3U */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    Импорт M3U
-                  </CardTitle>
-                  <CardDescription>Добавьте плейлист по ссылке или файлу</CardDescription>
-                </div>
-                {/* Stats - inline in header */}
-                <div className="flex items-center gap-3 text-xs">
-                  <div className="flex items-center gap-1">
-                    <span className="font-bold">{stats?.total ?? '—'}</span>
-                    <span className="text-muted-foreground">всего</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-green-500">
-                    <CheckCircle2 className="h-3 w-3" />
-                    <span className="font-bold">{stats?.active ?? '—'}</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-red-500">
-                    <XCircle className="h-3 w-3" />
-                    <span className="font-bold">{stats?.broken ?? '—'}</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-yellow-500">
-                    <Clock className="h-3 w-3" />
-                    <span className="font-bold">{stats?.pending ?? '—'}</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-purple-500">
-                    <Users className="h-3 w-3" />
-                    <span className="font-bold">{usersCount ?? '—'}</span>
-                  </div>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex gap-2">
+      <main className="container py-4">
+        {/* Compact Import + Playlists bar */}
+        <Card className="mb-4">
+          <CardContent className="py-2 px-4">
+            <div className="flex items-center gap-3 flex-wrap">
+              {/* Import controls */}
+              <div className="flex items-center gap-2 flex-1 min-w-[300px]">
                 <Input
                   type="url"
                   placeholder="https://example.com/playlist.m3u"
-                  className="text-sm"
+                  className="h-8 text-sm flex-1"
                   value={playlistUrl}
                   onChange={(e) => setPlaylistUrl(e.target.value)}
                   disabled={isImporting}
                 />
-                <Button onClick={handleImportFromUrl} disabled={isImporting || !playlistUrl.trim()} size="icon">
+                <Button onClick={handleImportFromUrl} disabled={isImporting || !playlistUrl.trim()} size="icon" className="h-8 w-8">
                   {isImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link className="h-4 w-4" />}
                 </Button>
                 <input ref={fileInputRef} type="file" accept=".m3u,.m3u8" className="hidden" onChange={handleFileUpload} disabled={isImporting} />
-                <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isImporting}>
-                  <Upload className="h-4 w-4 mr-2" />
+                <Button variant="outline" size="sm" className="h-8" onClick={() => fileInputRef.current?.click()} disabled={isImporting}>
+                  <Upload className="h-4 w-4 mr-1" />
                   Файл
                 </Button>
               </div>
 
-              {importError && (
-                <p className="text-sm text-red-500 flex items-center gap-2">
-                  <XCircle className="h-4 w-4" />
-                  {importError}
-                </p>
-              )}
-              {importSuccess && (
-                <p className="text-sm text-green-500 flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4" />
-                  {importSuccess}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Search and Playlist Filter */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Search className="h-4 w-4" />
-                Фильтры
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Поиск каналов..."
-                  className="pl-9"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant={selectedStatus === 'all' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setSelectedStatus('all')}
-                >
-                  Все
-                </Button>
-                <Button
-                  variant={selectedStatus === 'pending' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setSelectedStatus('pending')}
-                  className={selectedStatus !== 'pending' ? 'text-yellow-500 border-yellow-500/30' : ''}
-                >
-                  <Clock className="h-3 w-3 mr-1" />
-                  Ожидает
-                </Button>
-                <Button
-                  variant={selectedStatus === 'active' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setSelectedStatus('active')}
-                  className={selectedStatus !== 'active' ? 'text-green-500 border-green-500/30' : ''}
-                >
-                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                  Рабочие
-                </Button>
-                <Button
-                  variant={selectedStatus === 'broken' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setSelectedStatus('broken')}
-                  className={selectedStatus !== 'broken' ? 'text-red-500 border-red-500/30' : ''}
-                >
-                  <AlertCircle className="h-3 w-3 mr-1" />
-                  Нерабочие
-                </Button>
-                <Button
-                  variant={selectedStatus === 'inactive' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setSelectedStatus('inactive')}
-                  className={selectedStatus !== 'inactive' ? 'text-gray-500 border-gray-500/30' : ''}
-                >
-                  <Ban className="h-3 w-3 mr-1" />
-                  Отключено
-                </Button>
-              </div>
-
-              {playlists.length > 0 && (
-                <div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-xs gap-1.5 px-2"
-                    onClick={() => setShowPlaylists(!showPlaylists)}
-                    disabled={isLoadingChannels}
-                  >
-                    <FileText className="h-3.5 w-3.5" />
-                    <span>Плейлист: {playlists.find(p => p.id === selectedPlaylist)?.name || 'Выберите'}</span>
-                    {isLoadingChannels ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : showPlaylists ? (
-                      <ChevronUp className="h-3.5 w-3.5" />
-                    ) : (
-                      <ChevronDown className="h-3.5 w-3.5" />
-                    )}
-                  </Button>
-
-                  {showPlaylists && (
-                    <div className="flex items-center gap-2 flex-wrap mt-2">
-                      {playlists.map((p) => (
-                        <Button
-                          key={p.id}
-                          variant={selectedPlaylist === p.id ? 'secondary' : 'ghost'}
-                          size="sm"
-                          onClick={() => handlePlaylistChange(p.id)}
-                        >
-                          {p.name}
-                        </Button>
-                      ))}
-                    </div>
-                  )}
+              {/* Stats */}
+              <div className="flex items-center gap-3 text-xs">
+                <div className="flex items-center gap-1">
+                  <span className="font-bold">{stats?.total ?? '—'}</span>
+                  <span className="text-muted-foreground">всего</span>
                 </div>
+                <div className="flex items-center gap-1 text-green-500">
+                  <CheckCircle2 className="h-3 w-3" />
+                  <span className="font-bold">{stats?.active ?? '—'}</span>
+                </div>
+                <div className="flex items-center gap-1 text-red-500">
+                  <XCircle className="h-3 w-3" />
+                  <span className="font-bold">{stats?.broken ?? '—'}</span>
+                </div>
+                <div className="flex items-center gap-1 text-yellow-500">
+                  <Clock className="h-3 w-3" />
+                  <span className="font-bold">{stats?.pending ?? '—'}</span>
+                </div>
+                <div className="flex items-center gap-1 text-purple-500">
+                  <Users className="h-3 w-3" />
+                  <span className="font-bold">{usersCount ?? '—'}</span>
+                </div>
+              </div>
+
+              {/* Playlists toggle */}
+              {playlists.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 text-xs gap-1.5"
+                  onClick={() => setShowPlaylists(!showPlaylists)}
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  <span>Плейлисты ({playlists.length})</span>
+                  {showPlaylists ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                </Button>
               )}
-            </CardContent>
-          </Card>
-        </div>
+
+              {/* Recalculate stats */}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs"
+                onClick={handleRecalculateStats}
+                disabled={isRecalculatingStats}
+              >
+                {isRecalculatingStats ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+              </Button>
+            </div>
+
+            {/* Import messages */}
+            {(importError || importSuccess) && (
+              <div className="mt-2">
+                {importError && (
+                  <p className="text-xs text-red-500 flex items-center gap-1">
+                    <XCircle className="h-3 w-3" />
+                    {importError}
+                  </p>
+                )}
+                {importSuccess && (
+                  <p className="text-xs text-green-500 flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3" />
+                    {importSuccess}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Collapsible playlists table */}
+            {showPlaylists && playlists.length > 0 && (
+              <div className="mt-2 border-t pt-2">
+                <div className="overflow-auto max-h-48">
+                  <table className="w-full text-xs">
+                    <thead className="sticky top-0 bg-background">
+                      <tr className="text-left text-muted-foreground">
+                        <th className="px-2 py-1 font-medium">Название</th>
+                        <th className="px-2 py-1 font-medium text-center">Всего</th>
+                        <th className="px-2 py-1 font-medium text-center text-green-500">
+                          <CheckCircle2 className="h-3 w-3 mx-auto" />
+                        </th>
+                        <th className="px-2 py-1 font-medium text-center text-red-500">
+                          <XCircle className="h-3 w-3 mx-auto" />
+                        </th>
+                        <th className="px-2 py-1 font-medium text-center text-yellow-500">
+                          <Clock className="h-3 w-3 mx-auto" />
+                        </th>
+                        <th className="px-2 py-1 font-medium text-center text-gray-500">
+                          <Ban className="h-3 w-3 mx-auto" />
+                        </th>
+                        <th className="px-1 py-1"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {playlists.map((playlist) => {
+                        const isDeleting = deletingPlaylistId === playlist.id
+                        const isSelected = selectedPlaylist === playlist.id
+                        const pStats = playlist.stats
+
+                        return (
+                          <tr
+                            key={playlist.id}
+                            className={cn(
+                              "hover:bg-muted/50 transition-colors cursor-pointer",
+                              isDeleting && "opacity-50",
+                              isSelected && "bg-primary/10"
+                            )}
+                            onClick={() => handlePlaylistChange(playlist.id)}
+                          >
+                            <td className="px-2 py-1">
+                              <span className="font-medium truncate block max-w-[150px]" title={playlist.name}>
+                                {playlist.name}
+                              </span>
+                            </td>
+                            <td className="px-2 py-1 text-center text-muted-foreground">
+                              {playlist.channelCount || '-'}
+                            </td>
+                            <td className="px-2 py-1 text-center text-green-500 font-medium">
+                              {pStats?.active ?? '-'}
+                            </td>
+                            <td className="px-2 py-1 text-center text-red-500 font-medium">
+                              {pStats?.broken ?? '-'}
+                            </td>
+                            <td className="px-2 py-1 text-center text-yellow-500 font-medium">
+                              {pStats?.pending ?? '-'}
+                            </td>
+                            <td className="px-2 py-1 text-center text-gray-500 font-medium">
+                              {pStats?.inactive ?? '-'}
+                            </td>
+                            <td className="px-1 py-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-5 w-5 text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleDeletePlaylist(playlist.id, playlist.channelCount || 0)
+                                }}
+                                disabled={isDeleting || deletingPlaylistId !== null}
+                              >
+                                {isDeleting ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-3 w-3" />
+                                )}
+                              </Button>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Main content: Player + Channels */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -857,113 +859,6 @@ export default function AdminPage() {
               </CardContent>
             </Card>
 
-            {/* Playlists */}
-            {playlists.length > 0 && (
-              <Card>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">Плейлисты ({playlists.length})</CardTitle>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 text-xs"
-                      onClick={handleRecalculateStats}
-                      disabled={isRecalculatingStats}
-                    >
-                      {isRecalculatingStats ? (
-                        <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                      ) : (
-                        <RefreshCw className="h-3 w-3 mr-1" />
-                      )}
-                      Пересчитать
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="overflow-auto max-h-64">
-                    <table className="w-full text-sm">
-                      <thead className="sticky top-0 bg-background border-b">
-                        <tr className="text-left text-xs text-muted-foreground">
-                          <th className="px-4 py-2 font-medium">Название</th>
-                          <th className="px-2 py-2 font-medium text-center">Всего</th>
-                          <th className="px-2 py-2 font-medium text-center text-green-500">
-                            <CheckCircle2 className="h-3 w-3 mx-auto" />
-                          </th>
-                          <th className="px-2 py-2 font-medium text-center text-red-500">
-                            <XCircle className="h-3 w-3 mx-auto" />
-                          </th>
-                          <th className="px-2 py-2 font-medium text-center text-yellow-500">
-                            <Clock className="h-3 w-3 mx-auto" />
-                          </th>
-                          <th className="px-2 py-2 font-medium text-center text-gray-500">
-                            <Ban className="h-3 w-3 mx-auto" />
-                          </th>
-                          <th className="px-2 py-2"></th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y">
-                        {playlists.map((playlist) => {
-                          const isDeleting = deletingPlaylistId === playlist.id
-                          const isSelected = selectedPlaylist === playlist.id
-                          const stats = playlist.stats
-
-                          return (
-                            <tr
-                              key={playlist.id}
-                              className={cn(
-                                "hover:bg-muted/50 transition-colors cursor-pointer",
-                                isDeleting && "opacity-50",
-                                isSelected && "bg-primary/10"
-                              )}
-                              onClick={() => handlePlaylistChange(playlist.id)}
-                            >
-                              <td className="px-4 py-2">
-                                <span className="font-medium truncate block max-w-[120px]" title={playlist.name}>
-                                  {playlist.name}
-                                </span>
-                              </td>
-                              <td className="px-2 py-2 text-center text-muted-foreground">
-                                {playlist.channelCount || '-'}
-                              </td>
-                              <td className="px-2 py-2 text-center text-green-500 font-medium">
-                                {stats?.active ?? '-'}
-                              </td>
-                              <td className="px-2 py-2 text-center text-red-500 font-medium">
-                                {stats?.broken ?? '-'}
-                              </td>
-                              <td className="px-2 py-2 text-center text-yellow-500 font-medium">
-                                {stats?.pending ?? '-'}
-                              </td>
-                              <td className="px-2 py-2 text-center text-gray-500 font-medium">
-                                {stats?.inactive ?? '-'}
-                              </td>
-                              <td className="px-2 py-2">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-500/10"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleDeletePlaylist(playlist.id, playlist.channelCount || 0)
-                                  }}
-                                  disabled={isDeleting || deletingPlaylistId !== null}
-                                >
-                                  {isDeleting ? (
-                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                  ) : (
-                                    <Trash2 className="h-3 w-3" />
-                                  )}
-                                </Button>
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
           </div>
 
           {/* Right column - Channels list */}
@@ -1003,9 +898,19 @@ export default function AdminPage() {
                   )
                 })()}
               </div>
-              {/* Status filter buttons */}
+              {/* Search and status filter buttons */}
               {selectedPlaylist && (
-                <div className="flex flex-wrap gap-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="relative flex-1 min-w-[150px] max-w-[250px]">
+                    <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      type="search"
+                      placeholder="Поиск..."
+                      className="h-6 text-xs pl-7 pr-2"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
                   <Button
                     variant={selectedStatus === 'all' ? 'default' : 'ghost'}
                     size="sm"
