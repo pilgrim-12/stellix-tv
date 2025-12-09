@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Switch } from '@/components/ui/switch'
 import { parseM3U, convertToAppChannels, fetchM3UPlaylist } from '@/lib/m3uParser'
 import {
   Search,
@@ -18,7 +17,6 @@ import {
   Upload,
   Link,
   Trash2,
-  FileText,
   Loader2,
   Users,
   Play,
@@ -27,56 +25,32 @@ import {
   Ban,
   Check,
   X,
-  Copy,
+  Database,
+  FileText,
   ChevronDown,
   ChevronUp,
+  FolderOpen,
 } from 'lucide-react'
 import {
-  getAllPlaylists,
-  getChannelsByPlaylist,
-  createPlaylist,
-  deletePlaylist,
-  importChannels,
-  getChannelsStats,
-  setChannelStatus,
-  updateChannelLanguage,
-  updateChannelCategory,
-  recalculateAllPlaylistStats,
-  getAllChannels,
-  setPrimarySource,
-  getChannelsByIds,
-  FirebaseChannel,
-  Playlist,
-} from '@/lib/channelService'
-import { DuplicateManagementModal } from '@/components/admin/DuplicateManagementModal'
+  getAllCuratedChannelsRaw,
+  getCuratedMetadata,
+  importChannelsToCurated,
+  updateChannelStatus,
+  updateCuratedChannel,
+  bulkDeleteChannels,
+  getPlaylistSources,
+  addPlaylistSource,
+  deletePlaylistSource,
+  CuratedChannel,
+  ImportResult,
+  PlaylistSource,
+} from '@/lib/curatedChannelService'
 import { getTotalUsersCount, setUserAsAdmin, removeUserAdmin, getAllUsers } from '@/lib/userService'
-import { getStatsSummary, resetStats, QuotaStats } from '@/lib/firebaseQuotaTracker'
+import { getStatsSummary, resetStats } from '@/lib/firebaseQuotaTracker'
 import { Timestamp } from 'firebase/firestore'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
-import { languageNames, languageOrder, ChannelStatus } from '@/types'
-
-const categoryNamesRu: Record<string, string> = {
-  all: 'Все',
-  news: 'Новости',
-  sports: 'Спорт',
-  movies: 'Кино',
-  kids: 'Детям',
-  music: 'Музыка',
-  entertainment: 'Развлечения',
-  documentary: 'Документальное',
-  nature: 'Природа',
-  lifestyle: 'Стиль жизни',
-  cooking: 'Кулинария',
-  gaming: 'Игры',
-  radio: 'Радио',
-}
-
-// Category order for selector (excluding 'all')
-const categoryOrder = [
-  'news', 'sports', 'movies', 'kids', 'music', 'entertainment',
-  'documentary', 'nature', 'lifestyle', 'cooking', 'gaming', 'radio'
-]
+import { languageNames, languageOrder, categoryNames, categoryOrder, ChannelStatus } from '@/types'
 
 const statusColors: Record<ChannelStatus, string> = {
   pending: 'bg-yellow-500/20 text-yellow-500',
@@ -99,25 +73,24 @@ export default function AdminPage() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const hlsRef = useRef<{ destroy: () => void } | null>(null)
 
-  // Data state
-  const [channels, setChannels] = useState<FirebaseChannel[]>([])
-  const [playlists, setPlaylists] = useState<Playlist[]>([])
+  // Data state - now using curated_channels
+  const [channels, setChannels] = useState<CuratedChannel[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   // Filter state
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedStatus, setSelectedStatus] = useState<ChannelStatus | 'all'>('all')
-  const [selectedPlaylist, setSelectedPlaylist] = useState<string>('')
-  const [isLoadingChannels, setIsLoadingChannels] = useState(false)
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('all')
 
   // Import state
   const [playlistUrl, setPlaylistUrl] = useState('')
   const [isImporting, setIsImporting] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
   const [importSuccess, setImportSuccess] = useState<string | null>(null)
+  const [lastImportResult, setLastImportResult] = useState<ImportResult | null>(null)
 
-  // Deleting playlist state
-  const [deletingPlaylistId, setDeletingPlaylistId] = useState<string | null>(null)
+  // Delete state
+  const [deletingChannelId, setDeletingChannelId] = useState<string | null>(null)
 
   // Status update loading state
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null)
@@ -125,29 +98,19 @@ export default function AdminPage() {
   const [updatingCategoryId, setUpdatingCategoryId] = useState<string | null>(null)
 
   // Player state
-  const [selectedChannel, setSelectedChannel] = useState<FirebaseChannel | null>(null)
+  const [selectedChannel, setSelectedChannel] = useState<CuratedChannel | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [playerError, setPlayerError] = useState(false)
 
-  // Stats
+  // Stats - calculated from channels
   const [usersCount, setUsersCount] = useState<number | null>(null)
-  const [stats, setStats] = useState<{ total: number; pending: number; active: number; inactive: number; broken: number } | null>(null)
+  const [metadata, setMetadata] = useState<{ count: number; version: number; updatedAt: Date | null } | null>(null)
 
-  // Duplicates analysis
-  interface DuplicateInfo {
-    name: string
-    normalizedName: string
-    count: number
-    channels: { id: string; playlistId: string; playlistName: string; status: string; isPrimary?: boolean }[]
-  }
-  const [duplicates, setDuplicates] = useState<DuplicateInfo[]>([])
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [showDuplicates, setShowDuplicates] = useState(false)
-  const [allChannelsForDuplicates, setAllChannelsForDuplicates] = useState<FirebaseChannel[]>([])
-  const [selectedDuplicate, setSelectedDuplicate] = useState<DuplicateInfo | null>(null)
-  const [duplicateModalChannels, setDuplicateModalChannels] = useState<FirebaseChannel[]>([])
-  const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false)
-  const [loadingDuplicateId, setLoadingDuplicateId] = useState<string | null>(null)
+  // Playlist sources (import history)
+  const [playlistSources, setPlaylistSources] = useState<PlaylistSource[]>([])
+  const [showPlaylists, setShowPlaylists] = useState(false)
+  const [selectedPlaylistId, setSelectedPlaylistId] = useState<string>('all')
+  const [deletingSourceId, setDeletingSourceId] = useState<string | null>(null)
 
   // Users management
   interface UserInfo {
@@ -160,8 +123,6 @@ export default function AdminPage() {
   const [showUsers, setShowUsers] = useState(false)
   const [loadingUsers, setLoadingUsers] = useState(false)
   const [togglingAdminId, setTogglingAdminId] = useState<string | null>(null)
-  const [showPlaylists, setShowPlaylists] = useState(false)
-  const [isRecalculatingStats, setIsRecalculatingStats] = useState(false)
 
   // Firebase Quota Tracking
   const [quotaStats, setQuotaStats] = useState<ReturnType<typeof getStatsSummary> | null>(null)
@@ -174,28 +135,22 @@ export default function AdminPage() {
     }
   }, [loading, isAdmin, router])
 
-  // Load playlists and stats (without channels)
+  // Load all data from curated_channels (single document = 1 read)
   const loadData = async () => {
     setIsLoading(true)
     try {
-      const [playlistsData, usersData, statsData] = await Promise.all([
-        getAllPlaylists(),
+      const [channelsData, usersData, metadataData, sourcesData] = await Promise.all([
+        getAllCuratedChannelsRaw(),
         getTotalUsersCount(),
-        getChannelsStats(),
+        getCuratedMetadata(),
+        getPlaylistSources(),
       ])
-      setPlaylists(playlistsData)
+      setChannels(channelsData)
       setUsersCount(usersData)
-      setStats(statsData)
-
-      // Load saved playlist from localStorage or auto-select first
-      const savedPlaylist = localStorage.getItem('stellix-admin-playlist')
-      if (savedPlaylist && playlistsData.some(p => p.id === savedPlaylist)) {
-        setSelectedPlaylist(savedPlaylist)
-      } else if (playlistsData.length > 0) {
-        const firstPlaylistId = playlistsData[0].id
-        setSelectedPlaylist(firstPlaylistId)
-        localStorage.setItem('stellix-admin-playlist', firstPlaylistId)
-      }
+      setMetadata(metadataData)
+      setPlaylistSources(sourcesData.sort((a, b) =>
+        new Date(b.importedAt).getTime() - new Date(a.importedAt).getTime()
+      ))
     } catch (error) {
       console.error('Error loading data:', error)
     } finally {
@@ -203,41 +158,9 @@ export default function AdminPage() {
     }
   }
 
-  // Load channels for selected playlist
-  const loadChannelsForPlaylist = async (playlistId: string) => {
-    if (!playlistId) return
-
-    setIsLoadingChannels(true)
-    try {
-      const channelsData = await getChannelsByPlaylist(playlistId)
-      setChannels(channelsData)
-    } catch (error) {
-      console.error('Error loading channels:', error)
-    } finally {
-      setIsLoadingChannels(false)
-    }
-  }
-
-  // Handle playlist selection change
-  const handlePlaylistChange = (playlistId: string) => {
-    setSelectedPlaylist(playlistId)
-    localStorage.setItem('stellix-admin-playlist', playlistId)
-    setShowPlaylists(false)
-    if (playlistId) {
-      loadChannelsForPlaylist(playlistId)
-    }
-  }
-
   useEffect(() => {
     loadData()
   }, [])
-
-  // Load channels when playlist changes or on initial load
-  useEffect(() => {
-    if (selectedPlaylist && playlists.length > 0) {
-      loadChannelsForPlaylist(selectedPlaylist)
-    }
-  }, [selectedPlaylist, playlists.length])
 
   // Update quota stats periodically
   useEffect(() => {
@@ -250,7 +173,7 @@ export default function AdminPage() {
   }, [])
 
   // Play channel in preview
-  const playChannel = async (channel: FirebaseChannel) => {
+  const playChannel = async (channel: CuratedChannel) => {
     // Cleanup previous HLS instance
     if (hlsRef.current) {
       hlsRef.current.destroy()
@@ -291,35 +214,14 @@ export default function AdminPage() {
   const handleSetStatus = async (channelId: string, status: ChannelStatus) => {
     setUpdatingStatusId(channelId)
     try {
-      const channel = channels.find(ch => ch.id === channelId)
-      const oldStatus = channel?.status || 'pending'
-
-      await setChannelStatus(channelId, status)
+      await updateChannelStatus(channelId, status, user?.email || undefined)
       setChannels((prev) =>
-        prev.map((ch) => (ch.id === channelId ? { ...ch, status } : ch))
+        prev.map((ch) => (ch.id === channelId ? { ...ch, status, lastChecked: new Date().toISOString() } : ch))
       )
-
-      // Update playlist stats in UI (optimistic update)
-      if (selectedPlaylist && oldStatus !== status) {
-        setPlaylists((prev) =>
-          prev.map((p) => {
-            if (p.id !== selectedPlaylist) return p
-            const stats = p.stats || { pending: 0, active: 0, inactive: 0, broken: 0 }
-            return {
-              ...p,
-              stats: {
-                ...stats,
-                [oldStatus]: Math.max(0, (stats[oldStatus] || 0) - 1),
-                [status]: (stats[status] || 0) + 1,
-              },
-            }
-          })
-        )
+      // Update selected channel if it's the one being updated
+      if (selectedChannel?.id === channelId) {
+        setSelectedChannel({ ...selectedChannel, status })
       }
-
-      // Update global stats
-      const newStats = await getChannelsStats()
-      setStats(newStats)
     } catch (error) {
       console.error('Error setting status:', error)
     } finally {
@@ -327,21 +229,34 @@ export default function AdminPage() {
     }
   }
 
-  // Import M3U from URL
+  // Delete channel
+  const handleDeleteChannel = async (channelId: string) => {
+    if (!confirm('Удалить этот канал?')) return
+
+    setDeletingChannelId(channelId)
+    try {
+      await bulkDeleteChannels([channelId])
+      setChannels((prev) => prev.filter((ch) => ch.id !== channelId))
+      if (selectedChannel?.id === channelId) {
+        setSelectedChannel(null)
+      }
+    } catch (error) {
+      console.error('Error deleting channel:', error)
+    } finally {
+      setDeletingChannelId(null)
+    }
+  }
+
+  // Import M3U from URL - adds to curated_channels with deduplication
   const handleImportFromUrl = async () => {
     if (!playlistUrl.trim()) return
 
     setIsImporting(true)
     setImportError(null)
     setImportSuccess(null)
+    setLastImportResult(null)
 
     try {
-      // Check if playlist with this URL already exists
-      const existingPlaylist = playlists.find((p) => p.url === playlistUrl.trim())
-      if (existingPlaylist) {
-        throw new Error(`Плейлист "${existingPlaylist.name}" с этим URL уже добавлен`)
-      }
-
       const content = await fetchM3UPlaylist(playlistUrl.trim())
       const m3uChannels = parseM3U(content)
 
@@ -349,25 +264,38 @@ export default function AdminPage() {
         throw new Error('Плейлист пуст или имеет неверный формат')
       }
 
-      // Extract name from URL
+      // Extract name from URL for playlistId reference
       const urlParts = playlistUrl.split('/')
-      const fileName = urlParts[urlParts.length - 1] || 'Плейлист'
+      const fileName = urlParts[urlParts.length - 1] || 'playlist'
       const playlistName = fileName.replace('.m3u8', '').replace('.m3u', '')
+      const playlistId = `source-${Date.now()}`
 
-      // Check if playlist with same name exists
-      const existingByName = playlists.find((p) => p.name.toLowerCase() === playlistName.toLowerCase())
-      if (existingByName) {
-        throw new Error(`Плейлист с именем "${playlistName}" уже существует`)
-      }
-
-      // Create playlist in Firebase
-      const playlistId = await createPlaylist(playlistName, m3uChannels.length, playlistUrl)
-
-      // Convert and import channels
+      // Convert and import channels to curated_channels
       const appChannels = convertToAppChannels(m3uChannels, playlistId)
-      const result = await importChannels(appChannels, playlistId)
+      const result = await importChannelsToCurated(
+        appChannels.map(ch => ({
+          name: ch.name,
+          url: ch.url,
+          logo: ch.logo,
+          group: ch.group,
+          language: ch.language,
+          country: ch.country,
+        })),
+        playlistId
+      )
 
-      setImportSuccess(`Добавлено ${result.success} каналов в плейлист "${playlistName}"`)
+      // Save playlist source record
+      await addPlaylistSource(
+        playlistName,
+        playlistUrl.trim(),
+        'url',
+        m3uChannels.length,
+        result.added,
+        result.skipped
+      )
+
+      setLastImportResult(result)
+      setImportSuccess(`Добавлено ${result.added} каналов, пропущено ${result.skipped} (дубликаты по URL)`)
       setPlaylistUrl('')
 
       // Reload data
@@ -379,7 +307,7 @@ export default function AdminPage() {
     }
   }
 
-  // Import M3U from file
+  // Import M3U from file - adds to curated_channels with deduplication
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -387,15 +315,11 @@ export default function AdminPage() {
     setIsImporting(true)
     setImportError(null)
     setImportSuccess(null)
+    setLastImportResult(null)
 
     try {
       const playlistName = file.name.replace('.m3u8', '').replace('.m3u', '')
-
-      // Check if playlist with same name already exists
-      const existingByName = playlists.find((p) => p.name.toLowerCase() === playlistName.toLowerCase())
-      if (existingByName) {
-        throw new Error(`Плейлист с именем "${playlistName}" уже существует`)
-      }
+      const playlistId = `source-${Date.now()}`
 
       const content = await file.text()
       const m3uChannels = parseM3U(content)
@@ -404,14 +328,32 @@ export default function AdminPage() {
         throw new Error('Файл пуст или имеет неверный формат')
       }
 
-      // Create playlist in Firebase
-      const playlistId = await createPlaylist(playlistName, m3uChannels.length)
-
-      // Convert and import channels
+      // Convert and import channels to curated_channels
       const appChannels = convertToAppChannels(m3uChannels, playlistId)
-      const result = await importChannels(appChannels, playlistId)
+      const result = await importChannelsToCurated(
+        appChannels.map(ch => ({
+          name: ch.name,
+          url: ch.url,
+          logo: ch.logo,
+          group: ch.group,
+          language: ch.language,
+          country: ch.country,
+        })),
+        playlistId
+      )
 
-      setImportSuccess(`Добавлено ${result.success} каналов из "${file.name}"`)
+      // Save playlist source record
+      await addPlaylistSource(
+        playlistName,
+        null,
+        'file',
+        m3uChannels.length,
+        result.added,
+        result.skipped
+      )
+
+      setLastImportResult(result)
+      setImportSuccess(`Добавлено ${result.added} каналов из "${file.name}", пропущено ${result.skipped} дубликатов`)
 
       // Reload data
       await loadData()
@@ -425,122 +367,58 @@ export default function AdminPage() {
     }
   }
 
-  // Delete playlist
-  const handleDeletePlaylist = async (playlistId: string, channelCount: number) => {
-    if (!confirm(`Удалить плейлист и все его ${channelCount} каналов? Это может занять некоторое время.`)) return
+  // Delete playlist source
+  const handleDeleteSource = async (sourceId: string) => {
+    if (!confirm('Удалить запись об импорте? Каналы из этого плейлиста останутся в базе.')) return
 
-    setDeletingPlaylistId(playlistId)
-    setImportError(null)
-    setImportSuccess(null)
-
+    setDeletingSourceId(sourceId)
     try {
-      await deletePlaylist(playlistId)
-      setImportSuccess(`Плейлист и ${channelCount} каналов удалены`)
-      await loadData()
-    } catch (error) {
-      console.error('Error deleting playlist:', error)
-      setImportError('Ошибка при удалении плейлиста')
-    } finally {
-      setDeletingPlaylistId(null)
-    }
-  }
-
-  // Analyze duplicates across ALL playlists - by URL (same source)
-  const analyzeDuplicates = async () => {
-    setIsAnalyzing(true)
-
-    try {
-      // Load ALL channels from ALL playlists
-      const allChannels = await getAllChannels()
-      setAllChannelsForDuplicates(allChannels)
-
-      // Create playlist map for quick lookup
-      const playlistMap = new Map(playlists.map(p => [p.id, p.name]))
-
-      // Group channels by URL (same source = duplicate)
-      const groups = new Map<string, DuplicateInfo>()
-
-      allChannels.forEach(channel => {
-        const url = channel.url?.trim()
-        if (!url) return
-
-        if (!groups.has(url)) {
-          groups.set(url, {
-            name: channel.name,
-            normalizedName: url, // Using URL as the key
-            count: 0,
-            channels: []
-          })
-        }
-
-        const group = groups.get(url)!
-        group.count++
-        group.channels.push({
-          id: channel.id,
-          playlistId: channel.playlistId || '',
-          playlistName: playlistMap.get(channel.playlistId || '') || 'Неизвестный',
-          status: channel.status || 'pending',
-          isPrimary: channel.isPrimary || false
-        })
-      })
-
-      // Filter only duplicates (count > 1) and sort by count
-      const duplicatesList = Array.from(groups.values())
-        .filter(g => g.count > 1)
-        .sort((a, b) => b.count - a.count)
-
-      setDuplicates(duplicatesList)
-      setShowDuplicates(true)
-    } catch (error) {
-      console.error('Error analyzing duplicates:', error)
-    } finally {
-      setIsAnalyzing(false)
-    }
-  }
-
-  // Open duplicate management modal
-  const openDuplicateModal = async (duplicate: DuplicateInfo) => {
-    setLoadingDuplicateId(duplicate.normalizedName)
-    setSelectedDuplicate(duplicate)
-
-    try {
-      // Load full channel data for all channels in this duplicate group
-      const channelIds = duplicate.channels.map(c => c.id)
-      const channelsData = await getChannelsByIds(channelIds)
-      setDuplicateModalChannels(channelsData)
-      setIsDuplicateModalOpen(true)
-    } finally {
-      setLoadingDuplicateId(null)
-    }
-  }
-
-  // Handle duplicate management apply
-  const handleDuplicateApply = async (primaryId: string | null, otherIds: string[]) => {
-    // Set isPrimary flag - does NOT change channel status
-    await setPrimarySource(primaryId, otherIds)
-
-    // Update local duplicates state - update isPrimary flag
-    setDuplicates(prev => prev.map(dup => {
-      if (dup.normalizedName === selectedDuplicate?.normalizedName) {
-        return {
-          ...dup,
-          channels: dup.channels.map(ch => ({
-            ...ch,
-            isPrimary: ch.id === primaryId
-          }))
-        }
+      await deletePlaylistSource(sourceId)
+      setPlaylistSources(prev => prev.filter(s => s.id !== sourceId))
+      if (selectedPlaylistId === sourceId) {
+        setSelectedPlaylistId('all')
       }
-      return dup
-    }))
+    } catch (error) {
+      console.error('Error deleting source:', error)
+    } finally {
+      setDeletingSourceId(null)
+    }
+  }
 
-    // Update channels in current view if any affected
-    setChannels(prev => prev.map(ch => {
-      const allIds = primaryId ? [primaryId, ...otherIds] : otherIds
-      if (allIds.includes(ch.id)) {
-        return { ...ch, isPrimary: ch.id === primaryId }
+  // Update channel language
+  const handleUpdateLanguage = async (channelId: string, newLanguage: string) => {
+    setUpdatingLanguageId(channelId)
+    try {
+      await updateCuratedChannel(channelId, { language: newLanguage || null })
+      setChannels((prev) =>
+        prev.map((ch) => (ch.id === channelId ? { ...ch, language: newLanguage || null } : ch))
+      )
+      if (selectedChannel?.id === channelId) {
+        setSelectedChannel({ ...selectedChannel, language: newLanguage || null })
       }
-      return ch
-    }))
+    } catch (error) {
+      console.error('Error updating language:', error)
+    } finally {
+      setUpdatingLanguageId(null)
+    }
+  }
+
+  // Update channel category
+  const handleUpdateCategory = async (channelId: string, newCategory: string) => {
+    setUpdatingCategoryId(channelId)
+    try {
+      await updateCuratedChannel(channelId, { group: newCategory || 'entertainment' })
+      setChannels((prev) =>
+        prev.map((ch) => (ch.id === channelId ? { ...ch, group: newCategory || 'entertainment' } : ch))
+      )
+      if (selectedChannel?.id === channelId) {
+        setSelectedChannel({ ...selectedChannel, group: newCategory || 'entertainment' })
+      }
+    } catch (error) {
+      console.error('Error updating category:', error)
+    } finally {
+      setUpdatingCategoryId(null)
+    }
   }
 
   // Load users for admin management
@@ -576,26 +454,25 @@ export default function AdminPage() {
     }
   }
 
-  // Recalculate all playlist stats
-  const handleRecalculateStats = async () => {
-    setIsRecalculatingStats(true)
-    try {
-      await recalculateAllPlaylistStats()
-      // Reload playlists to get updated stats
-      const playlistsData = await getAllPlaylists()
-      setPlaylists(playlistsData)
-    } catch (error) {
-      console.error('Error recalculating stats:', error)
-    } finally {
-      setIsRecalculatingStats(false)
-    }
+  // Calculate stats from channels
+  const stats = {
+    total: channels.length,
+    pending: channels.filter(ch => ch.status === 'pending').length,
+    active: channels.filter(ch => ch.status === 'active').length,
+    inactive: channels.filter(ch => ch.status === 'inactive').length,
+    broken: channels.filter(ch => ch.status === 'broken').length,
   }
 
-  // Filter channels (only by search and status, playlist is already filtered on load)
+  // Get unique languages from channels
+  const availableLanguages = [...new Set(channels.map(ch => ch.language).filter(Boolean))] as string[]
+
+  // Filter channels
   const filteredChannels = channels.filter((channel) => {
     const matchesSearch = !searchQuery || channel.name.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesStatus = selectedStatus === 'all' || channel.status === selectedStatus || (!channel.status && selectedStatus === 'pending')
-    return matchesSearch && matchesStatus
+    const matchesLanguage = selectedLanguage === 'all' || channel.language === selectedLanguage
+    const matchesPlaylist = selectedPlaylistId === 'all' || channel.playlistId === selectedPlaylistId
+    return matchesSearch && matchesStatus && matchesLanguage && matchesPlaylist
   })
 
   return (
@@ -611,6 +488,14 @@ export default function AdminPage() {
             <h1 className="text-lg font-semibold">Управление каналами</h1>
           </div>
           <div className="ml-auto flex items-center gap-2">
+            <Button variant="default" size="sm" onClick={() => router.push('/admin/staging')}>
+              <FolderOpen className="h-4 w-4 mr-2" />
+              Staging
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => router.push('/admin/migrate')}>
+              <Database className="h-4 w-4 mr-2" />
+              Миграция
+            </Button>
             <Button variant="outline" size="sm" onClick={loadData} disabled={isLoading}>
               <RefreshCw className={cn('h-4 w-4 mr-2', isLoading && 'animate-spin')} />
               Обновить
@@ -668,29 +553,27 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* Playlists toggle */}
-              {playlists.length > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 text-xs gap-1.5"
-                  onClick={() => setShowPlaylists(!showPlaylists)}
-                >
-                  <FileText className="h-3.5 w-3.5" />
-                  <span>Плейлисты ({playlists.length})</span>
-                  {showPlaylists ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                </Button>
+              {/* Database info */}
+              {metadata && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Database className="h-3 w-3" />
+                  <span>v{metadata.version}</span>
+                  {metadata.updatedAt && (
+                    <span>• {metadata.updatedAt.toLocaleString('ru-RU')}</span>
+                  )}
+                </div>
               )}
 
-              {/* Recalculate stats */}
+              {/* Playlists toggle */}
               <Button
-                variant="ghost"
+                variant={showPlaylists ? "secondary" : "ghost"}
                 size="sm"
-                className="h-8 text-xs"
-                onClick={handleRecalculateStats}
-                disabled={isRecalculatingStats}
+                className="h-8 text-xs gap-1.5"
+                onClick={() => setShowPlaylists(!showPlaylists)}
               >
-                {isRecalculatingStats ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                <FileText className="h-3.5 w-3.5" />
+                <span>Импорты ({playlistSources.length})</span>
+                {showPlaylists ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
               </Button>
 
               {/* Firebase Quota Stats toggle */}
@@ -723,90 +606,107 @@ export default function AdminPage() {
               </div>
             )}
 
-            {/* Collapsible playlists table */}
-            {showPlaylists && playlists.length > 0 && (
+            {/* Playlists (Import History) Panel */}
+            {showPlaylists && (
               <div className="mt-2 border-t pt-2">
-                <div className="overflow-auto max-h-48">
-                  <table className="w-full text-xs">
-                    <thead className="sticky top-0 bg-background">
-                      <tr className="text-left text-muted-foreground">
-                        <th className="px-2 py-1 font-medium">Название</th>
-                        <th className="px-2 py-1 font-medium text-center">Всего</th>
-                        <th className="px-2 py-1 font-medium text-center text-green-500">
-                          <CheckCircle2 className="h-3 w-3 mx-auto" />
-                        </th>
-                        <th className="px-2 py-1 font-medium text-center text-red-500">
-                          <XCircle className="h-3 w-3 mx-auto" />
-                        </th>
-                        <th className="px-2 py-1 font-medium text-center text-yellow-500">
-                          <Clock className="h-3 w-3 mx-auto" />
-                        </th>
-                        <th className="px-2 py-1 font-medium text-center text-gray-500">
-                          <Ban className="h-3 w-3 mx-auto" />
-                        </th>
-                        <th className="px-1 py-1"></th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {playlists.map((playlist) => {
-                        const isDeleting = deletingPlaylistId === playlist.id
-                        const isSelected = selectedPlaylist === playlist.id
-                        const pStats = playlist.stats
-
-                        return (
-                          <tr
-                            key={playlist.id}
-                            className={cn(
-                              "hover:bg-muted/50 transition-colors cursor-pointer",
-                              isDeleting && "opacity-50",
-                              isSelected && "bg-primary/10"
-                            )}
-                            onClick={() => handlePlaylistChange(playlist.id)}
-                          >
-                            <td className="px-2 py-1">
-                              <span className="font-medium truncate block max-w-[150px]" title={playlist.name}>
-                                {playlist.name}
-                              </span>
-                            </td>
-                            <td className="px-2 py-1 text-center text-muted-foreground">
-                              {playlist.channelCount || '-'}
-                            </td>
-                            <td className="px-2 py-1 text-center text-green-500 font-medium">
-                              {pStats?.active ?? '-'}
-                            </td>
-                            <td className="px-2 py-1 text-center text-red-500 font-medium">
-                              {pStats?.broken ?? '-'}
-                            </td>
-                            <td className="px-2 py-1 text-center text-yellow-500 font-medium">
-                              {pStats?.pending ?? '-'}
-                            </td>
-                            <td className="px-2 py-1 text-center text-gray-500 font-medium">
-                              {pStats?.inactive ?? '-'}
-                            </td>
-                            <td className="px-1 py-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-5 w-5 text-red-500 hover:text-red-600 hover:bg-red-500/10"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleDeletePlaylist(playlist.id, playlist.channelCount || 0)
-                                }}
-                                disabled={isDeleting || deletingPlaylistId !== null}
-                              >
-                                {isDeleting ? (
-                                  <Loader2 className="h-3 w-3 animate-spin" />
-                                ) : (
-                                  <Trash2 className="h-3 w-3" />
+                <h4 className="text-sm font-medium mb-2">История импортов</h4>
+                {playlistSources.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">Ещё нет импортированных плейлистов</p>
+                ) : (
+                  <div className="overflow-auto max-h-48">
+                    <table className="w-full text-xs">
+                      <thead className="sticky top-0 bg-background">
+                        <tr className="text-left text-muted-foreground">
+                          <th className="px-2 py-1 font-medium">Название</th>
+                          <th className="px-2 py-1 font-medium text-center">Тип</th>
+                          <th className="px-2 py-1 font-medium text-center">Всего</th>
+                          <th className="px-2 py-1 font-medium text-center text-green-500">Добавлено</th>
+                          <th className="px-2 py-1 font-medium text-center text-yellow-500">Пропущено</th>
+                          <th className="px-2 py-1 font-medium">Дата</th>
+                          <th className="px-1 py-1"></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {playlistSources.map((source) => {
+                          const isSelected = selectedPlaylistId === source.id
+                          return (
+                            <tr
+                              key={source.id}
+                              className={cn(
+                                "hover:bg-muted/50 cursor-pointer",
+                                isSelected && "bg-primary/10"
+                              )}
+                              onClick={() => setSelectedPlaylistId(isSelected ? 'all' : source.id)}
+                            >
+                              <td className="px-2 py-1">
+                                <span className="font-medium truncate block max-w-[150px]" title={source.name}>
+                                  {source.name}
+                                </span>
+                                {source.url && (
+                                  <span className="text-[10px] text-muted-foreground truncate block max-w-[150px]" title={source.url}>
+                                    {source.url}
+                                  </span>
                                 )}
-                              </Button>
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                              </td>
+                              <td className="px-2 py-1 text-center">
+                                {source.type === 'url' ? (
+                                  <Link className="h-3 w-3 mx-auto text-blue-500" />
+                                ) : (
+                                  <FileText className="h-3 w-3 mx-auto text-gray-500" />
+                                )}
+                              </td>
+                              <td className="px-2 py-1 text-center text-muted-foreground">
+                                {source.channelCount}
+                              </td>
+                              <td className="px-2 py-1 text-center text-green-500 font-medium">
+                                {source.addedCount}
+                              </td>
+                              <td className="px-2 py-1 text-center text-yellow-500 font-medium">
+                                {source.skippedCount}
+                              </td>
+                              <td className="px-2 py-1 text-muted-foreground">
+                                {new Date(source.importedAt).toLocaleDateString('ru-RU')}
+                              </td>
+                              <td className="px-1 py-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-5 w-5 text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleDeleteSource(source.id)
+                                  }}
+                                  disabled={deletingSourceId === source.id}
+                                >
+                                  {deletingSourceId === source.id ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="h-3 w-3" />
+                                  )}
+                                </Button>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                {selectedPlaylistId !== 'all' && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      Фильтр: {playlistSources.find(s => s.id === selectedPlaylistId)?.name}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 text-xs px-2"
+                      onClick={() => setSelectedPlaylistId('all')}
+                    >
+                      Сбросить
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -981,23 +881,7 @@ export default function AdminPage() {
                         className="flex-1 h-8 rounded-md border border-input bg-background px-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:opacity-50"
                         value={selectedChannel.language || ''}
                         disabled={updatingLanguageId === selectedChannel.id}
-                        onChange={async (e) => {
-                          const newLanguage = e.target.value
-                          setUpdatingLanguageId(selectedChannel.id)
-                          try {
-                            await updateChannelLanguage(selectedChannel.id, newLanguage)
-                            setChannels((prev) =>
-                              prev.map((ch) =>
-                                ch.id === selectedChannel.id ? { ...ch, language: newLanguage } : ch
-                              )
-                            )
-                            setSelectedChannel({ ...selectedChannel, language: newLanguage })
-                          } catch (error) {
-                            console.error('Error updating language:', error)
-                          } finally {
-                            setUpdatingLanguageId(null)
-                          }
-                        }}
+                        onChange={(e) => handleUpdateLanguage(selectedChannel.id, e.target.value)}
                       >
                         <option value="">Неизвестный язык</option>
                         {languageOrder.map((code) => (
@@ -1019,32 +903,32 @@ export default function AdminPage() {
                         className="flex-1 h-8 rounded-md border border-input bg-background px-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:opacity-50"
                         value={selectedChannel.group || ''}
                         disabled={updatingCategoryId === selectedChannel.id}
-                        onChange={async (e) => {
-                          const newCategory = e.target.value
-                          setUpdatingCategoryId(selectedChannel.id)
-                          try {
-                            await updateChannelCategory(selectedChannel.id, newCategory)
-                            setChannels((prev) =>
-                              prev.map((ch) =>
-                                ch.id === selectedChannel.id ? { ...ch, group: newCategory } : ch
-                              )
-                            )
-                            setSelectedChannel({ ...selectedChannel, group: newCategory })
-                          } catch (error) {
-                            console.error('Error updating category:', error)
-                          } finally {
-                            setUpdatingCategoryId(null)
-                          }
-                        }}
+                        onChange={(e) => handleUpdateCategory(selectedChannel.id, e.target.value)}
                       >
                         <option value="">Неизвестная категория</option>
                         {categoryOrder.map((cat) => (
                           <option key={cat} value={cat}>
-                            {categoryNamesRu[cat]}
+                            {categoryNames[cat]}
                           </option>
                         ))}
                       </select>
                     </div>
+
+                    {/* Delete button */}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full text-red-500 hover:bg-red-500/10"
+                      onClick={() => handleDeleteChannel(selectedChannel.id)}
+                      disabled={deletingChannelId === selectedChannel.id}
+                    >
+                      {deletingChannelId === selectedChannel.id ? (
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4 mr-1" />
+                      )}
+                      Удалить канал
+                    </Button>
                   </div>
                 )}
               </CardContent>
@@ -1057,111 +941,95 @@ export default function AdminPage() {
             <CardHeader className="pb-3 space-y-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">
-                  Каналы {selectedPlaylist ? `(${filteredChannels.length})` : ''}
+                  Каналы ({filteredChannels.length} из {channels.length})
                 </CardTitle>
-                {selectedPlaylist && (() => {
-                  const currentPlaylist = playlists.find(p => p.id === selectedPlaylist)
-                  const stats = currentPlaylist?.stats
-                  return (
-                    <div className="flex items-center gap-3 text-xs">
-                      <span className="text-muted-foreground font-medium truncate max-w-[150px]" title={currentPlaylist?.name}>
-                        {currentPlaylist?.name}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1 text-green-500">
-                          <CheckCircle2 className="h-3 w-3" />
-                          <span className="font-medium">{stats?.active ?? 0}</span>
-                        </div>
-                        <div className="flex items-center gap-1 text-red-500">
-                          <XCircle className="h-3 w-3" />
-                          <span className="font-medium">{stats?.broken ?? 0}</span>
-                        </div>
-                        <div className="flex items-center gap-1 text-yellow-500">
-                          <Clock className="h-3 w-3" />
-                          <span className="font-medium">{stats?.pending ?? 0}</span>
-                        </div>
-                        <div className="flex items-center gap-1 text-gray-500">
-                          <Ban className="h-3 w-3" />
-                          <span className="font-medium">{stats?.inactive ?? 0}</span>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })()}
               </div>
-              {/* Search and status filter buttons */}
-              {selectedPlaylist && (
-                <div className="flex items-center gap-2 flex-wrap">
-                  <div className="relative flex-1 min-w-[150px] max-w-[250px]">
-                    <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      type="search"
-                      placeholder="Поиск..."
-                      className="h-6 text-xs pl-7 pr-2"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                  </div>
-                  <Button
-                    variant={selectedStatus === 'all' ? 'default' : 'ghost'}
-                    size="sm"
-                    className="h-6 text-xs px-2"
-                    onClick={() => setSelectedStatus('all')}
-                  >
-                    Все
-                  </Button>
-                  <Button
-                    variant={selectedStatus === 'pending' ? 'default' : 'ghost'}
-                    size="sm"
-                    className={cn('h-6 text-xs px-2', selectedStatus !== 'pending' && 'text-yellow-500')}
-                    onClick={() => setSelectedStatus('pending')}
-                  >
-                    <Clock className="h-3 w-3 mr-1" />
-                    Ожидает
-                  </Button>
-                  <Button
-                    variant={selectedStatus === 'active' ? 'default' : 'ghost'}
-                    size="sm"
-                    className={cn('h-6 text-xs px-2', selectedStatus !== 'active' && 'text-green-500')}
-                    onClick={() => setSelectedStatus('active')}
-                  >
-                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                    Рабочие
-                  </Button>
-                  <Button
-                    variant={selectedStatus === 'broken' ? 'default' : 'ghost'}
-                    size="sm"
-                    className={cn('h-6 text-xs px-2', selectedStatus !== 'broken' && 'text-red-500')}
-                    onClick={() => setSelectedStatus('broken')}
-                  >
-                    <AlertCircle className="h-3 w-3 mr-1" />
-                    Нерабочие
-                  </Button>
-                  <Button
-                    variant={selectedStatus === 'inactive' ? 'default' : 'ghost'}
-                    size="sm"
-                    className={cn('h-6 text-xs px-2', selectedStatus !== 'inactive' && 'text-gray-500')}
-                    onClick={() => setSelectedStatus('inactive')}
-                  >
-                    <Ban className="h-3 w-3 mr-1" />
-                    Откл.
-                  </Button>
+              {/* Search and filter buttons */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="relative flex-1 min-w-[150px] max-w-[250px]">
+                  <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    type="search"
+                    placeholder="Поиск..."
+                    className="h-6 text-xs pl-7 pr-2"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
                 </div>
-              )}
+                <Button
+                  variant={selectedStatus === 'all' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="h-6 text-xs px-2"
+                  onClick={() => setSelectedStatus('all')}
+                >
+                  Все
+                </Button>
+                <Button
+                  variant={selectedStatus === 'pending' ? 'default' : 'ghost'}
+                  size="sm"
+                  className={cn('h-6 text-xs px-2', selectedStatus !== 'pending' && 'text-yellow-500')}
+                  onClick={() => setSelectedStatus('pending')}
+                >
+                  <Clock className="h-3 w-3 mr-1" />
+                  Ожидает
+                </Button>
+                <Button
+                  variant={selectedStatus === 'active' ? 'default' : 'ghost'}
+                  size="sm"
+                  className={cn('h-6 text-xs px-2', selectedStatus !== 'active' && 'text-green-500')}
+                  onClick={() => setSelectedStatus('active')}
+                >
+                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                  Рабочие
+                </Button>
+                <Button
+                  variant={selectedStatus === 'broken' ? 'default' : 'ghost'}
+                  size="sm"
+                  className={cn('h-6 text-xs px-2', selectedStatus !== 'broken' && 'text-red-500')}
+                  onClick={() => setSelectedStatus('broken')}
+                >
+                  <AlertCircle className="h-3 w-3 mr-1" />
+                  Нерабочие
+                </Button>
+                <Button
+                  variant={selectedStatus === 'inactive' ? 'default' : 'ghost'}
+                  size="sm"
+                  className={cn('h-6 text-xs px-2', selectedStatus !== 'inactive' && 'text-gray-500')}
+                  onClick={() => setSelectedStatus('inactive')}
+                >
+                  <Ban className="h-3 w-3 mr-1" />
+                  Откл.
+                </Button>
+                {/* Language filter */}
+                {availableLanguages.length > 0 && (
+                  <select
+                    className="h-6 rounded-md border border-input bg-background px-2 text-xs"
+                    value={selectedLanguage}
+                    onChange={(e) => setSelectedLanguage(e.target.value)}
+                  >
+                    <option value="all">Все языки</option>
+                    {availableLanguages.map((lang) => (
+                      <option key={lang} value={lang}>
+                        {languageNames[lang] || lang}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="p-0">
-              {isLoadingChannels ? (
+              {isLoading ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                   <span className="ml-2 text-muted-foreground">Загрузка каналов...</span>
                 </div>
-              ) : !selectedPlaylist ? (
+              ) : channels.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
-                  {playlists.length === 0 ? 'Импортируйте плейлист чтобы добавить каналы' : 'Выберите плейлист для просмотра каналов'}
+                  Импортируйте плейлист чтобы добавить каналы
                 </div>
               ) : filteredChannels.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
-                  {channels.length === 0 ? 'В этом плейлисте нет каналов' : 'Каналы не найдены по заданным фильтрам'}
+                  Каналы не найдены по заданным фильтрам
                 </div>
               ) : (
                 <div className="divide-y max-h-[600px] overflow-auto">
@@ -1187,7 +1055,7 @@ export default function AdminPage() {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm truncate">{channel.name}</p>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span>{categoryNamesRu[channel.group] || channel.group}</span>
+                          <span>{categoryNames[channel.group] || channel.group}</span>
                           {channel.language && (
                             <>
                               <span>•</span>
@@ -1240,156 +1108,6 @@ export default function AdminPage() {
                 </div>
               )}
             </CardContent>
-          </Card>
-        </div>
-
-        {/* Duplicates Analysis Section */}
-        <div className="mt-6">
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Copy className="h-4 w-4" />
-                  Анализ дубликатов
-                </CardTitle>
-                <div className="flex items-center gap-2">
-                  {duplicates.length > 0 && (
-                    <span className="text-sm text-muted-foreground">
-                      Найдено {duplicates.length} групп дубликатов
-                    </span>
-                  )}
-                  <Button
-                    onClick={analyzeDuplicates}
-                    disabled={isAnalyzing || playlists.length === 0}
-                    size="sm"
-                  >
-                    {isAnalyzing ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Анализ...
-                      </>
-                    ) : (
-                      <>
-                        <Search className="h-4 w-4 mr-2" />
-                        Найти дубликаты
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-              <CardDescription>
-                Поиск каналов с одинаковым URL (источником) во всех плейлистах. Выберите основной канал для каждой группы дубликатов.
-              </CardDescription>
-            </CardHeader>
-
-            {showDuplicates && duplicates.length > 0 && (
-              <CardContent className="p-0">
-                <div className="overflow-auto max-h-[500px]">
-                  <table className="w-full text-sm">
-                    <thead className="sticky top-0 bg-background border-b">
-                      <tr className="text-left text-xs text-muted-foreground">
-                        <th className="px-4 py-2 font-medium">Канал</th>
-                        <th className="px-2 py-2 font-medium text-center">Повторов</th>
-                        <th className="px-4 py-2 font-medium">Плейлисты</th>
-                        <th className="px-4 py-2 font-medium">Статусы</th>
-                        <th className="px-2 py-2 font-medium text-center">Действие</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {duplicates.map((dup, idx) => {
-                        const hasPrimary = dup.channels.some(c => c.isPrimary)
-                        return (
-                        <tr key={idx} className={cn(
-                          "hover:bg-muted/50 cursor-pointer",
-                          hasPrimary && "bg-green-500/10"
-                        )}>
-                          <td className="px-4 py-2">
-                            <div>
-                              <span className="font-medium">{dup.name}</span>
-                              <p className="text-[10px] text-muted-foreground truncate max-w-[300px]" title={dup.normalizedName}>
-                                {dup.normalizedName}
-                              </p>
-                            </div>
-                          </td>
-                          <td className="px-2 py-2 text-center">
-                            <span className={cn(
-                              "font-bold",
-                              dup.count >= 5 ? "text-red-500" : dup.count >= 3 ? "text-yellow-500" : "text-muted-foreground"
-                            )}>
-                              {dup.count}
-                            </span>
-                          </td>
-                          <td className="px-4 py-2">
-                            <div className="flex flex-wrap gap-1">
-                              {[...new Set(dup.channels.map(c => c.playlistName))].map((name, i) => (
-                                <span key={i} className="text-xs px-1.5 py-0.5 rounded bg-muted">
-                                  {name}
-                                </span>
-                              ))}
-                            </div>
-                          </td>
-                          <td className="px-4 py-2">
-                            <div className="flex gap-2 text-xs flex-wrap">
-                              {(() => {
-                                const statusCounts = dup.channels.reduce((acc, c) => {
-                                  acc[c.status] = (acc[c.status] || 0) + 1
-                                  return acc
-                                }, {} as Record<string, number>)
-                                return (
-                                  <>
-                                    {hasPrimary ? (
-                                      <span className="text-green-500 font-medium">✓ выбран</span>
-                                    ) : (
-                                      <span className="text-orange-500">не выбран</span>
-                                    )}
-                                    <span className="text-muted-foreground">|</span>
-                                    {statusCounts.active && (
-                                      <span className="text-green-500">{statusCounts.active} рабочих</span>
-                                    )}
-                                    {statusCounts.broken && (
-                                      <span className="text-red-500">{statusCounts.broken} сломано</span>
-                                    )}
-                                    {statusCounts.pending && (
-                                      <span className="text-yellow-500">{statusCounts.pending} ожидает</span>
-                                    )}
-                                    {statusCounts.inactive && (
-                                      <span className="text-gray-500">{statusCounts.inactive} откл.</span>
-                                    )}
-                                  </>
-                                )
-                              })()}
-                            </div>
-                          </td>
-                          <td className="px-2 py-2 text-center">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 text-xs"
-                              onClick={() => openDuplicateModal(dup)}
-                              disabled={loadingDuplicateId === dup.normalizedName}
-                            >
-                              {loadingDuplicateId === dup.normalizedName ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                              ) : (
-                                'Управлять'
-                              )}
-                            </Button>
-                          </td>
-                        </tr>
-                      )})}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            )}
-
-            {showDuplicates && duplicates.length === 0 && (
-              <CardContent>
-                <p className="text-center text-muted-foreground py-4">
-                  Дубликаты не найдены
-                </p>
-              </CardContent>
-            )}
           </Card>
         </div>
 
@@ -1489,19 +1207,6 @@ export default function AdminPage() {
           </Card>
         </div>
       </main>
-
-      {/* Duplicate Management Modal */}
-      <DuplicateManagementModal
-        isOpen={isDuplicateModalOpen}
-        onClose={() => {
-          setIsDuplicateModalOpen(false)
-          setSelectedDuplicate(null)
-          setDuplicateModalChannels([])
-        }}
-        duplicate={selectedDuplicate}
-        channelsData={duplicateModalChannels}
-        onApply={handleDuplicateApply}
-      />
     </div>
   )
 }

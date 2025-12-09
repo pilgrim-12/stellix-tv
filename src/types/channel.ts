@@ -28,9 +28,12 @@ export type ChannelCategory =
   | 'news'
   | 'sports'
   | 'movies'
+  | 'series'
   | 'kids'
+  | 'family'
   | 'music'
   | 'entertainment'
+  | 'comedy'
   | 'documentary'
   | 'lifestyle'
   | 'education'
@@ -39,6 +42,14 @@ export type ChannelCategory =
   | 'cooking'
   | 'nature'
   | 'science'
+  | 'culture'
+  | 'animation'
+  | 'classic'
+  | 'auto'
+  | 'weather'
+  | 'relax'
+  | 'outdoor'
+  | 'general'
   | 'religious'
   | 'radio';
 
@@ -112,17 +123,68 @@ export const categoryNames: Record<string, string> = {
   news: 'Новости',
   sports: 'Спорт',
   movies: 'Кино',
+  series: 'Сериалы',
   kids: 'Детям',
+  family: 'Семейное',
   music: 'Музыка',
   entertainment: 'Развлечения',
+  comedy: 'Комедия',
   documentary: 'Документальное',
-  nature: 'Природа',
   lifestyle: 'Стиль жизни',
-  cooking: 'Кулинария',
-  gaming: 'Игры',
   education: 'Образование',
   travel: 'Путешествия',
+  gaming: 'Игры',
+  cooking: 'Кулинария',
+  nature: 'Природа',
   science: 'Наука',
+  culture: 'Культура',
+  animation: 'Анимация',
+  classic: 'Классика',
+  auto: 'Авто',
+  weather: 'Погода',
+  relax: 'Релакс',
+  outdoor: 'Активный отдых',
+  general: 'Общее',
   religious: 'Религия',
   radio: 'Радио',
 };
+
+// Category names in English
+export const categoryNamesEn: Record<string, string> = {
+  all: 'All',
+  news: 'News',
+  sports: 'Sports',
+  movies: 'Movies',
+  series: 'Series',
+  kids: 'Kids',
+  family: 'Family',
+  music: 'Music',
+  entertainment: 'Entertainment',
+  comedy: 'Comedy',
+  documentary: 'Documentary',
+  lifestyle: 'Lifestyle',
+  education: 'Education',
+  travel: 'Travel',
+  gaming: 'Gaming',
+  cooking: 'Cooking',
+  nature: 'Nature',
+  science: 'Science',
+  culture: 'Culture',
+  animation: 'Animation',
+  classic: 'Classic',
+  auto: 'Auto',
+  weather: 'Weather',
+  relax: 'Relax',
+  outdoor: 'Outdoor',
+  general: 'General',
+  religious: 'Religious',
+  radio: 'Radio',
+};
+
+// Ordered list for dropdowns (most common first)
+export const categoryOrder = [
+  'news', 'sports', 'movies', 'series', 'kids', 'family', 'music', 'entertainment',
+  'comedy', 'documentary', 'lifestyle', 'education', 'travel', 'gaming', 'cooking',
+  'nature', 'science', 'culture', 'animation', 'classic', 'auto', 'weather',
+  'relax', 'outdoor', 'general', 'religious', 'radio'
+];

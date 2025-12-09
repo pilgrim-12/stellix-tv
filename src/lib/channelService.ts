@@ -21,6 +21,7 @@ export interface FirebaseChannel extends Channel {
   updatedAt?: Timestamp
   lastChecked?: Timestamp
   checkedBy?: string // admin uid who checked the channel
+  isCustom?: boolean // custom channel added by user
 }
 
 export interface PlaylistStats {

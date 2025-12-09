@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { Channel, ChannelCategory } from '@/types';
 import { addFavorite, removeFavorite, getFavorites, setFavorites, addWatchHistory, getUserSettings, updateUserSettings } from '@/lib/userService';
 import { getActiveChannels } from '@/lib/channelService';
+import { getActiveChannelsV2, hasNewStructure } from '@/lib/channelDataService';
+import { getActiveCuratedChannels, hasCuratedStructure } from '@/lib/curatedChannelService';
 
 interface CustomPlaylist {
   id: string;
@@ -76,7 +78,32 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
   loadChannelsFromFirebase: async () => {
     try {
       set({ isLoading: true, error: null });
-      const firebaseChannels = await getActiveChannels();
+
+      // Priority: curated_channels (new) > channelData (intermediate) > channels (old)
+      let firebaseChannels: Channel[] = [];
+
+      try {
+        // 1. Try curated_channels (newest, best structure - 1 read)
+        const hasCurated = await hasCuratedStructure();
+        if (hasCurated) {
+          console.log('[ChannelStore] Using curated_channels structure (1 read)');
+          firebaseChannels = await getActiveCuratedChannels();
+        } else {
+          // 2. Try channelData (intermediate structure)
+          const hasIntermediate = await hasNewStructure();
+          if (hasIntermediate) {
+            console.log('[ChannelStore] Using channelData structure (1 read)');
+            firebaseChannels = await getActiveChannelsV2();
+          } else {
+            // 3. Fallback to old structure (many reads)
+            console.log('[ChannelStore] Using old channels structure (many reads)');
+            firebaseChannels = await getActiveChannels();
+          }
+        }
+      } catch (err) {
+        console.warn('[ChannelStore] Error checking structure, falling back to old:', err);
+        firebaseChannels = await getActiveChannels();
+      }
 
       if (firebaseChannels.length > 0) {
         // Merge Firebase data with offline status
