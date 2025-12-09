@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { parseM3U, convertToAppChannels, fetchM3UPlaylist } from '@/lib/m3uParser'
 import {
   Search,
   Tv,
@@ -14,8 +13,6 @@ import {
   CheckCircle2,
   XCircle,
   RefreshCw,
-  Upload,
-  Link,
   Trash2,
   Loader2,
   Users,
@@ -26,23 +23,16 @@ import {
   Check,
   X,
   Database,
-  FileText,
-  ChevronDown,
-  ChevronUp,
   FolderOpen,
 } from 'lucide-react'
 import {
   getAllCuratedChannelsRaw,
   getCuratedMetadata,
-  importChannelsToCurated,
   updateChannelStatus,
   updateCuratedChannel,
   bulkDeleteChannels,
   getPlaylistSources,
-  addPlaylistSource,
-  deletePlaylistSource,
   CuratedChannel,
-  ImportResult,
   PlaylistSource,
 } from '@/lib/curatedChannelService'
 import { getTotalUsersCount, setUserAsAdmin, removeUserAdmin, getAllUsers } from '@/lib/userService'
@@ -69,7 +59,6 @@ const statusNames: Record<ChannelStatus, string> = {
 export default function AdminPage() {
   const router = useRouter()
   const { user, isAdmin, loading } = useAuthContext()
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const hlsRef = useRef<{ destroy: () => void } | null>(null)
 
@@ -81,13 +70,6 @@ export default function AdminPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedStatus, setSelectedStatus] = useState<ChannelStatus | 'all'>('all')
   const [selectedLanguage, setSelectedLanguage] = useState<string>('all')
-
-  // Import state
-  const [playlistUrl, setPlaylistUrl] = useState('')
-  const [isImporting, setIsImporting] = useState(false)
-  const [importError, setImportError] = useState<string | null>(null)
-  const [importSuccess, setImportSuccess] = useState<string | null>(null)
-  const [lastImportResult, setLastImportResult] = useState<ImportResult | null>(null)
 
   // Delete state
   const [deletingChannelId, setDeletingChannelId] = useState<string | null>(null)
@@ -106,11 +88,9 @@ export default function AdminPage() {
   const [usersCount, setUsersCount] = useState<number | null>(null)
   const [metadata, setMetadata] = useState<{ count: number; version: number; updatedAt: Date | null } | null>(null)
 
-  // Playlist sources (import history)
+  // Playlist sources (for filtering by playlist)
   const [playlistSources, setPlaylistSources] = useState<PlaylistSource[]>([])
-  const [showPlaylists, setShowPlaylists] = useState(false)
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string>('all')
-  const [deletingSourceId, setDeletingSourceId] = useState<string | null>(null)
 
   // Users management
   interface UserInfo {
@@ -247,144 +227,6 @@ export default function AdminPage() {
     }
   }
 
-  // Import M3U from URL - adds to curated_channels with deduplication
-  const handleImportFromUrl = async () => {
-    if (!playlistUrl.trim()) return
-
-    setIsImporting(true)
-    setImportError(null)
-    setImportSuccess(null)
-    setLastImportResult(null)
-
-    try {
-      const content = await fetchM3UPlaylist(playlistUrl.trim())
-      const m3uChannels = parseM3U(content)
-
-      if (m3uChannels.length === 0) {
-        throw new Error('Плейлист пуст или имеет неверный формат')
-      }
-
-      // Extract name from URL for playlistId reference
-      const urlParts = playlistUrl.split('/')
-      const fileName = urlParts[urlParts.length - 1] || 'playlist'
-      const playlistName = fileName.replace('.m3u8', '').replace('.m3u', '')
-      const playlistId = `source-${Date.now()}`
-
-      // Convert and import channels to curated_channels
-      const appChannels = convertToAppChannels(m3uChannels, playlistId)
-      const result = await importChannelsToCurated(
-        appChannels.map(ch => ({
-          name: ch.name,
-          url: ch.url,
-          logo: ch.logo,
-          group: ch.group,
-          language: ch.language,
-          country: ch.country,
-        })),
-        playlistId
-      )
-
-      // Save playlist source record
-      await addPlaylistSource(
-        playlistName,
-        playlistUrl.trim(),
-        'url',
-        m3uChannels.length,
-        result.added,
-        result.skipped
-      )
-
-      setLastImportResult(result)
-      setImportSuccess(`Добавлено ${result.added} каналов, пропущено ${result.skipped} (дубликаты по URL)`)
-      setPlaylistUrl('')
-
-      // Reload data
-      await loadData()
-    } catch (error) {
-      setImportError(error instanceof Error ? error.message : 'Ошибка импорта')
-    } finally {
-      setIsImporting(false)
-    }
-  }
-
-  // Import M3U from file - adds to curated_channels with deduplication
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    setIsImporting(true)
-    setImportError(null)
-    setImportSuccess(null)
-    setLastImportResult(null)
-
-    try {
-      const playlistName = file.name.replace('.m3u8', '').replace('.m3u', '')
-      const playlistId = `source-${Date.now()}`
-
-      const content = await file.text()
-      const m3uChannels = parseM3U(content)
-
-      if (m3uChannels.length === 0) {
-        throw new Error('Файл пуст или имеет неверный формат')
-      }
-
-      // Convert and import channels to curated_channels
-      const appChannels = convertToAppChannels(m3uChannels, playlistId)
-      const result = await importChannelsToCurated(
-        appChannels.map(ch => ({
-          name: ch.name,
-          url: ch.url,
-          logo: ch.logo,
-          group: ch.group,
-          language: ch.language,
-          country: ch.country,
-        })),
-        playlistId
-      )
-
-      // Save playlist source record
-      await addPlaylistSource(
-        playlistName,
-        null,
-        'file',
-        m3uChannels.length,
-        result.added,
-        result.skipped
-      )
-
-      setLastImportResult(result)
-      setImportSuccess(`Добавлено ${result.added} каналов из "${file.name}", пропущено ${result.skipped} дубликатов`)
-
-      // Reload data
-      await loadData()
-    } catch (error) {
-      setImportError(error instanceof Error ? error.message : 'Ошибка чтения файла')
-    } finally {
-      setIsImporting(false)
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''
-      }
-    }
-  }
-
-  // Delete playlist source
-  const handleDeleteSource = async (sourceId: string) => {
-    if (!confirm('Удалить запись об импорте? Каналы из этого плейлиста останутся в базе.')) return
-
-    setDeletingSourceId(sourceId)
-    try {
-      await deletePlaylistSource(sourceId)
-      setPlaylistSources(prev => prev.filter(s => s.id !== sourceId))
-      if (selectedPlaylistId === sourceId) {
-        setSelectedPlaylistId('all')
-      }
-    } catch (error) {
-      console.error('Error deleting source:', error)
-    } finally {
-      setDeletingSourceId(null)
-    }
-  }
-
   // Update channel language
   const handleUpdateLanguage = async (channelId: string, newLanguage: string) => {
     setUpdatingLanguageId(channelId)
@@ -501,35 +343,16 @@ export default function AdminPage() {
       </header>
 
       <main className="container py-4">
-        {/* Compact Import + Playlists bar */}
+        {/* Stats bar */}
         <Card className="mb-4">
           <CardContent className="py-2 px-4">
-            <div className="flex items-center gap-3 flex-wrap">
-              {/* Import controls */}
-              <div className="flex items-center gap-2 flex-1 min-w-[300px]">
-                <Input
-                  type="url"
-                  placeholder="https://example.com/playlist.m3u"
-                  className="h-8 text-sm flex-1"
-                  value={playlistUrl}
-                  onChange={(e) => setPlaylistUrl(e.target.value)}
-                  disabled={isImporting}
-                />
-                <Button onClick={handleImportFromUrl} disabled={isImporting || !playlistUrl.trim()} size="icon" className="h-8 w-8">
-                  {isImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link className="h-4 w-4" />}
-                </Button>
-                <input ref={fileInputRef} type="file" accept=".m3u,.m3u8" className="hidden" onChange={handleFileUpload} disabled={isImporting} />
-                <Button variant="outline" size="sm" className="h-8" onClick={() => fileInputRef.current?.click()} disabled={isImporting}>
-                  <Upload className="h-4 w-4 mr-1" />
-                  Файл
-                </Button>
-              </div>
-
-              {/* Stats */}
+            <div className="flex items-center gap-4 flex-wrap">
+              {/* Channel Stats */}
               <div className="flex items-center gap-3 text-xs">
                 <div className="flex items-center gap-1">
+                  <Tv className="h-3 w-3 text-muted-foreground" />
                   <span className="font-bold">{stats?.total ?? '—'}</span>
-                  <span className="text-muted-foreground">всего</span>
+                  <span className="text-muted-foreground">каналов</span>
                 </div>
                 <div className="flex items-center gap-1 text-green-500">
                   <CheckCircle2 className="h-3 w-3" />
@@ -543,10 +366,13 @@ export default function AdminPage() {
                   <Clock className="h-3 w-3" />
                   <span className="font-bold">{stats?.pending ?? '—'}</span>
                 </div>
-                <div className="flex items-center gap-1 text-purple-500">
-                  <Users className="h-3 w-3" />
-                  <span className="font-bold">{usersCount ?? '—'}</span>
-                </div>
+              </div>
+
+              {/* Users count */}
+              <div className="flex items-center gap-1 text-xs text-purple-500">
+                <Users className="h-3 w-3" />
+                <span className="font-bold">{usersCount ?? '—'}</span>
+                <span className="text-muted-foreground">польз.</span>
               </div>
 
               {/* Database info */}
@@ -560,18 +386,6 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {/* Playlists toggle */}
-              <Button
-                variant={showPlaylists ? "secondary" : "ghost"}
-                size="sm"
-                className="h-8 text-xs gap-1.5"
-                onClick={() => setShowPlaylists(!showPlaylists)}
-              >
-                <FileText className="h-3.5 w-3.5" />
-                <span>Импорты ({playlistSources.length})</span>
-                {showPlaylists ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-              </Button>
-
               {/* Firebase Quota Stats toggle */}
               <Button
                 variant={showQuotaStats ? "secondary" : "ghost"}
@@ -583,128 +397,6 @@ export default function AdminPage() {
                 <span>Квота: {quotaStats?.total ?? 0}</span>
               </Button>
             </div>
-
-            {/* Import messages */}
-            {(importError || importSuccess) && (
-              <div className="mt-2">
-                {importError && (
-                  <p className="text-xs text-red-500 flex items-center gap-1">
-                    <XCircle className="h-3 w-3" />
-                    {importError}
-                  </p>
-                )}
-                {importSuccess && (
-                  <p className="text-xs text-green-500 flex items-center gap-1">
-                    <CheckCircle2 className="h-3 w-3" />
-                    {importSuccess}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Playlists (Import History) Panel */}
-            {showPlaylists && (
-              <div className="mt-2 border-t pt-2">
-                <h4 className="text-sm font-medium mb-2">История импортов</h4>
-                {playlistSources.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">Ещё нет импортированных плейлистов</p>
-                ) : (
-                  <div className="overflow-auto max-h-48">
-                    <table className="w-full text-xs">
-                      <thead className="sticky top-0 bg-background">
-                        <tr className="text-left text-muted-foreground">
-                          <th className="px-2 py-1 font-medium">Название</th>
-                          <th className="px-2 py-1 font-medium text-center">Тип</th>
-                          <th className="px-2 py-1 font-medium text-center">Всего</th>
-                          <th className="px-2 py-1 font-medium text-center text-green-500">Добавлено</th>
-                          <th className="px-2 py-1 font-medium text-center text-yellow-500">Пропущено</th>
-                          <th className="px-2 py-1 font-medium">Дата</th>
-                          <th className="px-1 py-1"></th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y">
-                        {playlistSources.map((source) => {
-                          const isSelected = selectedPlaylistId === source.id
-                          return (
-                            <tr
-                              key={source.id}
-                              className={cn(
-                                "hover:bg-muted/50 cursor-pointer",
-                                isSelected && "bg-primary/10"
-                              )}
-                              onClick={() => setSelectedPlaylistId(isSelected ? 'all' : source.id)}
-                            >
-                              <td className="px-2 py-1">
-                                <span className="font-medium truncate block max-w-[150px]" title={source.name}>
-                                  {source.name}
-                                </span>
-                                {source.url && (
-                                  <span className="text-[10px] text-muted-foreground truncate block max-w-[150px]" title={source.url}>
-                                    {source.url}
-                                  </span>
-                                )}
-                              </td>
-                              <td className="px-2 py-1 text-center">
-                                {source.type === 'url' ? (
-                                  <Link className="h-3 w-3 mx-auto text-blue-500" />
-                                ) : (
-                                  <FileText className="h-3 w-3 mx-auto text-gray-500" />
-                                )}
-                              </td>
-                              <td className="px-2 py-1 text-center text-muted-foreground">
-                                {source.channelCount}
-                              </td>
-                              <td className="px-2 py-1 text-center text-green-500 font-medium">
-                                {source.addedCount}
-                              </td>
-                              <td className="px-2 py-1 text-center text-yellow-500 font-medium">
-                                {source.skippedCount}
-                              </td>
-                              <td className="px-2 py-1 text-muted-foreground">
-                                {new Date(source.importedAt).toLocaleDateString('ru-RU')}
-                              </td>
-                              <td className="px-1 py-1">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-5 w-5 text-red-500 hover:text-red-600 hover:bg-red-500/10"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleDeleteSource(source.id)
-                                  }}
-                                  disabled={deletingSourceId === source.id}
-                                >
-                                  {deletingSourceId === source.id ? (
-                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                  ) : (
-                                    <Trash2 className="h-3 w-3" />
-                                  )}
-                                </Button>
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-                {selectedPlaylistId !== 'all' && (
-                  <div className="mt-2 flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">
-                      Фильтр: {playlistSources.find(s => s.id === selectedPlaylistId)?.name}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-5 text-xs px-2"
-                      onClick={() => setSelectedPlaylistId('all')}
-                    >
-                      Сбросить
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* Firebase Quota Stats Panel */}
             {showQuotaStats && quotaStats && (
