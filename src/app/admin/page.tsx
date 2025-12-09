@@ -42,9 +42,13 @@ import {
   updateChannelLanguage,
   updateChannelCategory,
   recalculateAllPlaylistStats,
+  getAllChannels,
+  setPrimarySource,
+  getChannelsByIds,
   FirebaseChannel,
   Playlist,
 } from '@/lib/channelService'
+import { DuplicateManagementModal } from '@/components/admin/DuplicateManagementModal'
 import { getTotalUsersCount, setUserAsAdmin, removeUserAdmin, getAllUsers } from '@/lib/userService'
 import { Timestamp } from 'firebase/firestore'
 import { useAuthContext } from '@/contexts/AuthContext'
@@ -133,11 +137,15 @@ export default function AdminPage() {
     name: string
     normalizedName: string
     count: number
-    channels: { id: string; playlistId: string; playlistName: string; status: string }[]
+    channels: { id: string; playlistId: string; playlistName: string; status: string; isPrimary?: boolean }[]
   }
   const [duplicates, setDuplicates] = useState<DuplicateInfo[]>([])
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [showDuplicates, setShowDuplicates] = useState(false)
+  const [allChannelsForDuplicates, setAllChannelsForDuplicates] = useState<FirebaseChannel[]>([])
+  const [selectedDuplicate, setSelectedDuplicate] = useState<DuplicateInfo | null>(null)
+  const [duplicateModalChannels, setDuplicateModalChannels] = useState<FirebaseChannel[]>([])
+  const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false)
 
   // Users management
   interface UserInfo {
@@ -421,58 +429,97 @@ export default function AdminPage() {
     }
   }
 
-  // Analyze duplicates
-  const analyzeDuplicates = () => {
+  // Analyze duplicates across ALL playlists - by URL (same source)
+  const analyzeDuplicates = async () => {
     setIsAnalyzing(true)
 
-    // Normalize channel name for comparison
-    const normalizeName = (name: string): string => {
-      return name
-        .toLowerCase()
-        .replace(/\s*(hd|sd|fhd|4k|uhd|\d+p)\s*/gi, '')
-        .replace(/\s*\([^)]*\)\s*/g, '')
-        .replace(/\s*\[[^\]]*\]\s*/g, '')
-        .replace(/[^a-zа-яё0-9]/gi, '')
-        .trim()
-    }
+    try {
+      // Load ALL channels from ALL playlists
+      const allChannels = await getAllChannels()
+      setAllChannelsForDuplicates(allChannels)
 
-    // Create playlist map for quick lookup
-    const playlistMap = new Map(playlists.map(p => [p.id, p.name]))
+      // Create playlist map for quick lookup
+      const playlistMap = new Map(playlists.map(p => [p.id, p.name]))
 
-    // Group channels by normalized name
-    const groups = new Map<string, DuplicateInfo>()
+      // Group channels by URL (same source = duplicate)
+      const groups = new Map<string, DuplicateInfo>()
 
-    channels.forEach(channel => {
-      const normalized = normalizeName(channel.name)
-      if (!normalized) return
+      allChannels.forEach(channel => {
+        const url = channel.url?.trim()
+        if (!url) return
 
-      if (!groups.has(normalized)) {
-        groups.set(normalized, {
-          name: channel.name,
-          normalizedName: normalized,
-          count: 0,
-          channels: []
+        if (!groups.has(url)) {
+          groups.set(url, {
+            name: channel.name,
+            normalizedName: url, // Using URL as the key
+            count: 0,
+            channels: []
+          })
+        }
+
+        const group = groups.get(url)!
+        group.count++
+        group.channels.push({
+          id: channel.id,
+          playlistId: channel.playlistId || '',
+          playlistName: playlistMap.get(channel.playlistId || '') || 'Неизвестный',
+          status: channel.status || 'pending',
+          isPrimary: channel.isPrimary || false
         })
-      }
-
-      const group = groups.get(normalized)!
-      group.count++
-      group.channels.push({
-        id: channel.id,
-        playlistId: channel.playlistId || '',
-        playlistName: playlistMap.get(channel.playlistId || '') || 'Неизвестный',
-        status: channel.status || 'pending'
       })
-    })
 
-    // Filter only duplicates (count > 1) and sort by count
-    const duplicatesList = Array.from(groups.values())
-      .filter(g => g.count > 1)
-      .sort((a, b) => b.count - a.count)
+      // Filter only duplicates (count > 1) and sort by count
+      const duplicatesList = Array.from(groups.values())
+        .filter(g => g.count > 1)
+        .sort((a, b) => b.count - a.count)
 
-    setDuplicates(duplicatesList)
-    setShowDuplicates(true)
-    setIsAnalyzing(false)
+      setDuplicates(duplicatesList)
+      setShowDuplicates(true)
+    } catch (error) {
+      console.error('Error analyzing duplicates:', error)
+    } finally {
+      setIsAnalyzing(false)
+    }
+  }
+
+  // Open duplicate management modal
+  const openDuplicateModal = async (duplicate: DuplicateInfo) => {
+    setSelectedDuplicate(duplicate)
+
+    // Load full channel data for all channels in this duplicate group
+    const channelIds = duplicate.channels.map(c => c.id)
+    const channelsData = await getChannelsByIds(channelIds)
+    setDuplicateModalChannels(channelsData)
+    setIsDuplicateModalOpen(true)
+  }
+
+  // Handle duplicate management apply
+  const handleDuplicateApply = async (primaryId: string | null, otherIds: string[]) => {
+    // Set isPrimary flag - does NOT change channel status
+    await setPrimarySource(primaryId, otherIds)
+
+    // Update local duplicates state - update isPrimary flag
+    setDuplicates(prev => prev.map(dup => {
+      if (dup.normalizedName === selectedDuplicate?.normalizedName) {
+        return {
+          ...dup,
+          channels: dup.channels.map(ch => ({
+            ...ch,
+            isPrimary: ch.id === primaryId
+          }))
+        }
+      }
+      return dup
+    }))
+
+    // Update channels in current view if any affected
+    setChannels(prev => prev.map(ch => {
+      const allIds = primaryId ? [primaryId, ...otherIds] : otherIds
+      if (allIds.includes(ch.id)) {
+        return { ...ch, isPrimary: ch.id === primaryId }
+      }
+      return ch
+    }))
   }
 
   // Load users for admin management
@@ -1116,7 +1163,7 @@ export default function AdminPage() {
                   )}
                   <Button
                     onClick={analyzeDuplicates}
-                    disabled={isAnalyzing || channels.length === 0 || !selectedPlaylist}
+                    disabled={isAnalyzing || playlists.length === 0}
                     size="sm"
                   >
                     {isAnalyzing ? (
@@ -1134,7 +1181,7 @@ export default function AdminPage() {
                 </div>
               </div>
               <CardDescription>
-                Поиск каналов с одинаковыми или похожими названиями в разных плейлистах
+                Поиск каналов с одинаковым URL (источником) во всех плейлистах. Выберите основной канал для каждой группы дубликатов.
               </CardDescription>
             </CardHeader>
 
@@ -1148,6 +1195,7 @@ export default function AdminPage() {
                         <th className="px-2 py-2 font-medium text-center">Повторов</th>
                         <th className="px-4 py-2 font-medium">Плейлисты</th>
                         <th className="px-4 py-2 font-medium">Статусы</th>
+                        <th className="px-2 py-2 font-medium text-center">Действие</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
@@ -1156,9 +1204,9 @@ export default function AdminPage() {
                           <td className="px-4 py-2">
                             <div>
                               <span className="font-medium">{dup.name}</span>
-                              <span className="text-xs text-muted-foreground ml-2">
-                                ({dup.normalizedName})
-                              </span>
+                              <p className="text-[10px] text-muted-foreground truncate max-w-[300px]" title={dup.normalizedName}>
+                                {dup.normalizedName}
+                              </p>
                             </div>
                           </td>
                           <td className="px-2 py-2 text-center">
@@ -1179,14 +1227,21 @@ export default function AdminPage() {
                             </div>
                           </td>
                           <td className="px-4 py-2">
-                            <div className="flex gap-2 text-xs">
+                            <div className="flex gap-2 text-xs flex-wrap">
                               {(() => {
                                 const statusCounts = dup.channels.reduce((acc, c) => {
                                   acc[c.status] = (acc[c.status] || 0) + 1
                                   return acc
                                 }, {} as Record<string, number>)
+                                const hasPrimary = dup.channels.some(c => c.isPrimary)
                                 return (
                                   <>
+                                    {hasPrimary ? (
+                                      <span className="text-primary font-medium">1 выбран</span>
+                                    ) : (
+                                      <span className="text-muted-foreground">не выбран</span>
+                                    )}
+                                    <span className="text-muted-foreground">|</span>
                                     {statusCounts.active && (
                                       <span className="text-green-500">{statusCounts.active} рабочих</span>
                                     )}
@@ -1203,6 +1258,16 @@ export default function AdminPage() {
                                 )
                               })()}
                             </div>
+                          </td>
+                          <td className="px-2 py-2 text-center">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() => openDuplicateModal(dup)}
+                            >
+                              Управлять
+                            </Button>
                           </td>
                         </tr>
                       ))}
@@ -1318,6 +1383,19 @@ export default function AdminPage() {
           </Card>
         </div>
       </main>
+
+      {/* Duplicate Management Modal */}
+      <DuplicateManagementModal
+        isOpen={isDuplicateModalOpen}
+        onClose={() => {
+          setIsDuplicateModalOpen(false)
+          setSelectedDuplicate(null)
+          setDuplicateModalChannels([])
+        }}
+        duplicate={selectedDuplicate}
+        channelsData={duplicateModalChannels}
+        onApply={handleDuplicateApply}
+      />
     </div>
   )
 }

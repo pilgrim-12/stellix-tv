@@ -62,17 +62,57 @@ export async function getAllChannels(): Promise<FirebaseChannel[]> {
   }
 }
 
-// Get only active channels (status = 'active')
+// Get only active channels (status = 'active'), filtering out duplicates by URL
+// For duplicate groups: show only isPrimary channel, or first if none selected
 export async function getActiveChannels(): Promise<FirebaseChannel[]> {
   try {
     const channelsRef = collection(db, CHANNELS_COLLECTION)
     const q = query(channelsRef, where('status', '==', 'active'))
     const snapshot = await getDocs(q)
 
-    return snapshot.docs.map((doc) => ({
+    const allActiveChannels = snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
     })) as FirebaseChannel[]
+
+    // Group channels by URL to detect true duplicates
+    const groups = new Map<string, FirebaseChannel[]>()
+
+    allActiveChannels.forEach(channel => {
+      const url = channel.url?.trim()
+      if (!url) {
+        // No URL - treat as unique
+        groups.set(channel.id, [channel])
+        return
+      }
+
+      if (!groups.has(url)) {
+        groups.set(url, [])
+      }
+      groups.get(url)!.push(channel)
+    })
+
+    // For each group, select which channel(s) to show
+    const result: FirebaseChannel[] = []
+
+    groups.forEach(channels => {
+      if (channels.length === 1) {
+        // No duplicates - show the channel
+        result.push(channels[0])
+      } else {
+        // Multiple duplicates (same URL) - check if any is marked as primary
+        const primary = channels.find(ch => ch.isPrimary)
+        if (primary) {
+          // Primary is selected - show only the primary
+          result.push(primary)
+        } else {
+          // No primary selected - show ALL channels in the group
+          result.push(...channels)
+        }
+      }
+    })
+
+    return result
   } catch (error) {
     console.error('Error getting active channels:', error)
     // Fallback: get all channels if query fails
@@ -524,6 +564,120 @@ export async function recalculateAllPlaylistStats(): Promise<void> {
   } catch (error) {
     console.error('Error recalculating all playlist stats:', error)
     throw error
+  }
+}
+
+// ==================== DUPLICATE MANAGEMENT ====================
+
+// Set primary source for a group of duplicate channels
+// primaryId = the channel to mark as primary (or null to clear all)
+// otherIds = other channels in the group to mark as not primary
+export async function setPrimarySource(
+  primaryId: string | null,
+  otherIds: string[]
+): Promise<{ success: number; failed: number }> {
+  let success = 0
+  let failed = 0
+
+  const allIds = primaryId ? [primaryId, ...otherIds] : otherIds
+
+  // Process in batches of 500 (Firestore limit)
+  const batchSize = 500
+  for (let i = 0; i < allIds.length; i += batchSize) {
+    const batch = writeBatch(db)
+    const chunk = allIds.slice(i, i + batchSize)
+
+    for (const channelId of chunk) {
+      try {
+        const channelRef = doc(db, CHANNELS_COLLECTION, channelId)
+        batch.update(channelRef, {
+          isPrimary: channelId === primaryId,
+          updatedAt: Timestamp.now(),
+        })
+        success++
+      } catch {
+        failed++
+      }
+    }
+
+    try {
+      await batch.commit()
+    } catch (error) {
+      console.error('Error committing batch:', error)
+      failed += chunk.length
+      success -= chunk.length
+    }
+  }
+
+  return { success, failed }
+}
+
+// Bulk update status for multiple channels (for duplicate management)
+export async function bulkSetChannelStatus(
+  channelIds: string[],
+  status: ChannelStatus
+): Promise<{ success: number; failed: number }> {
+  let success = 0
+  let failed = 0
+
+  // Process in batches of 500 (Firestore limit)
+  const batchSize = 500
+  for (let i = 0; i < channelIds.length; i += batchSize) {
+    const batch = writeBatch(db)
+    const chunk = channelIds.slice(i, i + batchSize)
+
+    for (const channelId of chunk) {
+      try {
+        const channelRef = doc(db, CHANNELS_COLLECTION, channelId)
+        batch.update(channelRef, {
+          status,
+          updatedAt: Timestamp.now(),
+        })
+        success++
+      } catch {
+        failed++
+      }
+    }
+
+    try {
+      await batch.commit()
+    } catch (error) {
+      console.error('Error committing batch:', error)
+      failed += chunk.length
+      success -= chunk.length
+    }
+  }
+
+  return { success, failed }
+}
+
+// Get multiple channels by IDs
+export async function getChannelsByIds(channelIds: string[]): Promise<FirebaseChannel[]> {
+  try {
+    const channels: FirebaseChannel[] = []
+
+    // Firestore doesn't support 'in' queries with more than 30 items
+    // So we need to batch the requests
+    const batchSize = 30
+    for (let i = 0; i < channelIds.length; i += batchSize) {
+      const chunk = channelIds.slice(i, i + batchSize)
+      const promises = chunk.map(async (id) => {
+        const channelRef = doc(db, CHANNELS_COLLECTION, id)
+        const snapshot = await getDoc(channelRef)
+        if (snapshot.exists()) {
+          return { id: snapshot.id, ...snapshot.data() } as FirebaseChannel
+        }
+        return null
+      })
+
+      const results = await Promise.all(promises)
+      channels.push(...results.filter((ch): ch is FirebaseChannel => ch !== null))
+    }
+
+    return channels
+  } catch (error) {
+    console.error('Error getting channels by IDs:', error)
+    return []
   }
 }
 
