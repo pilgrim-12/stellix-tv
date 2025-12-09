@@ -146,6 +146,7 @@ export default function AdminPage() {
   const [selectedDuplicate, setSelectedDuplicate] = useState<DuplicateInfo | null>(null)
   const [duplicateModalChannels, setDuplicateModalChannels] = useState<FirebaseChannel[]>([])
   const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false)
+  const [loadingDuplicateId, setLoadingDuplicateId] = useState<string | null>(null)
 
   // Users management
   interface UserInfo {
@@ -484,13 +485,18 @@ export default function AdminPage() {
 
   // Open duplicate management modal
   const openDuplicateModal = async (duplicate: DuplicateInfo) => {
+    setLoadingDuplicateId(duplicate.normalizedName)
     setSelectedDuplicate(duplicate)
 
-    // Load full channel data for all channels in this duplicate group
-    const channelIds = duplicate.channels.map(c => c.id)
-    const channelsData = await getChannelsByIds(channelIds)
-    setDuplicateModalChannels(channelsData)
-    setIsDuplicateModalOpen(true)
+    try {
+      // Load full channel data for all channels in this duplicate group
+      const channelIds = duplicate.channels.map(c => c.id)
+      const channelsData = await getChannelsByIds(channelIds)
+      setDuplicateModalChannels(channelsData)
+      setIsDuplicateModalOpen(true)
+    } finally {
+      setLoadingDuplicateId(null)
+    }
   }
 
   // Handle duplicate management apply
@@ -1199,8 +1205,13 @@ export default function AdminPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y">
-                      {duplicates.map((dup, idx) => (
-                        <tr key={idx} className="hover:bg-muted/50">
+                      {duplicates.map((dup, idx) => {
+                        const hasPrimary = dup.channels.some(c => c.isPrimary)
+                        return (
+                        <tr key={idx} className={cn(
+                          "hover:bg-muted/50 cursor-pointer",
+                          hasPrimary && "bg-green-500/10"
+                        )}>
                           <td className="px-4 py-2">
                             <div>
                               <span className="font-medium">{dup.name}</span>
@@ -1233,13 +1244,12 @@ export default function AdminPage() {
                                   acc[c.status] = (acc[c.status] || 0) + 1
                                   return acc
                                 }, {} as Record<string, number>)
-                                const hasPrimary = dup.channels.some(c => c.isPrimary)
                                 return (
                                   <>
                                     {hasPrimary ? (
-                                      <span className="text-primary font-medium">1 выбран</span>
+                                      <span className="text-green-500 font-medium">✓ выбран</span>
                                     ) : (
-                                      <span className="text-muted-foreground">не выбран</span>
+                                      <span className="text-orange-500">не выбран</span>
                                     )}
                                     <span className="text-muted-foreground">|</span>
                                     {statusCounts.active && (
@@ -1265,12 +1275,17 @@ export default function AdminPage() {
                               size="sm"
                               className="h-7 text-xs"
                               onClick={() => openDuplicateModal(dup)}
+                              disabled={loadingDuplicateId === dup.normalizedName}
                             >
-                              Управлять
+                              {loadingDuplicateId === dup.normalizedName ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                'Управлять'
+                              )}
                             </Button>
                           </td>
                         </tr>
-                      ))}
+                      )})}
                     </tbody>
                   </table>
                 </div>
