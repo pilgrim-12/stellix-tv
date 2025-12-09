@@ -348,7 +348,35 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
   getFilteredChannels: () => {
     const { channels, selectedCategory, selectedLanguage, searchQuery, offlineChannels, disabledChannels, showOnlyFavorites, favorites } = get();
 
-    return channels
+    // First, deduplicate by URL (keep only first occurrence or primary)
+    const seenUrls = new Map<string, Channel>();
+    const deduplicatedChannels: Channel[] = [];
+
+    for (const channel of channels) {
+      const url = channel.url?.trim();
+      if (!url) {
+        // No URL - treat as unique
+        deduplicatedChannels.push(channel);
+        continue;
+      }
+
+      if (!seenUrls.has(url)) {
+        // First occurrence of this URL
+        seenUrls.set(url, channel);
+        deduplicatedChannels.push(channel);
+      } else {
+        // Duplicate URL - only replace if this one is primary
+        if (channel.isPrimary) {
+          const existingIndex = deduplicatedChannels.findIndex(ch => ch.url?.trim() === url);
+          if (existingIndex !== -1) {
+            deduplicatedChannels[existingIndex] = channel;
+            seenUrls.set(url, channel);
+          }
+        }
+      }
+    }
+
+    return deduplicatedChannels
       .filter((channel) => !disabledChannels.has(channel.id)) // exclude disabled channels
       .map((channel) => ({
         ...channel,
