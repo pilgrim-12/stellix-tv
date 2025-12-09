@@ -13,6 +13,7 @@ import {
   Timestamp,
 } from 'firebase/firestore'
 import { Channel, ChannelStatus } from '@/types'
+import { trackRead, trackWrite, trackDelete, trackQuery, trackBatch } from './firebaseQuotaTracker'
 
 export interface FirebaseChannel extends Channel {
   playlistId?: string // связь с плейлистом
@@ -51,6 +52,7 @@ export async function getAllChannels(): Promise<FirebaseChannel[]> {
   try {
     const channelsRef = collection(db, CHANNELS_COLLECTION)
     const snapshot = await getDocs(channelsRef)
+    trackQuery('getAllChannels', snapshot.size)
 
     return snapshot.docs.map((doc) => ({
       id: doc.id,
@@ -69,6 +71,7 @@ export async function getActiveChannels(): Promise<FirebaseChannel[]> {
     const channelsRef = collection(db, CHANNELS_COLLECTION)
     const q = query(channelsRef, where('status', '==', 'active'))
     const snapshot = await getDocs(q)
+    trackQuery('getActiveChannels', snapshot.size)
 
     const allActiveChannels = snapshot.docs.map((doc) => ({
       id: doc.id,
@@ -126,6 +129,7 @@ export async function getChannelsByPlaylist(playlistId: string): Promise<Firebas
     const channelsRef = collection(db, CHANNELS_COLLECTION)
     const q = query(channelsRef, where('playlistId', '==', playlistId))
     const snapshot = await getDocs(q)
+    trackQuery('getChannelsByPlaylist', snapshot.size)
 
     return snapshot.docs.map((doc) => ({
       id: doc.id,
@@ -142,6 +146,7 @@ export async function getChannel(channelId: string): Promise<FirebaseChannel | n
   try {
     const channelRef = doc(db, CHANNELS_COLLECTION, channelId)
     const snapshot = await getDoc(channelRef)
+    trackRead('getChannel')
 
     if (snapshot.exists()) {
       return { id: snapshot.id, ...snapshot.data() } as FirebaseChannel
@@ -158,6 +163,7 @@ export async function saveChannel(channel: Channel, playlistId?: string): Promis
   try {
     const channelRef = doc(db, CHANNELS_COLLECTION, channel.id)
     const existing = await getDoc(channelRef)
+    trackRead('saveChannel')
 
     if (existing.exists()) {
       await updateDoc(channelRef, {
@@ -165,6 +171,7 @@ export async function saveChannel(channel: Channel, playlistId?: string): Promis
         playlistId: playlistId || existing.data().playlistId,
         updatedAt: Timestamp.now(),
       })
+      trackWrite('saveChannel')
     } else {
       await setDoc(channelRef, {
         ...channel,
@@ -173,6 +180,7 @@ export async function saveChannel(channel: Channel, playlistId?: string): Promis
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
       })
+      trackWrite('saveChannel')
     }
   } catch (error) {
     console.error('Error saving channel:', error)
@@ -190,6 +198,7 @@ export async function setChannelStatus(
     // Get channel to find old status and playlistId
     const channelRef = doc(db, CHANNELS_COLLECTION, channelId)
     const channelSnap = await getDoc(channelRef)
+    trackRead('setChannelStatus')
 
     if (!channelSnap.exists()) {
       throw new Error('Channel not found')
@@ -206,6 +215,7 @@ export async function setChannelStatus(
       checkedBy: checkedBy || null,
       updatedAt: Timestamp.now(),
     })
+    trackWrite('setChannelStatus')
 
     // Update playlist stats if status changed and channel belongs to a playlist
     if (playlistId && oldStatus !== status) {
@@ -226,6 +236,7 @@ async function updatePlaylistStatsOnStatusChange(
   try {
     const playlistRef = doc(db, PLAYLISTS_COLLECTION, playlistId)
     const playlistSnap = await getDoc(playlistRef)
+    trackRead('updatePlaylistStatsOnStatusChange')
 
     if (!playlistSnap.exists()) return
 
@@ -243,6 +254,7 @@ async function updatePlaylistStatsOnStatusChange(
       stats,
       updatedAt: Timestamp.now(),
     })
+    trackWrite('updatePlaylistStatsOnStatusChange')
   } catch (error) {
     console.error('Error updating playlist stats:', error)
     // Don't throw - this is a secondary operation
@@ -254,6 +266,7 @@ export async function deleteChannel(channelId: string): Promise<void> {
   try {
     const channelRef = doc(db, CHANNELS_COLLECTION, channelId)
     await deleteDoc(channelRef)
+    trackDelete('deleteChannel')
   } catch (error) {
     console.error('Error deleting channel:', error)
     throw error
@@ -277,6 +290,7 @@ export async function deleteChannelsByPlaylist(playlistId: string): Promise<numb
       })
 
       await batch.commit()
+      trackBatch('deleteChannelsByPlaylist', chunk.length, 'delete')
     }
 
     return channels.length
@@ -338,6 +352,7 @@ export async function importChannels(
 
     try {
       await batch.commit()
+      trackBatch('importChannels', chunk.length, 'write')
     } catch (error) {
       console.error('Error committing batch:', error)
       failed += chunk.length
@@ -355,6 +370,7 @@ export async function getAllPlaylists(): Promise<Playlist[]> {
   try {
     const playlistsRef = collection(db, PLAYLISTS_COLLECTION)
     const snapshot = await getDocs(playlistsRef)
+    trackQuery('getAllPlaylists', snapshot.size)
 
     return snapshot.docs.map((doc) => ({
       id: doc.id,
@@ -371,6 +387,7 @@ export async function getPlaylist(playlistId: string): Promise<Playlist | null> 
   try {
     const playlistRef = doc(db, PLAYLISTS_COLLECTION, playlistId)
     const snapshot = await getDoc(playlistRef)
+    trackRead('getPlaylist')
 
     if (snapshot.exists()) {
       return { id: snapshot.id, ...snapshot.data() } as Playlist
@@ -401,6 +418,7 @@ export async function createPlaylist(
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     })
+    trackWrite('createPlaylist')
 
     return playlistId
   } catch (error) {
@@ -418,6 +436,7 @@ export async function deletePlaylist(playlistId: string): Promise<void> {
     // Then delete the playlist itself
     const playlistRef = doc(db, PLAYLISTS_COLLECTION, playlistId)
     await deleteDoc(playlistRef)
+    trackDelete('deletePlaylist')
   } catch (error) {
     console.error('Error deleting playlist:', error)
     throw error
@@ -436,6 +455,7 @@ export async function togglePlaylistEnabled(playlistId: string): Promise<boolean
       enabled: newEnabled,
       updatedAt: Timestamp.now(),
     })
+    trackWrite('togglePlaylistEnabled')
 
     return newEnabled
   } catch (error) {
@@ -454,6 +474,7 @@ export async function updateChannelLanguage(channelId: string, language: string)
       language,
       updatedAt: Timestamp.now(),
     })
+    trackWrite('updateChannelLanguage')
   } catch (error) {
     console.error('Error updating channel language:', error)
     throw error
@@ -468,6 +489,7 @@ export async function updateChannelCategory(channelId: string, group: string): P
       group,
       updatedAt: Timestamp.now(),
     })
+    trackWrite('updateChannelCategory')
   } catch (error) {
     console.error('Error updating channel category:', error)
     throw error
@@ -510,6 +532,7 @@ export async function recalculateAllLanguages(
       }
 
       await batch.commit()
+      trackBatch('recalculateAllLanguages', updated, 'write')
     }
 
     return { updated, unchanged }
@@ -545,6 +568,7 @@ export async function recalculatePlaylistStats(playlistId: string): Promise<Play
       channelCount: channels.length,
       updatedAt: Timestamp.now(),
     })
+    trackWrite('recalculatePlaylistStats')
 
     return stats
   } catch (error) {
@@ -602,6 +626,7 @@ export async function setPrimarySource(
 
     try {
       await batch.commit()
+      trackBatch('setPrimarySource', chunk.length, 'write')
     } catch (error) {
       console.error('Error committing batch:', error)
       failed += chunk.length
@@ -641,6 +666,7 @@ export async function bulkSetChannelStatus(
 
     try {
       await batch.commit()
+      trackBatch('bulkSetChannelStatus', chunk.length, 'write')
     } catch (error) {
       console.error('Error committing batch:', error)
       failed += chunk.length
@@ -671,6 +697,7 @@ export async function getChannelsByIds(channelIds: string[]): Promise<FirebaseCh
       })
 
       const results = await Promise.all(promises)
+      trackRead('getChannelsByIds', chunk.length)
       channels.push(...results.filter((ch): ch is FirebaseChannel => ch !== null))
     }
 

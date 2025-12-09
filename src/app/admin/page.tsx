@@ -50,6 +50,7 @@ import {
 } from '@/lib/channelService'
 import { DuplicateManagementModal } from '@/components/admin/DuplicateManagementModal'
 import { getTotalUsersCount, setUserAsAdmin, removeUserAdmin, getAllUsers } from '@/lib/userService'
+import { getStatsSummary, resetStats, QuotaStats } from '@/lib/firebaseQuotaTracker'
 import { Timestamp } from 'firebase/firestore'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
@@ -162,6 +163,10 @@ export default function AdminPage() {
   const [showPlaylists, setShowPlaylists] = useState(false)
   const [isRecalculatingStats, setIsRecalculatingStats] = useState(false)
 
+  // Firebase Quota Tracking
+  const [quotaStats, setQuotaStats] = useState<ReturnType<typeof getStatsSummary> | null>(null)
+  const [showQuotaStats, setShowQuotaStats] = useState(false)
+
   // Redirect non-admins
   useEffect(() => {
     if (!loading && !isAdmin) {
@@ -233,6 +238,16 @@ export default function AdminPage() {
       loadChannelsForPlaylist(selectedPlaylist)
     }
   }, [selectedPlaylist, playlists.length])
+
+  // Update quota stats periodically
+  useEffect(() => {
+    const updateQuotaStats = () => {
+      setQuotaStats(getStatsSummary())
+    }
+    updateQuotaStats()
+    const interval = setInterval(updateQuotaStats, 5000) // Update every 5 seconds
+    return () => clearInterval(interval)
+  }, [])
 
   // Play channel in preview
   const playChannel = async (channel: FirebaseChannel) => {
@@ -677,6 +692,17 @@ export default function AdminPage() {
               >
                 {isRecalculatingStats ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
               </Button>
+
+              {/* Firebase Quota Stats toggle */}
+              <Button
+                variant={showQuotaStats ? "secondary" : "ghost"}
+                size="sm"
+                className="h-8 text-xs gap-1.5"
+                onClick={() => setShowQuotaStats(!showQuotaStats)}
+              >
+                <AlertCircle className="h-3.5 w-3.5" />
+                <span>Квота: {quotaStats?.total ?? 0}</span>
+              </Button>
             </div>
 
             {/* Import messages */}
@@ -781,6 +807,71 @@ export default function AdminPage() {
                     </tbody>
                   </table>
                 </div>
+              </div>
+            )}
+
+            {/* Firebase Quota Stats Panel */}
+            {showQuotaStats && quotaStats && (
+              <div className="mt-2 border-t pt-2">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-medium">Firebase Quota (сегодня)</h4>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-6 text-xs"
+                    onClick={() => {
+                      resetStats()
+                      setQuotaStats(getStatsSummary())
+                    }}
+                  >
+                    Сбросить
+                  </Button>
+                </div>
+                <div className="grid grid-cols-4 gap-2 text-xs mb-3">
+                  <div className="bg-muted/50 rounded p-2 text-center">
+                    <div className="font-bold text-lg">{quotaStats.total}</div>
+                    <div className="text-muted-foreground">Всего</div>
+                  </div>
+                  <div className="bg-blue-500/10 rounded p-2 text-center">
+                    <div className="font-bold text-lg text-blue-500">{quotaStats.reads}</div>
+                    <div className="text-muted-foreground">Чтений</div>
+                  </div>
+                  <div className="bg-green-500/10 rounded p-2 text-center">
+                    <div className="font-bold text-lg text-green-500">{quotaStats.writes}</div>
+                    <div className="text-muted-foreground">Записей</div>
+                  </div>
+                  <div className="bg-red-500/10 rounded p-2 text-center">
+                    <div className="font-bold text-lg text-red-500">{quotaStats.deletes}</div>
+                    <div className="text-muted-foreground">Удалений</div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                  <div className="bg-orange-500/10 rounded p-2 text-center">
+                    <div className="font-bold">{quotaStats.last5Minutes}</div>
+                    <div className="text-muted-foreground">За 5 мин</div>
+                  </div>
+                  <div className="bg-purple-500/10 rounded p-2 text-center">
+                    <div className="font-bold">{quotaStats.lastHour}</div>
+                    <div className="text-muted-foreground">За час</div>
+                  </div>
+                </div>
+                {quotaStats.topFunctions.length > 0 && (
+                  <div>
+                    <h5 className="text-xs font-medium text-muted-foreground mb-1">Топ функций:</h5>
+                    <div className="space-y-1 max-h-32 overflow-auto">
+                      {quotaStats.topFunctions.map((fn) => (
+                        <div key={fn.name} className="flex items-center justify-between text-xs bg-muted/30 rounded px-2 py-1">
+                          <span className="font-mono truncate">{fn.name}</span>
+                          <div className="flex gap-2 text-muted-foreground">
+                            <span className="text-blue-500">R:{fn.reads}</span>
+                            <span className="text-green-500">W:{fn.writes}</span>
+                            <span className="text-red-500">D:{fn.deletes}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>

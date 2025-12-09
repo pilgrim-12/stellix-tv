@@ -15,6 +15,7 @@ import {
   getDocs,
   Timestamp,
 } from 'firebase/firestore'
+import { trackRead, trackWrite, trackQuery } from './firebaseQuotaTracker'
 
 export interface WatchHistoryEntry {
   channelId: string
@@ -43,6 +44,7 @@ export async function getUserData(userId: string): Promise<UserData | null> {
   try {
     const userRef = doc(db, 'users', userId)
     const userSnap = await getDoc(userRef)
+    trackRead('getUserData')
 
     if (userSnap.exists()) {
       return userSnap.data() as UserData
@@ -59,6 +61,7 @@ export async function initializeUser(userId: string, email?: string): Promise<vo
   try {
     const userRef = doc(db, 'users', userId)
     const userSnap = await getDoc(userRef)
+    trackRead('initializeUser')
 
     if (!userSnap.exists()) {
       await setDoc(userRef, {
@@ -70,12 +73,14 @@ export async function initializeUser(userId: string, email?: string): Promise<vo
         ipAddresses: [],
         createdAt: serverTimestamp(),
       })
+      trackWrite('initializeUser')
     } else {
       // Update visit stats
       await updateDoc(userRef, {
         lastVisit: serverTimestamp(),
         totalVisits: increment(1),
       })
+      trackWrite('initializeUser')
     }
   } catch (error) {
     console.error('Error initializing user:', error)
@@ -91,6 +96,7 @@ export async function saveUserIP(userId: string, ip: string): Promise<void> {
       lastIP: ip,
       lastVisit: serverTimestamp(),
     })
+    trackWrite('saveUserIP')
   } catch (error) {
     console.error('Error saving IP:', error)
   }
@@ -103,6 +109,7 @@ export async function addFavorite(userId: string, channelId: string): Promise<vo
     await updateDoc(userRef, {
       favorites: arrayUnion(channelId),
     })
+    trackWrite('addFavorite')
   } catch (error) {
     console.error('Error adding favorite:', error)
   }
@@ -114,6 +121,7 @@ export async function removeFavorite(userId: string, channelId: string): Promise
     await updateDoc(userRef, {
       favorites: arrayRemove(channelId),
     })
+    trackWrite('removeFavorite')
   } catch (error) {
     console.error('Error removing favorite:', error)
   }
@@ -133,6 +141,7 @@ export async function setFavorites(userId: string, favorites: string[]): Promise
   try {
     const userRef = doc(db, 'users', userId)
     await updateDoc(userRef, { favorites })
+    trackWrite('setFavorites')
   } catch (error) {
     console.error('Error setting favorites:', error)
   }
@@ -152,7 +161,7 @@ export async function addWatchHistory(
       watchedAt: Timestamp.now(),
     }
 
-    // Get current history
+    // Get current history (getUserData already tracks the read)
     const userData = await getUserData(userId)
     const history = userData?.watchHistory || []
 
@@ -162,6 +171,7 @@ export async function addWatchHistory(
     await updateDoc(userRef, {
       watchHistory: newHistory,
     })
+    trackWrite('addWatchHistory')
   } catch (error) {
     console.error('Error adding watch history:', error)
   }
@@ -182,6 +192,7 @@ export async function getTotalUsersCount(): Promise<number> {
   try {
     const usersRef = collection(db, 'users')
     const snapshot = await getDocs(usersRef)
+    trackQuery('getTotalUsersCount', snapshot.size)
     return snapshot.size
   } catch (error) {
     console.error('Error getting users count:', error)
@@ -195,6 +206,7 @@ export async function getRecentUsers(count: number = 10): Promise<Array<{ id: st
     const usersRef = collection(db, 'users')
     const q = query(usersRef, orderBy('lastVisit', 'desc'), limit(count))
     const snapshot = await getDocs(q)
+    trackQuery('getRecentUsers', snapshot.size)
 
     return snapshot.docs.map((doc) => ({
       id: doc.id,
@@ -225,6 +237,7 @@ export async function updateUserSettings(userId: string, settings: Partial<UserS
     await updateDoc(userRef, {
       settings: { ...currentSettings, ...settings },
     })
+    trackWrite('updateUserSettings')
   } catch (error) {
     console.error('Error updating user settings:', error)
   }
@@ -248,6 +261,7 @@ export async function setUserAsAdmin(userId: string): Promise<void> {
     await updateDoc(userRef, {
       isAdmin: true,
     })
+    trackWrite('setUserAsAdmin')
   } catch (error) {
     console.error('Error setting user as admin:', error)
     throw error
@@ -261,6 +275,7 @@ export async function removeUserAdmin(userId: string): Promise<void> {
     await updateDoc(userRef, {
       isAdmin: false,
     })
+    trackWrite('removeUserAdmin')
   } catch (error) {
     console.error('Error removing admin status:', error)
     throw error
@@ -272,6 +287,7 @@ export async function getAllUsers(): Promise<Array<{ id: string; email?: string;
   try {
     const usersRef = collection(db, 'users')
     const snapshot = await getDocs(usersRef)
+    trackQuery('getAllUsers', snapshot.size)
     return snapshot.docs.map((doc) => ({
       id: doc.id,
       email: doc.data().email,
