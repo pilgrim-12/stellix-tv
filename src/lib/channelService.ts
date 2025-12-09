@@ -95,7 +95,7 @@ export async function getActiveChannels(): Promise<FirebaseChannel[]> {
       groups.get(url)!.push(channel)
     })
 
-    // For each group, select which channel(s) to show
+    // For each group, select which channel to show (only ONE per URL)
     const result: FirebaseChannel[] = []
 
     groups.forEach(channels => {
@@ -109,8 +109,8 @@ export async function getActiveChannels(): Promise<FirebaseChannel[]> {
           // Primary is selected - show only the primary
           result.push(primary)
         } else {
-          // No primary selected - show ALL channels in the group
-          result.push(...channels)
+          // No primary selected - show only the FIRST channel (not all duplicates)
+          result.push(channels[0])
         }
       }
     })
