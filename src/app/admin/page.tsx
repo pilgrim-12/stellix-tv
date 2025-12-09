@@ -492,10 +492,6 @@ export default function AdminPage() {
               <FolderOpen className="h-4 w-4 mr-2" />
               Staging
             </Button>
-            <Button variant="outline" size="sm" onClick={() => router.push('/admin/migrate')}>
-              <Database className="h-4 w-4 mr-2" />
-              Миграция
-            </Button>
             <Button variant="outline" size="sm" onClick={loadData} disabled={isLoading}>
               <RefreshCw className={cn('h-4 w-4 mr-2', isLoading && 'animate-spin')} />
               Обновить
