@@ -1,16 +1,20 @@
 'use client'
 
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useState } from 'react'
 import Hls from 'hls.js'
 import { usePlayerStore, useChannelStore } from '@/stores'
 import { useSettings } from '@/contexts/SettingsContext'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 export function VideoPlayer() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const hlsRef = useRef<Hls | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const touchStartX = useRef<number | null>(null)
+  const touchStartY = useRef<number | null>(null)
+  const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null)
 
-  const { currentChannel, markChannelOffline, markChannelOnline } = useChannelStore()
+  const { currentChannel, markChannelOffline, markChannelOnline, getFilteredChannels, setCurrentChannel } = useChannelStore()
   const { t } = useSettings()
   const {
     isPlaying,
@@ -213,12 +217,64 @@ export function VideoPlayer() {
     }
   }, [])
 
+  // Swipe handlers for mobile channel switching
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX
+    touchStartY.current = e.touches[0].clientY
+    setSwipeDirection(null)
+  }, [])
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return
+
+    const deltaX = e.touches[0].clientX - touchStartX.current
+    const deltaY = e.touches[0].clientY - touchStartY.current
+
+    // Only show swipe indicator if horizontal swipe is dominant
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 30) {
+      setSwipeDirection(deltaX > 0 ? 'right' : 'left')
+    }
+  }, [])
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return
+
+    const deltaX = e.changedTouches[0].clientX - touchStartX.current
+    const deltaY = e.changedTouches[0].clientY - touchStartY.current
+    const minSwipeDistance = 80
+
+    // Only trigger channel switch if horizontal swipe is dominant and long enough
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance) {
+      const filteredChannels = getFilteredChannels()
+      if (currentChannel && filteredChannels.length > 0) {
+        const currentIndex = filteredChannels.findIndex(ch => ch.id === currentChannel.id)
+
+        if (deltaX > 0) {
+          // Swipe right = previous channel
+          const prevIndex = currentIndex > 0 ? currentIndex - 1 : filteredChannels.length - 1
+          setCurrentChannel(filteredChannels[prevIndex])
+        } else {
+          // Swipe left = next channel
+          const nextIndex = currentIndex < filteredChannels.length - 1 ? currentIndex + 1 : 0
+          setCurrentChannel(filteredChannels[nextIndex])
+        }
+      }
+    }
+
+    touchStartX.current = null
+    touchStartY.current = null
+    setSwipeDirection(null)
+  }, [currentChannel, getFilteredChannels, setCurrentChannel])
+
   return (
     <div ref={containerRef} className="video-container group">
       {/* Video wrapper - aspect-video on mobile, flex-1 on desktop */}
       <div
         className="relative aspect-video lg:aspect-auto lg:flex-1 lg:min-h-[200px] bg-black rounded-lg overflow-hidden"
         onDoubleClick={toggleFullscreen}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         <video
           ref={videoRef}
@@ -230,7 +286,26 @@ export function VideoPlayer() {
           onPause={handlePause}
         />
 
-        {/* Loading overlay removed - browser's native video controls show loading state */}
+        {/* Swipe indicators - only visible on touch devices */}
+        {swipeDirection && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+            <div className={`flex items-center gap-2 px-4 py-2 rounded-full bg-black/70 text-white ${
+              swipeDirection === 'left' ? 'animate-pulse' : 'animate-pulse'
+            }`}>
+              {swipeDirection === 'right' ? (
+                <>
+                  <ChevronLeft className="h-6 w-6" />
+                  <span className="text-sm">Previous</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-sm">Next</span>
+                  <ChevronRight className="h-6 w-6" />
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Error overlay */}
         {error && !isLoading && (
