@@ -24,6 +24,7 @@ import {
   X,
   Database,
   FolderOpen,
+  Copy,
 } from 'lucide-react'
 import {
   getAllCuratedChannelsRaw,
@@ -32,9 +33,13 @@ import {
   updateCuratedChannel,
   bulkDeleteChannels,
   getPlaylistSources,
+  findDuplicateChannels,
+  setPrimaryChannel,
   CuratedChannel,
   PlaylistSource,
+  DuplicateInfo,
 } from '@/lib/curatedChannelService'
+import { DuplicateManagementModal } from '@/components/admin/DuplicateManagementModal'
 import { getTotalUsersCount } from '@/lib/userService'
 import { getStatsSummary, resetStats } from '@/lib/firebaseQuotaTracker'
 import { useAuthContext } from '@/contexts/AuthContext'
@@ -94,6 +99,12 @@ export default function AdminPage() {
   // Firebase Quota Tracking
   const [quotaStats, setQuotaStats] = useState<ReturnType<typeof getStatsSummary> | null>(null)
   const [showQuotaStats, setShowQuotaStats] = useState(false)
+
+  // Duplicates state
+  const [duplicates, setDuplicates] = useState<DuplicateInfo[]>([])
+  const [isLoadingDuplicates, setIsLoadingDuplicates] = useState(false)
+  const [selectedDuplicate, setSelectedDuplicate] = useState<DuplicateInfo | null>(null)
+  const [showDuplicatesModal, setShowDuplicatesModal] = useState(false)
 
   // Redirect non-admins
   useEffect(() => {
@@ -248,6 +259,34 @@ export default function AdminPage() {
     } finally {
       setUpdatingCategoryId(null)
     }
+  }
+
+  // Find duplicates
+  const handleFindDuplicates = async () => {
+    setIsLoadingDuplicates(true)
+    try {
+      const found = await findDuplicateChannels(playlistSources)
+      setDuplicates(found)
+    } catch (error) {
+      console.error('Error finding duplicates:', error)
+    } finally {
+      setIsLoadingDuplicates(false)
+    }
+  }
+
+  // Handle duplicate management
+  const handleDuplicateApply = async (primaryId: string | null, idsToDeactivate: string[], type: 'name' | 'url') => {
+    // For URL duplicates: deactivate others (set status to inactive)
+    if (type === 'url' && idsToDeactivate.length > 0) {
+      const { bulkUpdateStatus } = await import('@/lib/curatedChannelService')
+      await bulkUpdateStatus(idsToDeactivate, 'inactive', user?.email || undefined)
+    }
+    // Set primary for both types
+    await setPrimaryChannel(primaryId, type === 'url' ? [] : idsToDeactivate)
+    // Refresh duplicates list
+    await handleFindDuplicates()
+    // Reload channels to reflect changes
+    await loadData()
   }
 
   // Calculate stats from channels
@@ -577,6 +616,74 @@ export default function AdminPage() {
               </CardContent>
             </Card>
 
+            {/* Duplicates Card */}
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Copy className="h-4 w-4" />
+                    Duplicates
+                    {duplicates.length > 0 && (
+                      <span className="text-sm font-normal text-orange-500">
+                        ({duplicates.length} groups)
+                      </span>
+                    )}
+                  </CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleFindDuplicates}
+                    disabled={isLoadingDuplicates}
+                  >
+                    {isLoadingDuplicates ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Search className="h-4 w-4" />
+                    )}
+                    <span className="ml-1">Find</span>
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {duplicates.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    {isLoadingDuplicates ? 'Searching...' : 'Click "Find" to search for duplicates'}
+                  </p>
+                ) : (
+                  <div className="space-y-2 max-h-[300px] overflow-auto">
+                    {duplicates.map((dup) => (
+                      <div
+                        key={`${dup.type}-${dup.normalizedName}`}
+                        className={cn(
+                          'flex items-center justify-between p-2 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors',
+                          dup.type === 'url' && 'border-red-500/30 bg-red-500/5'
+                        )}
+                        onClick={() => {
+                          setSelectedDuplicate(dup)
+                          setShowDuplicatesModal(true)
+                        }}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{dup.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {dup.count} sources • {dup.type === 'url' ? 'Same URL' : 'Same name'}
+                          </p>
+                        </div>
+                        <span className={cn(
+                          'text-xs px-2 py-0.5 rounded',
+                          dup.type === 'url'
+                            ? 'bg-red-500/20 text-red-500'
+                            : 'bg-orange-500/20 text-orange-500'
+                        )}>
+                          x{dup.count}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
           </div>
 
           {/* Right column - Channels list */}
@@ -755,6 +862,18 @@ export default function AdminPage() {
         </div>
 
       </main>
+
+      {/* Duplicate Management Modal */}
+      <DuplicateManagementModal
+        isOpen={showDuplicatesModal}
+        onClose={() => {
+          setShowDuplicatesModal(false)
+          setSelectedDuplicate(null)
+        }}
+        duplicate={selectedDuplicate}
+        channelsData={channels}
+        onApply={handleDuplicateApply}
+      />
     </div>
   )
 }

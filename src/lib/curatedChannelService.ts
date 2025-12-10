@@ -665,3 +665,158 @@ export async function bulkDeleteChannels(channelIds: string[]): Promise<number> 
 
   return deleted
 }
+
+// ==================== DUPLICATES ====================
+
+/**
+ * Normalize channel name for comparison
+ */
+function normalizeChannelName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .replace(/[^\p{L}\p{N}\s]/gu, '') // Remove non-alphanumeric except spaces
+    .trim()
+}
+
+/**
+ * Normalize URL for comparison (remove protocol, trailing slashes, etc)
+ */
+function normalizeUrl(url: string): string {
+  return url
+    .toLowerCase()
+    .replace(/^https?:\/\//, '')
+    .replace(/\/+$/, '')
+    .trim()
+}
+
+export interface DuplicateChannel {
+  id: string
+  playlistId: string | undefined
+  playlistName: string
+  status: string
+  isPrimary?: boolean
+  url?: string
+}
+
+export interface DuplicateInfo {
+  name: string
+  normalizedName: string
+  count: number
+  channels: DuplicateChannel[]
+  type: 'name' | 'url' // Type of duplicate
+}
+
+/**
+ * Find duplicate channels by normalized name AND by URL
+ * Excludes inactive channels from duplicate detection
+ */
+export async function findDuplicateChannels(
+  playlistSources: PlaylistSource[]
+): Promise<DuplicateInfo[]> {
+  const allChannels = await getCuratedChannelsRaw()
+  // Only check active/pending channels, skip inactive/broken
+  const channels = allChannels.filter(ch => ch.status !== 'inactive')
+
+  // Create playlist name map
+  const playlistNames = new Map<string, string>()
+  playlistSources.forEach(p => playlistNames.set(p.id, p.name))
+
+  const duplicates: DuplicateInfo[] = []
+
+  // 1. Find duplicates by URL (exact copies)
+  const urlGroups = new Map<string, CuratedChannel[]>()
+  channels.forEach(ch => {
+    if (!ch.url) return
+    const normalized = normalizeUrl(ch.url)
+    if (!urlGroups.has(normalized)) {
+      urlGroups.set(normalized, [])
+    }
+    urlGroups.get(normalized)!.push(ch)
+  })
+
+  urlGroups.forEach((group) => {
+    if (group.length > 1) {
+      duplicates.push({
+        name: `🔗 ${group[0].name}`,
+        normalizedName: normalizeUrl(group[0].url),
+        count: group.length,
+        type: 'url',
+        channels: group.map(ch => ({
+          id: ch.id,
+          playlistId: ch.playlistId,
+          playlistName: ch.playlistId ? (playlistNames.get(ch.playlistId) || 'Unknown') : 'Manual',
+          status: ch.status || 'pending',
+          isPrimary: ch.isPrimary,
+          url: ch.url,
+        })),
+      })
+    }
+  })
+
+  // 2. Find duplicates by name (same channel, different sources)
+  // But exclude channels that are already in URL duplicates
+  const urlDuplicateIds = new Set<string>()
+  duplicates.forEach(d => d.channels.forEach(ch => urlDuplicateIds.add(ch.id)))
+
+  const nameGroups = new Map<string, CuratedChannel[]>()
+  channels.forEach(ch => {
+    // Skip if already in URL duplicates
+    if (urlDuplicateIds.has(ch.id)) return
+
+    const normalized = normalizeChannelName(ch.name)
+    if (!nameGroups.has(normalized)) {
+      nameGroups.set(normalized, [])
+    }
+    nameGroups.get(normalized)!.push(ch)
+  })
+
+  nameGroups.forEach((group, normalizedName) => {
+    if (group.length > 1) {
+      duplicates.push({
+        name: group[0].name,
+        normalizedName,
+        count: group.length,
+        type: 'name',
+        channels: group.map(ch => ({
+          id: ch.id,
+          playlistId: ch.playlistId,
+          playlistName: ch.playlistId ? (playlistNames.get(ch.playlistId) || 'Unknown') : 'Manual',
+          status: ch.status || 'pending',
+          isPrimary: ch.isPrimary,
+          url: ch.url,
+        })),
+      })
+    }
+  })
+
+  // Sort: URL duplicates first, then by count
+  duplicates.sort((a, b) => {
+    if (a.type !== b.type) return a.type === 'url' ? -1 : 1
+    return b.count - a.count
+  })
+
+  return duplicates
+}
+
+/**
+ * Set primary channel for a duplicate group and optionally mark others
+ */
+export async function setPrimaryChannel(
+  primaryId: string | null,
+  otherIds: string[]
+): Promise<void> {
+  const channels = await getCuratedChannelsRaw()
+
+  // Clear isPrimary from all channels in the group
+  const allIds = new Set([...(primaryId ? [primaryId] : []), ...otherIds])
+
+  channels.forEach(ch => {
+    if (allIds.has(ch.id)) {
+      ch.isPrimary = ch.id === primaryId
+      ch.updatedAt = new Date().toISOString()
+    }
+  })
+
+  await saveCuratedChannels(channels)
+}

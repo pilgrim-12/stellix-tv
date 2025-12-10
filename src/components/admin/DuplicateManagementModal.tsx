@@ -10,7 +10,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { CuratedChannel } from '@/lib/curatedChannelService'
+import { CuratedChannel, DuplicateInfo } from '@/lib/curatedChannelService'
 import { ChannelStatus, languageNames } from '@/types'
 import {
   Loader2,
@@ -24,27 +24,12 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-interface DuplicateChannel {
-  id: string
-  playlistId: string
-  playlistName: string
-  status: string
-  isPrimary?: boolean
-}
-
-interface DuplicateInfo {
-  name: string
-  normalizedName: string
-  count: number
-  channels: DuplicateChannel[]
-}
-
 interface DuplicateManagementModalProps {
   isOpen: boolean
   onClose: () => void
   duplicate: DuplicateInfo | null
   channelsData: CuratedChannel[]
-  onApply: (primaryId: string | null, inactiveIds: string[]) => Promise<void>
+  onApply: (primaryId: string | null, idsToDeactivate: string[], type: 'name' | 'url') => Promise<void>
 }
 
 const statusColors: Record<ChannelStatus, string> = {
@@ -146,11 +131,13 @@ export function DuplicateManagementModal({
 
     setIsApplying(true)
     try {
-      const inactiveIds = duplicate.channels
-        .map(c => c.id)
-        .filter(id => id !== selectedPrimaryId)
+      // For URL duplicates: deactivate all except selected
+      // For name duplicates: just mark primary
+      const idsToDeactivate = duplicate.type === 'url' && selectedPrimaryId
+        ? duplicate.channels.map(c => c.id).filter(id => id !== selectedPrimaryId)
+        : []
 
-      await onApply(selectedPrimaryId, inactiveIds)
+      await onApply(selectedPrimaryId, idsToDeactivate, duplicate.type)
       onClose()
     } catch (error) {
       console.error('Error applying duplicate management:', error)
@@ -343,16 +330,30 @@ export function DuplicateManagementModal({
 
               {/* Selected channel info */}
               {selectedPrimaryId ? (
-                <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
-                  <p className="text-sm font-medium text-primary mb-1">
+                <div className={cn(
+                  'p-3 rounded-lg border',
+                  duplicate.type === 'url'
+                    ? 'bg-orange-500/5 border-orange-500/20'
+                    : 'bg-primary/5 border-primary/20'
+                )}>
+                  <p className={cn(
+                    'text-sm font-medium mb-1',
+                    duplicate.type === 'url' ? 'text-orange-500' : 'text-primary'
+                  )}>
                     Выбран как основной:
                   </p>
                   <p className="text-sm">
                     {getFullChannel(selectedPrimaryId)?.name || selectedPrimaryId}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Статусы каналов не изменятся — только отметка "основной"
-                  </p>
+                  {duplicate.type === 'url' ? (
+                    <p className="text-xs text-orange-400 mt-2">
+                      ⚠️ Остальные {duplicate.count - 1} дубликат(ов) будут ОТКЛЮЧЕНЫ
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Остальные каналы получат отметку "не основной"
+                    </p>
+                  )}
                   <p className="text-xs text-muted-foreground mt-1">
                     Кликните на источник ещё раз чтобы снять выбор
                   </p>
@@ -363,10 +364,7 @@ export function DuplicateManagementModal({
                     Основной источник не выбран
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Выберите источник или оставьте без выбора
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Статусы каналов не изменятся
+                    Выберите источник {duplicate.type === 'url' ? 'чтобы удалить дубликаты' : 'или оставьте без выбора'}
                   </p>
                 </div>
               )}
