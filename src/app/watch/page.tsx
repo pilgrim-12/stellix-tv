@@ -9,6 +9,9 @@ import { useChannelStore } from '@/stores'
 import { useSettings } from '@/contexts/SettingsContext'
 import { sampleChannels } from '@/data/channels'
 import { getCurrentProgram, getUpcomingPrograms } from '@/data/programs'
+import { Keyboard } from 'lucide-react'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Button } from '@/components/ui/button'
 
 export default function WatchPage() {
   return (
@@ -247,6 +250,51 @@ function WatchContent() {
       <div className="hidden md:flex shrink-0 border-t border-border/40 bg-muted/30 px-3 py-1 items-center justify-between text-[10px] text-muted-foreground">
         <div className="flex items-center gap-3">
           <ChannelGridTrigger />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] gap-1 text-muted-foreground hover:text-foreground">
+                <Keyboard className="h-3 w-3" />
+                <span className="hidden lg:inline">Hotkeys</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-3" align="start">
+              <div className="space-y-3">
+                <h4 className="font-medium text-sm">Keyboard Shortcuts</h4>
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Play / Pause</span>
+                    <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px]">Space</kbd>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Mute / Unmute</span>
+                    <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px]">M</kbd>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Volume Up</span>
+                    <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px]">+</kbd>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Volume Down</span>
+                    <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px]">-</kbd>
+                  </div>
+                  <div className="border-t border-border pt-2 mt-2">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Previous Channel</span>
+                      <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px]">↑</kbd>
+                    </div>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Next Channel</span>
+                    <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px]">↓</kbd>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Channel 1-9</span>
+                    <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px]">1-9</kbd>
+                  </div>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
         <div>
           {currentTime.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' })} • {currentTime.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
