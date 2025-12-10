@@ -42,6 +42,8 @@ export interface CuratedChannel {
   status: 'pending' | 'active' | 'inactive' | 'broken'
   enabled: boolean
   isPrimary?: boolean
+  // Order field for custom sorting
+  order?: number
   // Metadata
   playlistId?: string
   labels?: string[]
@@ -137,6 +139,7 @@ export async function getCuratedChannels(): Promise<Channel[]> {
       status: ch.status || 'pending',
       enabled: ch.enabled !== false,
       isPrimary: ch.isPrimary,
+      order: ch.order,
       labels: ch.labels as Channel['labels'],
       isOffline: false,
     }))
@@ -158,10 +161,17 @@ export async function getCuratedChannels(): Promise<Channel[]> {
 
 /**
  * Get only active channels for /watch page (filtered from cache)
+ * Sorted by order field
  */
 export async function getActiveCuratedChannels(): Promise<Channel[]> {
   const allChannels = await getCuratedChannels()
-  return allChannels.filter((ch) => ch.status === 'active' && ch.enabled !== false)
+  const activeChannels = allChannels.filter((ch) => ch.status === 'active' && ch.enabled !== false)
+  // Sort by order field (channels without order come last)
+  return activeChannels.sort((a, b) => {
+    const orderA = a.order ?? Number.MAX_SAFE_INTEGER
+    const orderB = b.order ?? Number.MAX_SAFE_INTEGER
+    return orderA - orderB
+  })
 }
 
 /**
@@ -819,4 +829,40 @@ export async function setPrimaryChannel(
   })
 
   await saveCuratedChannels(channels)
+}
+
+// ==================== CHANNEL ORDER ====================
+
+/**
+ * Update channel order based on array of IDs
+ * The order in the array determines the display order
+ */
+export async function updateChannelOrder(orderedIds: string[]): Promise<void> {
+  const channels = await getCuratedChannelsRaw()
+
+  // Create a map for quick lookup
+  const channelMap = new Map<string, CuratedChannel>()
+  channels.forEach(ch => channelMap.set(ch.id, ch))
+
+  // Assign order based on position in orderedIds
+  const orderMap = new Map<string, number>()
+  orderedIds.forEach((id, index) => orderMap.set(id, index))
+
+  // Update order for all channels
+  channels.forEach(ch => {
+    if (orderMap.has(ch.id)) {
+      ch.order = orderMap.get(ch.id)
+      ch.updatedAt = new Date().toISOString()
+    }
+  })
+
+  // Sort channels by order before saving
+  channels.sort((a, b) => {
+    const orderA = a.order ?? Number.MAX_SAFE_INTEGER
+    const orderB = b.order ?? Number.MAX_SAFE_INTEGER
+    return orderA - orderB
+  })
+
+  await saveCuratedChannels(channels)
+  console.log('[CuratedChannels] Updated channel order for', orderedIds.length, 'channels')
 }

@@ -25,6 +25,8 @@ import {
   Database,
   FolderOpen,
   Copy,
+  GripVertical,
+  Save,
 } from 'lucide-react'
 import {
   getAllCuratedChannelsRaw,
@@ -35,11 +37,32 @@ import {
   getPlaylistSources,
   findDuplicateChannels,
   setPrimaryChannel,
+  updateChannelOrder,
   CuratedChannel,
   PlaylistSource,
   DuplicateInfo,
 } from '@/lib/curatedChannelService'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core'
+import { restrictToVerticalAxis } from '@dnd-kit/modifiers'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { DuplicateManagementModal } from '@/components/admin/DuplicateManagementModal'
+import { ChannelReorderModal } from '@/components/admin/ChannelReorderModal'
 import { getTotalUsersCount } from '@/lib/userService'
 import { getStatsSummary, resetStats } from '@/lib/firebaseQuotaTracker'
 import { useAuthContext } from '@/contexts/AuthContext'
@@ -58,6 +81,126 @@ const statusNames: Record<ChannelStatus, string> = {
   active: 'Active',
   inactive: 'Disabled',
   broken: 'Broken',
+}
+
+// Sortable Channel Item Component
+interface SortableChannelItemProps {
+  channel: CuratedChannel
+  isSelected: boolean
+  onClick: () => void
+  onSetStatus: (status: ChannelStatus) => void
+  updatingStatusId: string | null
+  isDragDisabled: boolean
+}
+
+function SortableChannelItem({
+  channel,
+  isSelected,
+  onClick,
+  onSetStatus,
+  updatingStatusId,
+  isDragDisabled,
+}: SortableChannelItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    isDragging,
+  } = useSortable({ id: channel.id, disabled: isDragDisabled })
+
+  const style: React.CSSProperties = {
+    transform: CSS.Translate.toString(transform),
+    zIndex: isDragging ? 1000 : undefined,
+    position: 'relative' as const,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        'flex items-center gap-3 px-4 py-2 cursor-pointer hover:bg-muted/50 border-b bg-background',
+        isSelected && 'bg-primary/10',
+        isDragging && 'bg-muted shadow-lg opacity-90'
+      )}
+      onClick={onClick}
+    >
+      {/* Drag handle */}
+      {!isDragDisabled && (
+        <div
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing touch-none"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        </div>
+      )}
+
+      {/* Logo */}
+      <div className="w-10 h-10 rounded bg-muted flex items-center justify-center overflow-hidden shrink-0">
+        {channel.logo ? (
+          <img src={channel.logo} alt="" className="w-full h-full object-cover" />
+        ) : (
+          <Tv className="h-5 w-5 text-muted-foreground" />
+        )}
+      </div>
+
+      {/* Info */}
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-sm truncate">{channel.name}</p>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span>{categoryNames[channel.group] || channel.group}</span>
+          {channel.language && (
+            <>
+              <span>•</span>
+              <span>{languageNames[channel.language] || channel.language}</span>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Status badge */}
+      <span className={cn('text-[10px] px-2 py-0.5 rounded font-medium shrink-0', statusColors[channel.status || 'pending'])}>
+        {statusNames[channel.status || 'pending']}
+      </span>
+
+      {/* Quick actions */}
+      <div className="flex gap-1 shrink-0">
+        {updatingStatusId === channel.id ? (
+          <div className="h-7 w-7 flex items-center justify-center">
+            <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-green-500 hover:bg-green-500/10"
+              onClick={(e) => {
+                e.stopPropagation()
+                onSetStatus('active')
+              }}
+            >
+              <Check className="h-3 w-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-red-500 hover:bg-red-500/10"
+              onClick={(e) => {
+                e.stopPropagation()
+                onSetStatus('broken')
+              }}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          </>
+        )}
+      </div>
+    </div>
+  )
 }
 
 export default function AdminPage() {
@@ -105,6 +248,29 @@ export default function AdminPage() {
   const [isLoadingDuplicates, setIsLoadingDuplicates] = useState(false)
   const [selectedDuplicate, setSelectedDuplicate] = useState<DuplicateInfo | null>(null)
   const [showDuplicatesModal, setShowDuplicatesModal] = useState(false)
+
+  // Drag and drop state
+  const [hasOrderChanged, setHasOrderChanged] = useState(false)
+  const [isSavingOrder, setIsSavingOrder] = useState(false)
+  const [showReorderModal, setShowReorderModal] = useState(false)
+
+  // DnD sensors - minimal activation constraints for instant response
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 3,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 100,
+        tolerance: 3,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
 
   // Redirect non-admins
   useEffect(() => {
@@ -288,6 +454,37 @@ export default function AdminPage() {
     // Reload channels to reflect changes
     await loadData()
   }
+
+  // Handle drag end for reordering
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+
+    if (over && active.id !== over.id) {
+      setChannels((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id)
+        const newIndex = items.findIndex((item) => item.id === over.id)
+        return arrayMove(items, oldIndex, newIndex)
+      })
+      setHasOrderChanged(true)
+    }
+  }
+
+  // Save channel order to Firebase
+  const handleSaveOrder = async () => {
+    setIsSavingOrder(true)
+    try {
+      const orderedIds = channels.map((ch) => ch.id)
+      await updateChannelOrder(orderedIds)
+      setHasOrderChanged(false)
+    } catch (error) {
+      console.error('Error saving channel order:', error)
+    } finally {
+      setIsSavingOrder(false)
+    }
+  }
+
+  // Check if filters are active (drag disabled when filtering)
+  const isFilterActive = searchQuery !== '' || selectedStatus !== 'all' || selectedLanguage !== 'all' || selectedPlaylistId !== 'all'
 
   // Calculate stats from channels
   const stats = {
@@ -690,9 +887,41 @@ export default function AdminPage() {
           <Card>
             <CardHeader className="pb-3 space-y-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base">
+                <CardTitle className="text-base flex items-center gap-2">
                   Channels ({filteredChannels.length} of {channels.length})
+                  {hasOrderChanged && (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="h-6 text-xs gap-1"
+                      onClick={handleSaveOrder}
+                      disabled={isSavingOrder}
+                    >
+                      {isSavingOrder ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Save className="h-3 w-3" />
+                      )}
+                      Save Order
+                    </Button>
+                  )}
                 </CardTitle>
+                <div className="flex items-center gap-2">
+                  {isFilterActive && (
+                    <span className="text-xs text-muted-foreground">
+                      Drag disabled while filtering
+                    </span>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-6 text-xs gap-1"
+                    onClick={() => setShowReorderModal(true)}
+                  >
+                    <GripVertical className="h-3 w-3" />
+                    Сортировка
+                  </Button>
+                </div>
               </div>
               {/* Search and filter buttons */}
               <div className="flex items-center gap-2 flex-wrap">
@@ -782,80 +1011,31 @@ export default function AdminPage() {
                   No channels match the filters
                 </div>
               ) : (
-                <div className="divide-y max-h-[600px] overflow-auto">
-                  {filteredChannels.map((channel) => (
-                    <div
-                      key={channel.id}
-                      className={cn(
-                        'flex items-center gap-3 px-4 py-2 cursor-pointer transition-colors hover:bg-muted/50',
-                        selectedChannel?.id === channel.id && 'bg-primary/10'
-                      )}
-                      onClick={() => playChannel(channel)}
-                    >
-                      {/* Logo */}
-                      <div className="w-10 h-10 rounded bg-muted flex items-center justify-center overflow-hidden shrink-0">
-                        {channel.logo ? (
-                          <img src={channel.logo} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <Tv className="h-5 w-5 text-muted-foreground" />
-                        )}
-                      </div>
-
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{channel.name}</p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span>{categoryNames[channel.group] || channel.group}</span>
-                          {channel.language && (
-                            <>
-                              <span>•</span>
-                              <span>{languageNames[channel.language] || channel.language}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Status badge */}
-                      <span className={cn('text-[10px] px-2 py-0.5 rounded font-medium shrink-0', statusColors[channel.status || 'pending'])}>
-                        {statusNames[channel.status || 'pending']}
-                      </span>
-
-                      {/* Quick actions */}
-                      <div className="flex gap-1 shrink-0">
-                        {updatingStatusId === channel.id ? (
-                          <div className="h-7 w-7 flex items-center justify-center">
-                            <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                          </div>
-                        ) : (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-green-500 hover:bg-green-500/10"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleSetStatus(channel.id, 'active')
-                              }}
-                            >
-                              <Check className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-red-500 hover:bg-red-500/10"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleSetStatus(channel.id, 'broken')
-                              }}
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                  modifiers={[restrictToVerticalAxis]}
+                >
+                  <SortableContext
+                    items={filteredChannels.map((ch) => ch.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="max-h-[600px] overflow-auto">
+                      {filteredChannels.map((channel) => (
+                        <SortableChannelItem
+                          key={channel.id}
+                          channel={channel}
+                          isSelected={selectedChannel?.id === channel.id}
+                          onClick={() => playChannel(channel)}
+                          onSetStatus={(status) => handleSetStatus(channel.id, status)}
+                          updatingStatusId={updatingStatusId}
+                          isDragDisabled={isFilterActive}
+                        />
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </SortableContext>
+                </DndContext>
               )}
             </CardContent>
           </Card>
@@ -873,6 +1053,30 @@ export default function AdminPage() {
         duplicate={selectedDuplicate}
         channelsData={channels}
         onApply={handleDuplicateApply}
+      />
+
+      {/* Channel Reorder Modal */}
+      <ChannelReorderModal
+        isOpen={showReorderModal}
+        onClose={() => setShowReorderModal(false)}
+        channels={channels}
+        onSave={async (orderedIds) => {
+          await updateChannelOrder(orderedIds)
+          // Update local state to reflect the new order
+          const orderMap = new Map<string, number>()
+          orderedIds.forEach((id, index) => orderMap.set(id, index))
+          setChannels((prev) => {
+            const updated = prev.map((ch) => ({
+              ...ch,
+              order: orderMap.get(ch.id) ?? ch.order,
+            }))
+            return updated.sort((a, b) => {
+              const orderA = a.order ?? Number.MAX_SAFE_INTEGER
+              const orderB = b.order ?? Number.MAX_SAFE_INTEGER
+              return orderA - orderB
+            })
+          })
+        }}
       />
     </div>
   )

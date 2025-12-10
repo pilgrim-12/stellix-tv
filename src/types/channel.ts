@@ -16,6 +16,7 @@ export interface Channel {
   enabled?: boolean; // for admin panel - default true
   status?: ChannelStatus; // pending = not checked, active = working, inactive = disabled by admin, broken = not working
   isPrimary?: boolean; // true = this is the selected source for this channel name (among duplicates)
+  order?: number; // display order for sorting (set in admin panel)
 }
 
 export interface ChannelGroup {
