@@ -429,14 +429,7 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
         return matchesCategory && matchesLanguage && matchesSearch && matchesFavorites;
       })
       .sort((a, b) => {
-        // Favorites first when not filtering by favorites
-        if (!showOnlyFavorites) {
-          const aFav = favorites.includes(a.id);
-          const bFav = favorites.includes(b.id);
-          if (aFav && !bFav) return -1;
-          if (!aFav && bFav) return 1;
-        }
-        // Online channels first
+        // Online channels first, offline at the end
         if (a.isOffline && !b.isOffline) return 1;
         if (!a.isOffline && b.isOffline) return -1;
         return 0;
