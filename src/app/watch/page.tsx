@@ -95,7 +95,7 @@ function WatchContent() {
       }
 
       const { togglePlay, toggleMute, setVolume, volume } = require('@/stores').usePlayerStore.getState()
-      const { currentChannel, setCurrentChannel } = require('@/stores').useChannelStore.getState()
+      const { currentChannel, setCurrentChannel, channels } = require('@/stores').useChannelStore.getState()
 
       switch (e.key.toLowerCase()) {
         case ' ':
@@ -105,35 +105,52 @@ function WatchContent() {
         case 'm':
           toggleMute()
           break
-        case 'arrowup':
+        case '+':
+        case '=':
           e.preventDefault()
           setVolume(Math.min(1, volume + 0.1))
           break
-        case 'arrowdown':
+        case '-':
           e.preventDefault()
           setVolume(Math.max(0, volume - 0.1))
           break
+        case 'arrowup':
+          e.preventDefault()
+          if (currentChannel && channels.length > 0) {
+            const currentIndex = channels.findIndex((ch: { id: string }) => ch.id === currentChannel.id)
+            const prevIndex = currentIndex > 0 ? currentIndex - 1 : channels.length - 1
+            setCurrentChannel(channels[prevIndex])
+          }
+          break
+        case 'arrowdown':
+          e.preventDefault()
+          if (currentChannel && channels.length > 0) {
+            const currentIndex = channels.findIndex((ch: { id: string }) => ch.id === currentChannel.id)
+            const nextIndex = currentIndex < channels.length - 1 ? currentIndex + 1 : 0
+            setCurrentChannel(channels[nextIndex])
+          }
+          break
         case 'arrowleft':
           e.preventDefault()
-          if (currentChannel) {
-            const currentIndex = sampleChannels.findIndex(ch => ch.id === currentChannel.id)
-            const prevIndex = currentIndex > 0 ? currentIndex - 1 : sampleChannels.length - 1
-            setCurrentChannel(sampleChannels[prevIndex])
+          if (currentChannel && channels.length > 0) {
+            const currentIndex = channels.findIndex((ch: { id: string }) => ch.id === currentChannel.id)
+            const prevIndex = currentIndex > 0 ? currentIndex - 1 : channels.length - 1
+            setCurrentChannel(channels[prevIndex])
           }
           break
         case 'arrowright':
           e.preventDefault()
-          if (currentChannel) {
-            const currentIndex = sampleChannels.findIndex(ch => ch.id === currentChannel.id)
-            const nextIndex = currentIndex < sampleChannels.length - 1 ? currentIndex + 1 : 0
-            setCurrentChannel(sampleChannels[nextIndex])
+          if (currentChannel && channels.length > 0) {
+            const currentIndex = channels.findIndex((ch: { id: string }) => ch.id === currentChannel.id)
+            const nextIndex = currentIndex < channels.length - 1 ? currentIndex + 1 : 0
+            setCurrentChannel(channels[nextIndex])
           }
           break
         default:
           if (/^[1-9]$/.test(e.key)) {
             const index = parseInt(e.key) - 1
-            if (sampleChannels[index]) {
-              setCurrentChannel(sampleChannels[index])
+            if (channels[index]) {
+              setCurrentChannel(channels[index])
             }
           }
       }
