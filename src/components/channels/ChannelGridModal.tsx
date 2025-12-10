@@ -106,7 +106,7 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[80vw] w-[80vw] h-[90vh] p-0 gap-0 flex flex-col left-[40%]">
+      <DialogContent className="max-w-[95vw] w-[95vw] h-[90vh] p-0 gap-0 flex flex-col">
         <DialogHeader className="px-4 py-3 border-b shrink-0">
           <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-2">
@@ -235,7 +235,7 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
               {t('noChannelsFound')}
             </div>
           ) : (
-            <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 2xl:grid-cols-9 gap-2">
+            <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 xl:grid-cols-14 2xl:grid-cols-16 gap-2">
               {filteredChannels.map((channel) => {
                 const isActive = currentChannel?.id === channel.id
                 const isFavorite = favorites.includes(channel.id)
@@ -244,14 +244,14 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
                   <div
                     key={channel.id}
                     className={cn(
-                      'group relative cursor-pointer rounded-lg p-3 transition-all min-w-[100px]',
-                      'hover:bg-muted/60 hover:scale-105',
+                      'group relative cursor-pointer rounded-lg p-2 transition-all',
+                      'hover:bg-muted/50',
                       isActive && 'bg-primary/15 ring-2 ring-primary'
                     )}
                     onClick={() => handleSelectChannel(channel)}
                   >
                     {/* Logo */}
-                    <div className="aspect-square rounded-md bg-black/40 overflow-hidden mb-2 flex items-center justify-center">
+                    <div className="w-12 h-12 mx-auto rounded bg-muted overflow-hidden mb-1 flex items-center justify-center">
                       {channel.logo ? (
                         <img
                           src={channel.logo}
@@ -263,33 +263,21 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
                           }}
                         />
                       ) : null}
-                      <span className={cn(
-                        'text-2xl font-bold text-muted-foreground',
+                      <Tv className={cn(
+                        'h-6 w-6 text-muted-foreground',
                         channel.logo && 'hidden'
-                      )}>
-                        {channel.name.charAt(0)}
-                      </span>
+                      )} />
                     </div>
 
                     {/* Name */}
-                    <p className="text-xs font-medium text-center line-clamp-2 leading-tight min-h-[2.5em]">
+                    <p className="text-[10px] font-medium text-center line-clamp-2 leading-tight w-full">
                       {channel.name}
                     </p>
 
                     {/* Favorite star */}
-                    <button
-                      className={cn(
-                        'absolute top-1 right-1 p-0.5 rounded transition-all',
-                        'opacity-0 group-hover:opacity-100',
-                        isFavorite && 'opacity-100 text-yellow-500'
-                      )}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        toggleFavorite(channel.id, user?.uid)
-                      }}
-                    >
-                      <Star className={cn('h-3 w-3', isFavorite && 'fill-current')} />
-                    </button>
+                    {isFavorite && (
+                      <Star className="absolute top-0.5 right-0.5 h-3 w-3 text-yellow-500 fill-current" />
+                    )}
 
                     {/* Active indicator */}
                     {isActive && (
