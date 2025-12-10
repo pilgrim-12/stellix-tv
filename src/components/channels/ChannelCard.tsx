@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Channel, languageNames } from '@/types'
 import { useChannelStore } from '@/stores'
 import { useAuthContext } from '@/contexts/AuthContext'
@@ -29,12 +29,21 @@ export function ChannelCard({ channel }: ChannelCardProps) {
   const isFavorite = favorites.includes(channel.id)
   const isOffline = channel.isOffline
   const [imgError, setImgError] = useState(false)
+  const cardRef = useRef<HTMLDivElement>(null)
 
   const categoryName = getCategoryName(channel.group)
   const langName = channel.language ? (languageNames[channel.language] || channel.language.toUpperCase()) : null
 
+  // Auto-scroll to active channel when it changes
+  useEffect(() => {
+    if (isActive && cardRef.current) {
+      cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+  }, [isActive])
+
   return (
     <div
+      ref={cardRef}
       className={cn(
         'group relative cursor-pointer rounded-lg p-2 transition-all',
         'hover:bg-muted/60',
