@@ -51,10 +51,10 @@ const statusColors: Record<StagingChannelStatus, string> = {
 }
 
 const statusNames: Record<StagingChannelStatus, string> = {
-  pending: 'Ожидает',
-  working: 'Рабочий',
-  broken: 'Нерабочий',
-  merged: 'Смержен',
+  pending: 'Pending',
+  working: 'Working',
+  broken: 'Broken',
+  merged: 'Merged',
 }
 
 export default function StagingPage() {
@@ -257,7 +257,7 @@ export default function StagingPage() {
       const m3uChannels = parseM3U(content)
 
       if (m3uChannels.length === 0) {
-        throw new Error('Плейлист пуст или имеет неверный формат')
+        throw new Error('Playlist is empty or has invalid format')
       }
 
       const urlParts = playlistUrl.split('/')
@@ -280,12 +280,12 @@ export default function StagingPage() {
         }))
       )
 
-      setImportSuccess(`Создан staging "${playlistName}" с ${result.channelCount} каналами`)
+      setImportSuccess(`Created staging "${playlistName}" with ${result.channelCount} channels`)
       setPlaylistUrl('')
       await loadPlaylists()
       loadPlaylist(result.id)
     } catch (error) {
-      setImportError(error instanceof Error ? error.message : 'Ошибка импорта')
+      setImportError(error instanceof Error ? error.message : 'Import error')
     } finally {
       setIsImporting(false)
     }
@@ -306,7 +306,7 @@ export default function StagingPage() {
       const m3uChannels = parseM3U(content)
 
       if (m3uChannels.length === 0) {
-        throw new Error('Файл пуст или имеет неверный формат')
+        throw new Error('File is empty or has invalid format')
       }
 
       const appChannels = convertToAppChannels(m3uChannels, '')
@@ -325,11 +325,11 @@ export default function StagingPage() {
         }))
       )
 
-      setImportSuccess(`Создан staging "${playlistName}" с ${result.channelCount} каналами`)
+      setImportSuccess(`Created staging "${playlistName}" with ${result.channelCount} channels`)
       await loadPlaylists()
       loadPlaylist(result.id)
     } catch (error) {
-      setImportError(error instanceof Error ? error.message : 'Ошибка чтения файла')
+      setImportError(error instanceof Error ? error.message : 'File read error')
     } finally {
       setIsImporting(false)
       if (fileInputRef.current) {
@@ -344,11 +344,11 @@ export default function StagingPage() {
 
     const workingCount = currentPlaylist.stats.working
     if (workingCount === 0) {
-      alert('Нет рабочих каналов для мерджа')
+      alert('No working channels to merge')
       return
     }
 
-    if (!confirm(`Смержить ${workingCount} рабочих каналов в эталонную коллекцию?`)) {
+    if (!confirm(`Merge ${workingCount} working channels to curated collection?`)) {
       return
     }
 
@@ -362,7 +362,7 @@ export default function StagingPage() {
       await loadPlaylists()
     } catch (error) {
       console.error('Error merging:', error)
-      alert('Ошибка мерджа: ' + (error instanceof Error ? error.message : 'Unknown error'))
+      alert('Merge error: ' + (error instanceof Error ? error.message : 'Unknown error'))
     } finally {
       setIsMerging(false)
     }
@@ -370,7 +370,7 @@ export default function StagingPage() {
 
   // Delete playlist
   const handleDeletePlaylist = async (id: string) => {
-    if (!confirm('Удалить этот staging плейлист?')) return
+    if (!confirm('Delete this staging playlist?')) return
 
     setDeletingPlaylistId(id)
     try {
@@ -464,7 +464,7 @@ export default function StagingPage() {
                   ) : (
                     <>
                       <Play className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>Выберите плейлист</p>
+                      <p>Select a playlist</p>
                     </>
                   )}
                 </CardContent>
@@ -493,7 +493,7 @@ export default function StagingPage() {
                   </div>
                   {mergeResult && (
                     <p className="text-xs text-green-500">
-                      Смержено: {mergeResult.merged}, пропущено: {mergeResult.skipped}
+                      Merged: {mergeResult.merged}, skipped: {mergeResult.skipped}
                     </p>
                   )}
                 </CardHeader>
@@ -512,13 +512,13 @@ export default function StagingPage() {
                         {playerError && (
                           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-red-500">
                             <XCircle className="h-8 w-8 mb-2" />
-                            <p className="text-sm">Ошибка воспроизведения</p>
+                            <p className="text-sm">Playback error</p>
                           </div>
                         )}
                       </>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                        <p className="text-sm">Выберите канал</p>
+                        <p className="text-sm">Select a channel</p>
                       </div>
                     )}
                   </div>
@@ -539,7 +539,7 @@ export default function StagingPage() {
                           ) : (
                             <Check className="h-4 w-4 mr-1" />
                           )}
-                          Рабочий
+                          Working
                         </Button>
                         <Button
                           size="sm"
@@ -553,7 +553,7 @@ export default function StagingPage() {
                           ) : (
                             <X className="h-4 w-4 mr-1" />
                           )}
-                          Нерабочий
+                          Broken
                         </Button>
                         <span className={cn('text-xs px-3 py-2 rounded font-medium', statusColors[selectedChannel.status])}>
                           {statusNames[selectedChannel.status]}
@@ -562,7 +562,7 @@ export default function StagingPage() {
 
                       {/* Editable name */}
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground w-16">Имя:</span>
+                        <span className="text-xs text-muted-foreground w-16">Name:</span>
                         {editingName ? (
                           <div className="flex-1 flex gap-2">
                             <Input
@@ -608,7 +608,7 @@ export default function StagingPage() {
 
                       {/* Language selector */}
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground w-16">Язык:</span>
+                        <span className="text-xs text-muted-foreground w-16">Language:</span>
                         {savingField === 'language' ? (
                           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                         ) : (
@@ -620,7 +620,7 @@ export default function StagingPage() {
                           disabled={savingField === 'language'}
                           onChange={(e) => handleUpdateChannel('language', e.target.value)}
                         >
-                          <option value="">Не указан</option>
+                          <option value="">Not specified</option>
                           {languageOrder.map((code) => (
                             <option key={code} value={code}>
                               {languageNames[code]}
@@ -631,7 +631,7 @@ export default function StagingPage() {
 
                       {/* Category selector */}
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground w-16">Категория:</span>
+                        <span className="text-xs text-muted-foreground w-16">Category:</span>
                         {savingField === 'group' ? (
                           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                         ) : (
@@ -643,7 +643,7 @@ export default function StagingPage() {
                           disabled={savingField === 'group'}
                           onChange={(e) => handleUpdateChannel('group', e.target.value)}
                         >
-                          <option value="">Не указана</option>
+                          <option value="">Not specified</option>
                           {categoryOrder.map((cat) => (
                             <option key={cat} value={cat}>
                               {categoryNames[cat]}
@@ -667,7 +667,7 @@ export default function StagingPage() {
                 ) : (
                   <>
                     <Tv className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Каналы появятся после выбора плейлиста</p>
+                    <p>Channels will appear after selecting a playlist</p>
                   </>
                 )}
               </CardContent>
@@ -680,7 +680,7 @@ export default function StagingPage() {
                     <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       type="search"
-                      placeholder="Поиск..."
+                      placeholder="Search..."
                       className="h-7 text-xs pl-7"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
@@ -692,7 +692,7 @@ export default function StagingPage() {
                     className="h-7 text-xs px-2"
                     onClick={() => setSelectedStatus('all')}
                   >
-                    Все ({currentPlaylist.stats.total})
+                    All ({currentPlaylist.stats.total})
                   </Button>
                   <Button
                     variant={selectedStatus === 'pending' ? 'default' : 'ghost'}
@@ -735,7 +735,7 @@ export default function StagingPage() {
               <CardContent className="p-0">
                 {filteredChannels.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground text-sm">
-                    Каналы не найдены
+                    No channels found
                   </div>
                 ) : (
                   <div className="divide-y max-h-[calc(100vh-280px)] overflow-auto">
@@ -819,7 +819,7 @@ export default function StagingPage() {
             <CardHeader className="pb-2 py-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <FolderOpen className="h-4 w-4" />
-                Плейлисты ({playlists.length})
+                Playlists ({playlists.length})
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
@@ -829,7 +829,7 @@ export default function StagingPage() {
                 </div>
               ) : playlists.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground text-sm px-4">
-                  Импортируйте плейлист через поле в шапке
+                  Import a playlist using the field in the header
                 </div>
               ) : (
                 <div className="divide-y max-h-[calc(100vh-200px)] overflow-auto">
@@ -846,7 +846,7 @@ export default function StagingPage() {
                         <div className="min-w-0 flex-1">
                           <p className="font-medium text-sm truncate">{playlist.name}</p>
                           <p className="text-xs text-muted-foreground">
-                            {new Date(playlist.importedAt).toLocaleDateString('ru-RU')}
+                            {new Date(playlist.importedAt).toLocaleDateString('en-US')}
                           </p>
                         </div>
                         <Button
@@ -868,10 +868,10 @@ export default function StagingPage() {
                       </div>
                       <div className="flex gap-3 mt-1 text-[10px]">
                         <span className="text-muted-foreground">{playlist.stats.total}</span>
-                        <span className="text-yellow-500">{playlist.stats.pending} ожид.</span>
-                        <span className="text-green-500">{playlist.stats.working} раб.</span>
-                        <span className="text-red-500">{playlist.stats.broken} слом.</span>
-                        <span className="text-blue-500">{playlist.stats.merged} мердж.</span>
+                        <span className="text-yellow-500">{playlist.stats.pending} pend.</span>
+                        <span className="text-green-500">{playlist.stats.working} work.</span>
+                        <span className="text-red-500">{playlist.stats.broken} brok.</span>
+                        <span className="text-blue-500">{playlist.stats.merged} merg.</span>
                       </div>
                     </div>
                   ))}

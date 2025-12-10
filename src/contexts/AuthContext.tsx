@@ -51,13 +51,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // Get and save user IP + country
         try {
-          const res = await fetch('https://ip-api.com/json/?fields=query,country,countryCode')
+          const res = await fetch('https://ipapi.co/json/')
           const data = await res.json()
-          if (data.query) {
-            await saveUserIP(user.uid, data.query)
+          if (data.ip) {
+            await saveUserIP(user.uid, data.ip)
           }
-          if (data.country) {
-            await saveUserCountry(user.uid, data.country)
+          if (data.country_name) {
+            await saveUserCountry(user.uid, data.country_name)
           }
         } catch {
           // IP fetch failed, ignore

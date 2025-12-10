@@ -35,7 +35,7 @@ import {
   CuratedChannel,
   PlaylistSource,
 } from '@/lib/curatedChannelService'
-import { getTotalUsersCount, setUserAsAdmin, removeUserAdmin, getAllUsers } from '@/lib/userService'
+import { getTotalUsersCount, setUserAsAdmin, removeUserAdmin, getAllUsers, saveUserCountry } from '@/lib/userService'
 import { getStatsSummary, resetStats } from '@/lib/firebaseQuotaTracker'
 import { Timestamp } from 'firebase/firestore'
 import { useAuthContext } from '@/contexts/AuthContext'
@@ -50,10 +50,10 @@ const statusColors: Record<ChannelStatus, string> = {
 }
 
 const statusNames: Record<ChannelStatus, string> = {
-  pending: 'Ожидает',
-  active: 'Рабочий',
-  inactive: 'Отключен',
-  broken: 'Нерабочий',
+  pending: 'Pending',
+  active: 'Active',
+  inactive: 'Disabled',
+  broken: 'Broken',
 }
 
 export default function AdminPage() {
@@ -205,7 +205,7 @@ export default function AdminPage() {
 
   // Delete channel
   const handleDeleteChannel = async (channelId: string) => {
-    if (!confirm('Удалить этот канал?')) return
+    if (!confirm('Delete this channel?')) return
 
     setDeletingChannelId(channelId)
     try {
@@ -262,7 +262,27 @@ export default function AdminPage() {
     setLoadingUsers(true)
     try {
       const users = await getAllUsers()
-      setAllUsers(users)
+
+      // Auto-detect countries for users without country
+      const usersWithUpdates = await Promise.all(
+        users.map(async (u) => {
+          if (u.lastIP && !u.country) {
+            try {
+              const res = await fetch(`https://ipapi.co/${u.lastIP}/json/`)
+              const data = await res.json()
+              if (data.country_name) {
+                await saveUserCountry(u.id, data.country_name)
+                return { ...u, country: data.country_name }
+              }
+            } catch {
+              // Skip failed requests
+            }
+          }
+          return u
+        })
+      )
+
+      setAllUsers(usersWithUpdates)
       setShowUsers(true)
     } catch (error) {
       console.error('Error loading users:', error)
@@ -321,7 +341,7 @@ export default function AdminPage() {
           </Button>
           <div className="flex items-center gap-2">
             <Tv className="h-5 w-5 text-primary" />
-            <h1 className="text-lg font-semibold">Управление каналами</h1>
+            <h1 className="text-lg font-semibold">Channel Management</h1>
           </div>
 
           {/* Stats in header */}
@@ -331,7 +351,7 @@ export default function AdminPage() {
               <div className="flex items-center gap-1">
                 <Tv className="h-3 w-3 text-muted-foreground" />
                 <span className="font-bold">{stats?.total ?? '—'}</span>
-                <span className="text-muted-foreground">каналов</span>
+                <span className="text-muted-foreground">channels</span>
               </div>
               <div className="flex items-center gap-1 text-green-500">
                 <CheckCircle2 className="h-3 w-3" />
@@ -351,7 +371,7 @@ export default function AdminPage() {
             <div className="flex items-center gap-1 text-xs text-purple-500">
               <Users className="h-3 w-3" />
               <span className="font-bold">{usersCount ?? '—'}</span>
-              <span className="text-muted-foreground">польз.</span>
+              <span className="text-muted-foreground">users</span>
             </div>
 
             {/* Database info */}
@@ -360,7 +380,7 @@ export default function AdminPage() {
                 <Database className="h-3 w-3" />
                 <span>v{metadata.version}</span>
                 {metadata.updatedAt && (
-                  <span>• {metadata.updatedAt.toLocaleString('ru-RU')}</span>
+                  <span>• {metadata.updatedAt.toLocaleString('en-US')}</span>
                 )}
               </div>
             )}
@@ -373,7 +393,7 @@ export default function AdminPage() {
               onClick={() => setShowQuotaStats(!showQuotaStats)}
             >
               <AlertCircle className="h-3.5 w-3.5" />
-              <span>Квота: {quotaStats?.total ?? 0}</span>
+              <span>Quota: {quotaStats?.total ?? 0}</span>
             </Button>
           </div>
 
@@ -384,7 +404,7 @@ export default function AdminPage() {
             </Button>
             <Button variant="outline" size="sm" onClick={loadData} disabled={isLoading}>
               <RefreshCw className={cn('h-4 w-4 mr-2', isLoading && 'animate-spin')} />
-              Обновить
+              Refresh
             </Button>
           </div>
         </div>
@@ -393,7 +413,7 @@ export default function AdminPage() {
         {showQuotaStats && quotaStats && (
           <div className="container border-t py-2">
             <div className="flex items-center justify-between mb-2">
-              <h4 className="text-sm font-medium">Firebase Quota (сегодня)</h4>
+              <h4 className="text-sm font-medium">Firebase Quota (today)</h4>
               <Button
                 variant="outline"
                 size="sm"
@@ -403,40 +423,40 @@ export default function AdminPage() {
                   setQuotaStats(getStatsSummary())
                 }}
               >
-                Сбросить
+                Reset
               </Button>
             </div>
             <div className="grid grid-cols-4 gap-2 text-xs mb-3">
               <div className="bg-muted/50 rounded p-2 text-center">
                 <div className="font-bold text-lg">{quotaStats.total}</div>
-                <div className="text-muted-foreground">Всего</div>
+                <div className="text-muted-foreground">Total</div>
               </div>
               <div className="bg-blue-500/10 rounded p-2 text-center">
                 <div className="font-bold text-lg text-blue-500">{quotaStats.reads}</div>
-                <div className="text-muted-foreground">Чтений</div>
+                <div className="text-muted-foreground">Reads</div>
               </div>
               <div className="bg-green-500/10 rounded p-2 text-center">
                 <div className="font-bold text-lg text-green-500">{quotaStats.writes}</div>
-                <div className="text-muted-foreground">Записей</div>
+                <div className="text-muted-foreground">Writes</div>
               </div>
               <div className="bg-red-500/10 rounded p-2 text-center">
                 <div className="font-bold text-lg text-red-500">{quotaStats.deletes}</div>
-                <div className="text-muted-foreground">Удалений</div>
+                <div className="text-muted-foreground">Deletes</div>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2 text-xs mb-3">
               <div className="bg-orange-500/10 rounded p-2 text-center">
                 <div className="font-bold">{quotaStats.last5Minutes}</div>
-                <div className="text-muted-foreground">За 5 мин</div>
+                <div className="text-muted-foreground">Last 5 min</div>
               </div>
               <div className="bg-purple-500/10 rounded p-2 text-center">
                 <div className="font-bold">{quotaStats.lastHour}</div>
-                <div className="text-muted-foreground">За час</div>
+                <div className="text-muted-foreground">Last hour</div>
               </div>
             </div>
             {quotaStats.topFunctions.length > 0 && (
               <div>
-                <h5 className="text-xs font-medium text-muted-foreground mb-1">Топ функций:</h5>
+                <h5 className="text-xs font-medium text-muted-foreground mb-1">Top functions:</h5>
                 <div className="space-y-1 max-h-32 overflow-auto">
                   {quotaStats.topFunctions.map((fn) => (
                     <div key={fn.name} className="flex items-center justify-between text-xs bg-muted/30 rounded px-2 py-1">
@@ -465,7 +485,7 @@ export default function AdminPage() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Play className="h-4 w-4" />
-                  Предпросмотр
+                  Preview
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -484,13 +504,13 @@ export default function AdminPage() {
                       {playerError && (
                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-red-500">
                           <XCircle className="h-8 w-8 mb-2" />
-                          <p className="text-sm">Ошибка воспроизведения</p>
+                          <p className="text-sm">Playback error</p>
                         </div>
                       )}
                     </>
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                      <p className="text-sm">Выберите канал для просмотра</p>
+                      <p className="text-sm">Select a channel to preview</p>
                     </div>
                   )}
                 </div>
@@ -517,7 +537,7 @@ export default function AdminPage() {
                         ) : (
                           <Check className="h-4 w-4 mr-1" />
                         )}
-                        Рабочий
+                        Active
                       </Button>
                       <Button
                         size="sm"
@@ -531,7 +551,7 @@ export default function AdminPage() {
                         ) : (
                           <X className="h-4 w-4 mr-1" />
                         )}
-                        Нерабочий
+                        Broken
                       </Button>
                       <Button
                         size="sm"
@@ -545,7 +565,7 @@ export default function AdminPage() {
                         ) : (
                           <Ban className="h-4 w-4 mr-1" />
                         )}
-                        Отключить
+                        Disable
                       </Button>
                     </div>
 
@@ -562,7 +582,7 @@ export default function AdminPage() {
                         disabled={updatingLanguageId === selectedChannel.id}
                         onChange={(e) => handleUpdateLanguage(selectedChannel.id, e.target.value)}
                       >
-                        <option value="">Неизвестный язык</option>
+                        <option value="">Unknown language</option>
                         {languageOrder.map((code) => (
                           <option key={code} value={code}>
                             {languageNames[code]}
@@ -584,7 +604,7 @@ export default function AdminPage() {
                         disabled={updatingCategoryId === selectedChannel.id}
                         onChange={(e) => handleUpdateCategory(selectedChannel.id, e.target.value)}
                       >
-                        <option value="">Неизвестная категория</option>
+                        <option value="">Unknown category</option>
                         {categoryOrder.map((cat) => (
                           <option key={cat} value={cat}>
                             {categoryNames[cat]}
@@ -606,7 +626,7 @@ export default function AdminPage() {
                       ) : (
                         <Trash2 className="h-4 w-4 mr-1" />
                       )}
-                      Удалить канал
+                      Delete channel
                     </Button>
                   </div>
                 )}
@@ -620,7 +640,7 @@ export default function AdminPage() {
             <CardHeader className="pb-3 space-y-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">
-                  Каналы ({filteredChannels.length} из {channels.length})
+                  Channels ({filteredChannels.length} of {channels.length})
                 </CardTitle>
               </div>
               {/* Search and filter buttons */}
@@ -629,7 +649,7 @@ export default function AdminPage() {
                   <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     type="search"
-                    placeholder="Поиск..."
+                    placeholder="Search..."
                     className="h-6 text-xs pl-7 pr-2"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -641,7 +661,7 @@ export default function AdminPage() {
                   className="h-6 text-xs px-2"
                   onClick={() => setSelectedStatus('all')}
                 >
-                  Все
+                  All
                 </Button>
                 <Button
                   variant={selectedStatus === 'pending' ? 'default' : 'ghost'}
@@ -650,7 +670,7 @@ export default function AdminPage() {
                   onClick={() => setSelectedStatus('pending')}
                 >
                   <Clock className="h-3 w-3 mr-1" />
-                  Ожидает
+                  Pending
                 </Button>
                 <Button
                   variant={selectedStatus === 'active' ? 'default' : 'ghost'}
@@ -659,7 +679,7 @@ export default function AdminPage() {
                   onClick={() => setSelectedStatus('active')}
                 >
                   <CheckCircle2 className="h-3 w-3 mr-1" />
-                  Рабочие
+                  Active
                 </Button>
                 <Button
                   variant={selectedStatus === 'broken' ? 'default' : 'ghost'}
@@ -668,7 +688,7 @@ export default function AdminPage() {
                   onClick={() => setSelectedStatus('broken')}
                 >
                   <AlertCircle className="h-3 w-3 mr-1" />
-                  Нерабочие
+                  Broken
                 </Button>
                 <Button
                   variant={selectedStatus === 'inactive' ? 'default' : 'ghost'}
@@ -677,7 +697,7 @@ export default function AdminPage() {
                   onClick={() => setSelectedStatus('inactive')}
                 >
                   <Ban className="h-3 w-3 mr-1" />
-                  Откл.
+                  Off
                 </Button>
                 {/* Language filter */}
                 {availableLanguages.length > 0 && (
@@ -686,7 +706,7 @@ export default function AdminPage() {
                     value={selectedLanguage}
                     onChange={(e) => setSelectedLanguage(e.target.value)}
                   >
-                    <option value="all">Все языки</option>
+                    <option value="all">All languages</option>
                     {availableLanguages.map((lang) => (
                       <option key={lang} value={lang}>
                         {languageNames[lang] || lang}
@@ -700,15 +720,15 @@ export default function AdminPage() {
               {isLoading ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  <span className="ml-2 text-muted-foreground">Загрузка каналов...</span>
+                  <span className="ml-2 text-muted-foreground">Loading channels...</span>
                 </div>
               ) : channels.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
-                  Импортируйте плейлист чтобы добавить каналы
+                  Import a playlist to add channels
                 </div>
               ) : filteredChannels.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
-                  Каналы не найдены по заданным фильтрам
+                  No channels match the filters
                 </div>
               ) : (
                 <div className="divide-y max-h-[600px] overflow-auto">
@@ -797,7 +817,7 @@ export default function AdminPage() {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Users className="h-4 w-4" />
-                  Управление пользователями
+                  User Management
                 </CardTitle>
                 <Button
                   onClick={loadUsers}
@@ -807,18 +827,18 @@ export default function AdminPage() {
                   {loadingUsers ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Загрузка...
+                      Loading...
                     </>
                   ) : (
                     <>
                       <RefreshCw className="h-4 w-4 mr-2" />
-                      {showUsers ? 'Обновить' : 'Загрузить пользователей'}
+                      {showUsers ? 'Refresh' : 'Load users'}
                     </>
                   )}
                 </Button>
               </div>
               <CardDescription>
-                Назначение и удаление прав администратора
+                Assign and revoke admin privileges
               </CardDescription>
             </CardHeader>
 
@@ -829,13 +849,13 @@ export default function AdminPage() {
                     <thead className="sticky top-0 bg-background border-b">
                       <tr className="text-left text-xs text-muted-foreground">
                         <th className="px-3 py-2 font-medium">Email</th>
-                        <th className="px-3 py-2 font-medium">IP / Страна</th>
-                        <th className="px-3 py-2 font-medium text-center">Визиты</th>
-                        <th className="px-3 py-2 font-medium text-center">Избр.</th>
-                        <th className="px-3 py-2 font-medium">Последний визит</th>
-                        <th className="px-3 py-2 font-medium">Регистрация</th>
-                        <th className="px-3 py-2 font-medium text-center">Админ</th>
-                        <th className="px-3 py-2 font-medium">Действие</th>
+                        <th className="px-3 py-2 font-medium">IP / Country</th>
+                        <th className="px-3 py-2 font-medium text-center">Visits</th>
+                        <th className="px-3 py-2 font-medium text-center">Favs</th>
+                        <th className="px-3 py-2 font-medium">Last Visit</th>
+                        <th className="px-3 py-2 font-medium">Registered</th>
+                        <th className="px-3 py-2 font-medium text-center">Admin</th>
+                        <th className="px-3 py-2 font-medium">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
@@ -849,9 +869,14 @@ export default function AdminPage() {
                           </td>
                           <td className="px-3 py-2">
                             <div className="text-xs">
-                              {u.lastIP && <div className="font-mono">{u.lastIP}</div>}
-                              {u.country && <div className="text-muted-foreground">{u.country}</div>}
-                              {!u.lastIP && !u.country && <span className="text-muted-foreground">—</span>}
+                              {u.lastIP ? (
+                                <div className="font-mono">
+                                  {u.lastIP}
+                                  {u.country && <span className="text-muted-foreground ml-1">({u.country})</span>}
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
                             </div>
                           </td>
                           <td className="px-3 py-2 text-center">
@@ -862,19 +887,19 @@ export default function AdminPage() {
                           </td>
                           <td className="px-3 py-2">
                             <span className="text-xs text-muted-foreground">
-                              {u.lastVisit?.toDate().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) || '—'}
+                              {u.lastVisit?.toDate().toLocaleString('en-US', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) || '—'}
                             </span>
                           </td>
                           <td className="px-3 py-2">
                             <span className="text-xs text-muted-foreground">
-                              {u.createdAt?.toDate().toLocaleDateString('ru-RU') || '—'}
+                              {u.createdAt?.toDate().toLocaleDateString('en-US') || '—'}
                             </span>
                           </td>
                           <td className="px-3 py-2 text-center">
                             {u.isAdmin ? (
-                              <span className="text-green-500 font-medium text-xs">Да</span>
+                              <span className="text-green-500 font-medium text-xs">Yes</span>
                             ) : (
-                              <span className="text-muted-foreground text-xs">Нет</span>
+                              <span className="text-muted-foreground text-xs">No</span>
                             )}
                           </td>
                           <td className="px-3 py-2">
@@ -888,7 +913,7 @@ export default function AdminPage() {
                               {togglingAdminId === u.id ? (
                                 <Loader2 className="h-3 w-3 animate-spin" />
                               ) : (
-                                u.isAdmin ? 'Убрать' : 'Админ'
+                                u.isAdmin ? 'Revoke' : 'Make Admin'
                               )}
                             </Button>
                           </td>
@@ -903,7 +928,7 @@ export default function AdminPage() {
             {showUsers && allUsers.length === 0 && (
               <CardContent>
                 <p className="text-center text-muted-foreground py-4">
-                  Пользователи не найдены
+                  No users found
                 </p>
               </CardContent>
             )}

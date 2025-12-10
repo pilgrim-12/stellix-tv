@@ -12,7 +12,8 @@
       "Bash(dir:*)",
       "Bash(cat:*)",
       "Bash(node -e:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []
