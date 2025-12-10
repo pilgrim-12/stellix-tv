@@ -10,7 +10,7 @@ import {
   signOut,
   resetPassword,
 } from '@/lib/auth'
-import { initializeUser, saveUserIP, isUserAdmin } from '@/lib/userService'
+import { initializeUser, saveUserIP, saveUserCountry, isUserAdmin } from '@/lib/userService'
 import { useChannelStore } from '@/stores'
 
 interface AuthContextType {
@@ -49,12 +49,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const adminStatus = await isUserAdmin(user.uid)
         setIsAdmin(adminStatus)
 
-        // Get and save user IP
+        // Get and save user IP + country
         try {
-          const res = await fetch('https://api.ipify.org?format=json')
+          const res = await fetch('https://ip-api.com/json/?fields=query,country,countryCode')
           const data = await res.json()
-          if (data.ip) {
-            await saveUserIP(user.uid, data.ip)
+          if (data.query) {
+            await saveUserIP(user.uid, data.query)
+          }
+          if (data.country) {
+            await saveUserCountry(user.uid, data.country)
           }
         } catch {
           // IP fetch failed, ignore

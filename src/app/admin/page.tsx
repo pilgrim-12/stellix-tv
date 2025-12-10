@@ -93,13 +93,7 @@ export default function AdminPage() {
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string>('all')
 
   // Users management
-  interface UserInfo {
-    id: string
-    email?: string
-    isAdmin?: boolean
-    lastVisit?: Timestamp
-  }
-  const [allUsers, setAllUsers] = useState<UserInfo[]>([])
+  const [allUsers, setAllUsers] = useState<Awaited<ReturnType<typeof getAllUsers>>>([])
   const [showUsers, setShowUsers] = useState(false)
   const [loadingUsers, setLoadingUsers] = useState(false)
   const [togglingAdminId, setTogglingAdminId] = useState<string | null>(null)
@@ -830,47 +824,71 @@ export default function AdminPage() {
 
             {showUsers && allUsers.length > 0 && (
               <CardContent className="p-0">
-                <div className="overflow-auto max-h-[400px]">
+                <div className="overflow-auto max-h-[500px]">
                   <table className="w-full text-sm">
                     <thead className="sticky top-0 bg-background border-b">
                       <tr className="text-left text-xs text-muted-foreground">
-                        <th className="px-4 py-2 font-medium">Email</th>
-                        <th className="px-4 py-2 font-medium">ID</th>
-                        <th className="px-4 py-2 font-medium text-center">Админ</th>
-                        <th className="px-4 py-2 font-medium">Действие</th>
+                        <th className="px-3 py-2 font-medium">Email</th>
+                        <th className="px-3 py-2 font-medium">IP / Страна</th>
+                        <th className="px-3 py-2 font-medium text-center">Визиты</th>
+                        <th className="px-3 py-2 font-medium text-center">Избр.</th>
+                        <th className="px-3 py-2 font-medium">Последний визит</th>
+                        <th className="px-3 py-2 font-medium">Регистрация</th>
+                        <th className="px-3 py-2 font-medium text-center">Админ</th>
+                        <th className="px-3 py-2 font-medium">Действие</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
                       {allUsers.map((u) => (
                         <tr key={u.id} className="hover:bg-muted/50">
-                          <td className="px-4 py-2">
-                            <span className="font-medium">{u.email || '—'}</span>
+                          <td className="px-3 py-2">
+                            <div>
+                              <span className="font-medium text-xs">{u.email || '—'}</span>
+                              <div className="text-[10px] text-muted-foreground font-mono">{u.id.slice(0, 10)}...</div>
+                            </div>
                           </td>
-                          <td className="px-4 py-2">
-                            <span className="text-xs text-muted-foreground font-mono">{u.id.slice(0, 12)}...</span>
+                          <td className="px-3 py-2">
+                            <div className="text-xs">
+                              {u.lastIP && <div className="font-mono">{u.lastIP}</div>}
+                              {u.country && <div className="text-muted-foreground">{u.country}</div>}
+                              {!u.lastIP && !u.country && <span className="text-muted-foreground">—</span>}
+                            </div>
                           </td>
-                          <td className="px-4 py-2 text-center">
+                          <td className="px-3 py-2 text-center">
+                            <span className="text-xs font-medium">{u.totalVisits || 0}</span>
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            <span className="text-xs">{u.favoritesCount || 0}</span>
+                          </td>
+                          <td className="px-3 py-2">
+                            <span className="text-xs text-muted-foreground">
+                              {u.lastVisit?.toDate().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) || '—'}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2">
+                            <span className="text-xs text-muted-foreground">
+                              {u.createdAt?.toDate().toLocaleDateString('ru-RU') || '—'}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 text-center">
                             {u.isAdmin ? (
-                              <span className="text-green-500 font-medium">Да</span>
+                              <span className="text-green-500 font-medium text-xs">Да</span>
                             ) : (
-                              <span className="text-muted-foreground">Нет</span>
+                              <span className="text-muted-foreground text-xs">Нет</span>
                             )}
                           </td>
-                          <td className="px-4 py-2">
+                          <td className="px-3 py-2">
                             <Button
                               variant={u.isAdmin ? "destructive" : "outline"}
                               size="sm"
-                              className="h-7 text-xs"
+                              className="h-6 text-[10px] px-2"
                               onClick={() => toggleAdmin(u.id, u.isAdmin || false)}
                               disabled={u.id === user?.uid || togglingAdminId === u.id}
                             >
                               {togglingAdminId === u.id ? (
-                                <>
-                                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                  Обновление...
-                                </>
+                                <Loader2 className="h-3 w-3 animate-spin" />
                               ) : (
-                                u.isAdmin ? 'Убрать админа' : 'Сделать админом'
+                                u.isAdmin ? 'Убрать' : 'Админ'
                               )}
                             </Button>
                           </td>

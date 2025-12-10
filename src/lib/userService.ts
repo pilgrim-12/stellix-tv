@@ -282,20 +282,55 @@ export async function removeUserAdmin(userId: string): Promise<void> {
   }
 }
 
-// Get all users with basic info
-export async function getAllUsers(): Promise<Array<{ id: string; email?: string; isAdmin?: boolean; lastVisit?: Timestamp }>> {
+export interface UserFullInfo {
+  id: string
+  email?: string
+  isAdmin?: boolean
+  lastVisit?: Timestamp
+  createdAt?: Timestamp
+  totalVisits?: number
+  lastIP?: string
+  ipAddresses?: string[]
+  favoritesCount?: number
+  watchHistoryCount?: number
+  country?: string
+}
+
+// Get all users with full info
+export async function getAllUsers(): Promise<UserFullInfo[]> {
   try {
     const usersRef = collection(db, 'users')
     const snapshot = await getDocs(usersRef)
     trackQuery('getAllUsers', snapshot.size)
-    return snapshot.docs.map((doc) => ({
-      id: doc.id,
-      email: doc.data().email,
-      isAdmin: doc.data().isAdmin,
-      lastVisit: doc.data().lastVisit,
-    }))
+    return snapshot.docs.map((doc) => {
+      const data = doc.data()
+      return {
+        id: doc.id,
+        email: data.email,
+        isAdmin: data.isAdmin,
+        lastVisit: data.lastVisit,
+        createdAt: data.createdAt,
+        totalVisits: data.totalVisits,
+        lastIP: data.lastIP,
+        ipAddresses: data.ipAddresses,
+        favoritesCount: data.favorites?.length || 0,
+        watchHistoryCount: data.watchHistory?.length || 0,
+        country: data.country,
+      }
+    })
   } catch (error) {
     console.error('Error getting all users:', error)
     return []
+  }
+}
+
+// Save user country (detected from IP)
+export async function saveUserCountry(userId: string, country: string): Promise<void> {
+  try {
+    const userRef = doc(db, 'users', userId)
+    await updateDoc(userRef, { country })
+    trackWrite('saveUserCountry')
+  } catch (error) {
+    console.error('Error saving country:', error)
   }
 }
