@@ -47,10 +47,11 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
     selectedLanguage,
     setLanguage,
     getAvailableLanguages,
+    showOnlyFavorites,
+    setShowOnlyFavorites,
   } = useChannelStore()
 
   const [searchQuery, setSearchQuery] = useState('')
-  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false)
   const [showCategories, setShowCategories] = useState(false)
   const [showLanguages, setShowLanguages] = useState(false)
 
@@ -151,7 +152,7 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
               variant={showOnlyFavorites ? 'default' : 'outline'}
               size="sm"
               className="gap-1.5"
-              onClick={() => setShowOnlyFavorites(!showOnlyFavorites)}
+              onClick={() => setShowOnlyFavorites(!showOnlyFavorites, user?.uid)}
             >
               <Star className={cn('h-4 w-4', showOnlyFavorites && 'fill-current')} />
               {t('favorites')} ({favorites.length})
