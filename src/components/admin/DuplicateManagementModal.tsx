@@ -10,7 +10,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { FirebaseChannel } from '@/lib/channelService'
+import { CuratedChannel } from '@/lib/curatedChannelService'
 import { ChannelStatus, languageNames } from '@/types'
 import {
   Loader2,
@@ -21,7 +21,6 @@ import {
   Ban,
   Tv,
   ExternalLink,
-  Star,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -44,7 +43,7 @@ interface DuplicateManagementModalProps {
   isOpen: boolean
   onClose: () => void
   duplicate: DuplicateInfo | null
-  channelsData: FirebaseChannel[]
+  channelsData: CuratedChannel[]
   onApply: (primaryId: string | null, inactiveIds: string[]) => Promise<void>
 }
 
