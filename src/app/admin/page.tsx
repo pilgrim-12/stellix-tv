@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Search,
   Tv,
@@ -35,9 +35,8 @@ import {
   CuratedChannel,
   PlaylistSource,
 } from '@/lib/curatedChannelService'
-import { getTotalUsersCount, setUserAsAdmin, removeUserAdmin, getAllUsers, saveUserCountry } from '@/lib/userService'
+import { getTotalUsersCount } from '@/lib/userService'
 import { getStatsSummary, resetStats } from '@/lib/firebaseQuotaTracker'
-import { Timestamp } from 'firebase/firestore'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
 import { languageNames, languageOrder, categoryNames, categoryOrder, ChannelStatus } from '@/types'
@@ -91,12 +90,6 @@ export default function AdminPage() {
   // Playlist sources (for filtering by playlist)
   const [playlistSources, setPlaylistSources] = useState<PlaylistSource[]>([])
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string>('all')
-
-  // Users management
-  const [allUsers, setAllUsers] = useState<Awaited<ReturnType<typeof getAllUsers>>>([])
-  const [showUsers, setShowUsers] = useState(false)
-  const [loadingUsers, setLoadingUsers] = useState(false)
-  const [togglingAdminId, setTogglingAdminId] = useState<string | null>(null)
 
   // Firebase Quota Tracking
   const [quotaStats, setQuotaStats] = useState<ReturnType<typeof getStatsSummary> | null>(null)
@@ -257,59 +250,6 @@ export default function AdminPage() {
     }
   }
 
-  // Load users for admin management
-  const loadUsers = async () => {
-    setLoadingUsers(true)
-    try {
-      const users = await getAllUsers()
-
-      // Auto-detect countries for users without country
-      const usersWithUpdates = await Promise.all(
-        users.map(async (u) => {
-          if (u.lastIP && !u.country) {
-            try {
-              const res = await fetch(`https://ipapi.co/${u.lastIP}/json/`)
-              const data = await res.json()
-              if (data.country_name) {
-                await saveUserCountry(u.id, data.country_name)
-                return { ...u, country: data.country_name }
-              }
-            } catch {
-              // Skip failed requests
-            }
-          }
-          return u
-        })
-      )
-
-      setAllUsers(usersWithUpdates)
-      setShowUsers(true)
-    } catch (error) {
-      console.error('Error loading users:', error)
-    } finally {
-      setLoadingUsers(false)
-    }
-  }
-
-  // Toggle admin status
-  const toggleAdmin = async (userId: string, currentIsAdmin: boolean) => {
-    setTogglingAdminId(userId)
-    try {
-      if (currentIsAdmin) {
-        await removeUserAdmin(userId)
-      } else {
-        await setUserAsAdmin(userId)
-      }
-      // Reload users
-      const users = await getAllUsers()
-      setAllUsers(users)
-    } catch (error) {
-      console.error('Error toggling admin:', error)
-    } finally {
-      setTogglingAdminId(null)
-    }
-  }
-
   // Calculate stats from channels
   const stats = {
     total: channels.length,
@@ -401,6 +341,10 @@ export default function AdminPage() {
             <Button variant="default" size="sm" onClick={() => router.push('/admin/staging')}>
               <FolderOpen className="h-4 w-4 mr-2" />
               Staging
+            </Button>
+            <Button variant="default" size="sm" onClick={() => router.push('/admin/users')}>
+              <Users className="h-4 w-4 mr-2" />
+              Users
             </Button>
             <Button variant="outline" size="sm" onClick={loadData} disabled={isLoading}>
               <RefreshCw className={cn('h-4 w-4 mr-2', isLoading && 'animate-spin')} />
@@ -810,130 +754,6 @@ export default function AdminPage() {
           </Card>
         </div>
 
-        {/* Users Management Section */}
-        <div className="mt-6">
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  User Management
-                </CardTitle>
-                <Button
-                  onClick={loadUsers}
-                  disabled={loadingUsers}
-                  size="sm"
-                >
-                  {loadingUsers ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Loading...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      {showUsers ? 'Refresh' : 'Load users'}
-                    </>
-                  )}
-                </Button>
-              </div>
-              <CardDescription>
-                Assign and revoke admin privileges
-              </CardDescription>
-            </CardHeader>
-
-            {showUsers && allUsers.length > 0 && (
-              <CardContent className="p-0">
-                <div className="overflow-auto max-h-[500px]">
-                  <table className="w-full text-sm">
-                    <thead className="sticky top-0 bg-background border-b">
-                      <tr className="text-left text-xs text-muted-foreground">
-                        <th className="px-3 py-2 font-medium">Email</th>
-                        <th className="px-3 py-2 font-medium">IP / Country</th>
-                        <th className="px-3 py-2 font-medium text-center">Visits</th>
-                        <th className="px-3 py-2 font-medium text-center">Favs</th>
-                        <th className="px-3 py-2 font-medium">Last Visit</th>
-                        <th className="px-3 py-2 font-medium">Registered</th>
-                        <th className="px-3 py-2 font-medium text-center">Admin</th>
-                        <th className="px-3 py-2 font-medium">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {allUsers.map((u) => (
-                        <tr key={u.id} className="hover:bg-muted/50">
-                          <td className="px-3 py-2">
-                            <div>
-                              <span className="font-medium text-xs">{u.email || '—'}</span>
-                              <div className="text-[10px] text-muted-foreground font-mono">{u.id.slice(0, 10)}...</div>
-                            </div>
-                          </td>
-                          <td className="px-3 py-2">
-                            <div className="text-xs">
-                              {u.lastIP ? (
-                                <div className="font-mono">
-                                  {u.lastIP}
-                                  {u.country && <span className="text-muted-foreground ml-1">({u.country})</span>}
-                                </div>
-                              ) : (
-                                <span className="text-muted-foreground">—</span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-3 py-2 text-center">
-                            <span className="text-xs font-medium">{u.totalVisits || 0}</span>
-                          </td>
-                          <td className="px-3 py-2 text-center">
-                            <span className="text-xs">{u.favoritesCount || 0}</span>
-                          </td>
-                          <td className="px-3 py-2">
-                            <span className="text-xs text-muted-foreground">
-                              {u.lastVisit?.toDate().toLocaleString('en-US', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) || '—'}
-                            </span>
-                          </td>
-                          <td className="px-3 py-2">
-                            <span className="text-xs text-muted-foreground">
-                              {u.createdAt?.toDate().toLocaleDateString('en-US') || '—'}
-                            </span>
-                          </td>
-                          <td className="px-3 py-2 text-center">
-                            {u.isAdmin ? (
-                              <span className="text-green-500 font-medium text-xs">Yes</span>
-                            ) : (
-                              <span className="text-muted-foreground text-xs">No</span>
-                            )}
-                          </td>
-                          <td className="px-3 py-2">
-                            <Button
-                              variant={u.isAdmin ? "destructive" : "outline"}
-                              size="sm"
-                              className="h-6 text-[10px] px-2"
-                              onClick={() => toggleAdmin(u.id, u.isAdmin || false)}
-                              disabled={u.id === user?.uid || togglingAdminId === u.id}
-                            >
-                              {togglingAdminId === u.id ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                              ) : (
-                                u.isAdmin ? 'Revoke' : 'Make Admin'
-                              )}
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            )}
-
-            {showUsers && allUsers.length === 0 && (
-              <CardContent>
-                <p className="text-center text-muted-foreground py-4">
-                  No users found
-                </p>
-              </CardContent>
-            )}
-          </Card>
-        </div>
       </main>
     </div>
   )

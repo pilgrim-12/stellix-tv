@@ -334,3 +334,41 @@ export async function saveUserCountry(userId: string, country: string): Promise<
     console.error('Error saving country:', error)
   }
 }
+
+export interface UserDetailedInfo extends UserFullInfo {
+  favorites: string[]
+  watchHistory: WatchHistoryEntry[]
+  settings?: UserSettings
+}
+
+// Get detailed user data for admin panel
+export async function getUserDetailedInfo(userId: string): Promise<UserDetailedInfo | null> {
+  try {
+    const userRef = doc(db, 'users', userId)
+    const userSnap = await getDoc(userRef)
+    trackRead('getUserDetailedInfo')
+
+    if (!userSnap.exists()) return null
+
+    const data = userSnap.data()
+    return {
+      id: userSnap.id,
+      email: data.email,
+      isAdmin: data.isAdmin,
+      lastVisit: data.lastVisit,
+      createdAt: data.createdAt,
+      totalVisits: data.totalVisits,
+      lastIP: data.lastIP,
+      ipAddresses: data.ipAddresses || [],
+      favoritesCount: data.favorites?.length || 0,
+      watchHistoryCount: data.watchHistory?.length || 0,
+      country: data.country,
+      favorites: data.favorites || [],
+      watchHistory: data.watchHistory || [],
+      settings: data.settings,
+    }
+  } catch (error) {
+    console.error('Error getting user detailed info:', error)
+    return null
+  }
+}

@@ -1,4 +1,4 @@
-export type UILanguage = 'ru' | 'en' | 'uk' | 'es' | 'it'
+export type UILanguage = 'ru' | 'en' | 'uk' | 'es' | 'it' | 'fr' | 'de' | 'ka'
 
 export const uiLanguages: { code: UILanguage; name: string; nativeName: string }[] = [
   { code: 'ru', name: 'Russian', nativeName: 'Русский' },
@@ -6,6 +6,9 @@ export const uiLanguages: { code: UILanguage; name: string; nativeName: string }
   { code: 'uk', name: 'Ukrainian', nativeName: 'Українська' },
   { code: 'es', name: 'Spanish', nativeName: 'Español' },
   { code: 'it', name: 'Italian', nativeName: 'Italiano' },
+  { code: 'fr', name: 'French', nativeName: 'Français' },
+  { code: 'de', name: 'German', nativeName: 'Deutsch' },
+  { code: 'ka', name: 'Georgian', nativeName: 'ქართული' },
 ]
 
 export const translations = {
@@ -358,6 +361,216 @@ export const translations = {
     // Misc
     browseChannels: 'Sfoglia canali',
     openChannelGrid: 'Apri tutti i canali',
+  },
+  fr: {
+    // Header
+    watch: 'Regarder',
+    program: 'Guide',
+    admin: 'Admin',
+    signIn: 'Connexion',
+    signUp: 'Inscription',
+    signOut: 'Déconnexion',
+    favorites: 'Favoris',
+    adminPanel: 'Panneau admin',
+    settings: 'Paramètres',
+
+    // Channel Grid
+    allChannels: 'Toutes les chaînes',
+    searchChannels: 'Rechercher des chaînes...',
+    channels: 'chaînes',
+    channelsCount: '{count} chaînes',
+    workingChannels: 'actives',
+    noChannelsFound: 'Aucune chaîne trouvée',
+
+    // Categories
+    category: 'Catégorie',
+    allCategories: 'Toutes',
+    news: 'Actualités',
+    sports: 'Sports',
+    movies: 'Films',
+    kids: 'Enfants',
+    family: 'Famille',
+    music: 'Musique',
+    entertainment: 'Divertissement',
+    documentary: 'Documentaire',
+    lifestyle: 'Style de vie',
+    education: 'Éducation',
+    travel: 'Voyages',
+    gaming: 'Jeux',
+    cooking: 'Cuisine',
+    nature: 'Nature',
+    science: 'Science',
+    culture: 'Culture',
+    animation: 'Animation',
+    auto: 'Auto',
+    weather: 'Météo',
+    outdoor: 'Plein air',
+    general: 'Général',
+    religious: 'Religieux',
+    radio: 'Radio',
+
+    // Language filter
+    language: 'Langue',
+    allLanguages: 'Toutes les langues',
+
+    // Settings
+    settingsTitle: 'Paramètres',
+    interfaceLanguage: 'Langue de l\'interface',
+    theme: 'Thème',
+    themeSystem: 'Système',
+    themeLight: 'Clair',
+    themeDark: 'Sombre',
+    saveSettings: 'Enregistrer',
+    close: 'Fermer',
+
+    // Player
+    selectChannel: 'Sélectionnez une chaîne à regarder',
+    channelOffline: 'Chaîne hors ligne',
+    loading: 'Chargement...',
+
+    // Misc
+    browseChannels: 'Parcourir les chaînes',
+    openChannelGrid: 'Ouvrir toutes les chaînes',
+  },
+  de: {
+    // Header
+    watch: 'Ansehen',
+    program: 'Programm',
+    admin: 'Admin',
+    signIn: 'Anmelden',
+    signUp: 'Registrieren',
+    signOut: 'Abmelden',
+    favorites: 'Favoriten',
+    adminPanel: 'Admin-Panel',
+    settings: 'Einstellungen',
+
+    // Channel Grid
+    allChannels: 'Alle Sender',
+    searchChannels: 'Sender suchen...',
+    channels: 'Sender',
+    channelsCount: '{count} Sender',
+    workingChannels: 'aktiv',
+    noChannelsFound: 'Keine Sender gefunden',
+
+    // Categories
+    category: 'Kategorie',
+    allCategories: 'Alle',
+    news: 'Nachrichten',
+    sports: 'Sport',
+    movies: 'Filme',
+    kids: 'Kinder',
+    family: 'Familie',
+    music: 'Musik',
+    entertainment: 'Unterhaltung',
+    documentary: 'Dokumentation',
+    lifestyle: 'Lifestyle',
+    education: 'Bildung',
+    travel: 'Reisen',
+    gaming: 'Gaming',
+    cooking: 'Kochen',
+    nature: 'Natur',
+    science: 'Wissenschaft',
+    culture: 'Kultur',
+    animation: 'Animation',
+    auto: 'Auto',
+    weather: 'Wetter',
+    outdoor: 'Outdoor',
+    general: 'Allgemein',
+    religious: 'Religion',
+    radio: 'Radio',
+
+    // Language filter
+    language: 'Sprache',
+    allLanguages: 'Alle Sprachen',
+
+    // Settings
+    settingsTitle: 'Einstellungen',
+    interfaceLanguage: 'Oberflächensprache',
+    theme: 'Design',
+    themeSystem: 'System',
+    themeLight: 'Hell',
+    themeDark: 'Dunkel',
+    saveSettings: 'Speichern',
+    close: 'Schließen',
+
+    // Player
+    selectChannel: 'Wählen Sie einen Sender aus',
+    channelOffline: 'Sender offline',
+    loading: 'Laden...',
+
+    // Misc
+    browseChannels: 'Sender durchsuchen',
+    openChannelGrid: 'Alle Sender öffnen',
+  },
+  ka: {
+    // Header
+    watch: 'ყურება',
+    program: 'პროგრამა',
+    admin: 'ადმინი',
+    signIn: 'შესვლა',
+    signUp: 'რეგისტრაცია',
+    signOut: 'გასვლა',
+    favorites: 'რჩეულები',
+    adminPanel: 'ადმინ პანელი',
+    settings: 'პარამეტრები',
+
+    // Channel Grid
+    allChannels: 'ყველა არხი',
+    searchChannels: 'არხების ძიება...',
+    channels: 'არხი',
+    channelsCount: '{count} არხი',
+    workingChannels: 'აქტიური',
+    noChannelsFound: 'არხები ვერ მოიძებნა',
+
+    // Categories
+    category: 'კატეგორია',
+    allCategories: 'ყველა',
+    news: 'ახალი ამბები',
+    sports: 'სპორტი',
+    movies: 'ფილმები',
+    kids: 'საბავშვო',
+    family: 'საოჯახო',
+    music: 'მუსიკა',
+    entertainment: 'გართობა',
+    documentary: 'დოკუმენტური',
+    lifestyle: 'ცხოვრების წესი',
+    education: 'განათლება',
+    travel: 'მოგზაურობა',
+    gaming: 'თამაშები',
+    cooking: 'კულინარია',
+    nature: 'ბუნება',
+    science: 'მეცნიერება',
+    culture: 'კულტურა',
+    animation: 'ანიმაცია',
+    auto: 'ავტო',
+    weather: 'ამინდი',
+    outdoor: 'აქტიური დასვენება',
+    general: 'ზოგადი',
+    religious: 'რელიგიური',
+    radio: 'რადიო',
+
+    // Language filter
+    language: 'ენა',
+    allLanguages: 'ყველა ენა',
+
+    // Settings
+    settingsTitle: 'პარამეტრები',
+    interfaceLanguage: 'ინტერფეისის ენა',
+    theme: 'თემა',
+    themeSystem: 'სისტემური',
+    themeLight: 'ნათელი',
+    themeDark: 'მუქი',
+    saveSettings: 'შენახვა',
+    close: 'დახურვა',
+
+    // Player
+    selectChannel: 'აირჩიეთ არხი საყურებლად',
+    channelOffline: 'არხი ოფლაინშია',
+    loading: 'იტვირთება...',
+
+    // Misc
+    browseChannels: 'არხების დათვალიერება',
+    openChannelGrid: 'ყველა არხის გახსნა',
   },
 } as const
 
