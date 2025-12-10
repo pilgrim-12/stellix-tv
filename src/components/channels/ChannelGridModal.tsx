@@ -26,6 +26,7 @@ import {
 import { cn } from '@/lib/utils'
 import { languageNames, languageOrder } from '@/types'
 import type { Channel, ChannelCategory } from '@/types'
+import { channelCategories } from '@/data/channels'
 
 interface ChannelGridModalProps {
   open: boolean
@@ -102,11 +103,6 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
     onOpenChange(false)
   }
 
-  const categories: ChannelCategory[] = [
-    'all', 'news', 'sports', 'movies', 'kids', 'music',
-    'entertainment', 'documentary', 'nature', 'lifestyle', 'cooking', 'gaming'
-  ]
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[75vw] w-[75vw] h-[90vh] p-0 gap-0 flex flex-col left-[37.5%]">
@@ -176,16 +172,16 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
             </Button>
 
             {showCategories && (
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                {categories.map((cat) => (
+              <div className="flex flex-wrap gap-1.5 mt-2 max-h-[200px] overflow-y-auto">
+                {channelCategories.map((cat) => (
                   <Button
-                    key={cat}
-                    variant={selectedCategory === cat ? 'default' : 'outline'}
+                    key={cat.id}
+                    variant={selectedCategory === cat.id ? 'default' : 'outline'}
                     size="sm"
                     className="h-7 text-xs"
-                    onClick={() => { setCategory(cat); setShowCategories(false) }}
+                    onClick={() => { setCategory(cat.id as ChannelCategory); setShowCategories(false) }}
                   >
-                    {getCategoryName(cat)}
+                    {getCategoryName(cat.id)}
                   </Button>
                 ))}
               </div>

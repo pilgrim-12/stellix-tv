@@ -329,6 +329,60 @@ export default function AdminPage() {
             <Tv className="h-5 w-5 text-primary" />
             <h1 className="text-lg font-semibold">Управление каналами</h1>
           </div>
+
+          {/* Stats in header */}
+          <div className="flex items-center gap-4 flex-wrap">
+            {/* Channel Stats */}
+            <div className="flex items-center gap-3 text-xs">
+              <div className="flex items-center gap-1">
+                <Tv className="h-3 w-3 text-muted-foreground" />
+                <span className="font-bold">{stats?.total ?? '—'}</span>
+                <span className="text-muted-foreground">каналов</span>
+              </div>
+              <div className="flex items-center gap-1 text-green-500">
+                <CheckCircle2 className="h-3 w-3" />
+                <span className="font-bold">{stats?.active ?? '—'}</span>
+              </div>
+              <div className="flex items-center gap-1 text-red-500">
+                <XCircle className="h-3 w-3" />
+                <span className="font-bold">{stats?.broken ?? '—'}</span>
+              </div>
+              <div className="flex items-center gap-1 text-yellow-500">
+                <Clock className="h-3 w-3" />
+                <span className="font-bold">{stats?.pending ?? '—'}</span>
+              </div>
+            </div>
+
+            {/* Users count */}
+            <div className="flex items-center gap-1 text-xs text-purple-500">
+              <Users className="h-3 w-3" />
+              <span className="font-bold">{usersCount ?? '—'}</span>
+              <span className="text-muted-foreground">польз.</span>
+            </div>
+
+            {/* Database info */}
+            {metadata && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Database className="h-3 w-3" />
+                <span>v{metadata.version}</span>
+                {metadata.updatedAt && (
+                  <span>• {metadata.updatedAt.toLocaleString('ru-RU')}</span>
+                )}
+              </div>
+            )}
+
+            {/* Firebase Quota Stats toggle */}
+            <Button
+              variant={showQuotaStats ? "secondary" : "ghost"}
+              size="sm"
+              className="h-7 text-xs gap-1.5"
+              onClick={() => setShowQuotaStats(!showQuotaStats)}
+            >
+              <AlertCircle className="h-3.5 w-3.5" />
+              <span>Квота: {quotaStats?.total ?? 0}</span>
+            </Button>
+          </div>
+
           <div className="ml-auto flex items-center gap-2">
             <Button variant="default" size="sm" onClick={() => router.push('/admin/staging')}>
               <FolderOpen className="h-4 w-4 mr-2" />
@@ -340,131 +394,74 @@ export default function AdminPage() {
             </Button>
           </div>
         </div>
+
+        {/* Firebase Quota Stats Panel */}
+        {showQuotaStats && quotaStats && (
+          <div className="container border-t py-2">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-sm font-medium">Firebase Quota (сегодня)</h4>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 text-xs"
+                onClick={() => {
+                  resetStats()
+                  setQuotaStats(getStatsSummary())
+                }}
+              >
+                Сбросить
+              </Button>
+            </div>
+            <div className="grid grid-cols-4 gap-2 text-xs mb-3">
+              <div className="bg-muted/50 rounded p-2 text-center">
+                <div className="font-bold text-lg">{quotaStats.total}</div>
+                <div className="text-muted-foreground">Всего</div>
+              </div>
+              <div className="bg-blue-500/10 rounded p-2 text-center">
+                <div className="font-bold text-lg text-blue-500">{quotaStats.reads}</div>
+                <div className="text-muted-foreground">Чтений</div>
+              </div>
+              <div className="bg-green-500/10 rounded p-2 text-center">
+                <div className="font-bold text-lg text-green-500">{quotaStats.writes}</div>
+                <div className="text-muted-foreground">Записей</div>
+              </div>
+              <div className="bg-red-500/10 rounded p-2 text-center">
+                <div className="font-bold text-lg text-red-500">{quotaStats.deletes}</div>
+                <div className="text-muted-foreground">Удалений</div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+              <div className="bg-orange-500/10 rounded p-2 text-center">
+                <div className="font-bold">{quotaStats.last5Minutes}</div>
+                <div className="text-muted-foreground">За 5 мин</div>
+              </div>
+              <div className="bg-purple-500/10 rounded p-2 text-center">
+                <div className="font-bold">{quotaStats.lastHour}</div>
+                <div className="text-muted-foreground">За час</div>
+              </div>
+            </div>
+            {quotaStats.topFunctions.length > 0 && (
+              <div>
+                <h5 className="text-xs font-medium text-muted-foreground mb-1">Топ функций:</h5>
+                <div className="space-y-1 max-h-32 overflow-auto">
+                  {quotaStats.topFunctions.map((fn) => (
+                    <div key={fn.name} className="flex items-center justify-between text-xs bg-muted/30 rounded px-2 py-1">
+                      <span className="font-mono truncate">{fn.name}</span>
+                      <div className="flex gap-2 text-muted-foreground">
+                        <span className="text-blue-500">R:{fn.reads}</span>
+                        <span className="text-green-500">W:{fn.writes}</span>
+                        <span className="text-red-500">D:{fn.deletes}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </header>
 
       <main className="container py-4">
-        {/* Stats bar */}
-        <Card className="mb-4">
-          <CardContent className="py-2 px-4">
-            <div className="flex items-center gap-4 flex-wrap">
-              {/* Channel Stats */}
-              <div className="flex items-center gap-3 text-xs">
-                <div className="flex items-center gap-1">
-                  <Tv className="h-3 w-3 text-muted-foreground" />
-                  <span className="font-bold">{stats?.total ?? '—'}</span>
-                  <span className="text-muted-foreground">каналов</span>
-                </div>
-                <div className="flex items-center gap-1 text-green-500">
-                  <CheckCircle2 className="h-3 w-3" />
-                  <span className="font-bold">{stats?.active ?? '—'}</span>
-                </div>
-                <div className="flex items-center gap-1 text-red-500">
-                  <XCircle className="h-3 w-3" />
-                  <span className="font-bold">{stats?.broken ?? '—'}</span>
-                </div>
-                <div className="flex items-center gap-1 text-yellow-500">
-                  <Clock className="h-3 w-3" />
-                  <span className="font-bold">{stats?.pending ?? '—'}</span>
-                </div>
-              </div>
-
-              {/* Users count */}
-              <div className="flex items-center gap-1 text-xs text-purple-500">
-                <Users className="h-3 w-3" />
-                <span className="font-bold">{usersCount ?? '—'}</span>
-                <span className="text-muted-foreground">польз.</span>
-              </div>
-
-              {/* Database info */}
-              {metadata && (
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Database className="h-3 w-3" />
-                  <span>v{metadata.version}</span>
-                  {metadata.updatedAt && (
-                    <span>• {metadata.updatedAt.toLocaleString('ru-RU')}</span>
-                  )}
-                </div>
-              )}
-
-              {/* Firebase Quota Stats toggle */}
-              <Button
-                variant={showQuotaStats ? "secondary" : "ghost"}
-                size="sm"
-                className="h-8 text-xs gap-1.5"
-                onClick={() => setShowQuotaStats(!showQuotaStats)}
-              >
-                <AlertCircle className="h-3.5 w-3.5" />
-                <span>Квота: {quotaStats?.total ?? 0}</span>
-              </Button>
-            </div>
-
-            {/* Firebase Quota Stats Panel */}
-            {showQuotaStats && quotaStats && (
-              <div className="mt-2 border-t pt-2">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-sm font-medium">Firebase Quota (сегодня)</h4>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-6 text-xs"
-                    onClick={() => {
-                      resetStats()
-                      setQuotaStats(getStatsSummary())
-                    }}
-                  >
-                    Сбросить
-                  </Button>
-                </div>
-                <div className="grid grid-cols-4 gap-2 text-xs mb-3">
-                  <div className="bg-muted/50 rounded p-2 text-center">
-                    <div className="font-bold text-lg">{quotaStats.total}</div>
-                    <div className="text-muted-foreground">Всего</div>
-                  </div>
-                  <div className="bg-blue-500/10 rounded p-2 text-center">
-                    <div className="font-bold text-lg text-blue-500">{quotaStats.reads}</div>
-                    <div className="text-muted-foreground">Чтений</div>
-                  </div>
-                  <div className="bg-green-500/10 rounded p-2 text-center">
-                    <div className="font-bold text-lg text-green-500">{quotaStats.writes}</div>
-                    <div className="text-muted-foreground">Записей</div>
-                  </div>
-                  <div className="bg-red-500/10 rounded p-2 text-center">
-                    <div className="font-bold text-lg text-red-500">{quotaStats.deletes}</div>
-                    <div className="text-muted-foreground">Удалений</div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs mb-3">
-                  <div className="bg-orange-500/10 rounded p-2 text-center">
-                    <div className="font-bold">{quotaStats.last5Minutes}</div>
-                    <div className="text-muted-foreground">За 5 мин</div>
-                  </div>
-                  <div className="bg-purple-500/10 rounded p-2 text-center">
-                    <div className="font-bold">{quotaStats.lastHour}</div>
-                    <div className="text-muted-foreground">За час</div>
-                  </div>
-                </div>
-                {quotaStats.topFunctions.length > 0 && (
-                  <div>
-                    <h5 className="text-xs font-medium text-muted-foreground mb-1">Топ функций:</h5>
-                    <div className="space-y-1 max-h-32 overflow-auto">
-                      {quotaStats.topFunctions.map((fn) => (
-                        <div key={fn.name} className="flex items-center justify-between text-xs bg-muted/30 rounded px-2 py-1">
-                          <span className="font-mono truncate">{fn.name}</span>
-                          <div className="flex gap-2 text-muted-foreground">
-                            <span className="text-blue-500">R:{fn.reads}</span>
-                            <span className="text-green-500">W:{fn.writes}</span>
-                            <span className="text-red-500">D:{fn.deletes}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
         {/* Main content: Player + Channels */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left column - Player + Playlists */}

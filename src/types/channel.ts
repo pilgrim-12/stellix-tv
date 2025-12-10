@@ -28,12 +28,10 @@ export type ChannelCategory =
   | 'news'
   | 'sports'
   | 'movies'
-  | 'series'
   | 'kids'
   | 'family'
   | 'music'
   | 'entertainment'
-  | 'comedy'
   | 'documentary'
   | 'lifestyle'
   | 'education'
@@ -44,10 +42,8 @@ export type ChannelCategory =
   | 'science'
   | 'culture'
   | 'animation'
-  | 'classic'
   | 'auto'
   | 'weather'
-  | 'relax'
   | 'outdoor'
   | 'general'
   | 'religious'
@@ -123,12 +119,10 @@ export const categoryNames: Record<string, string> = {
   news: 'Новости',
   sports: 'Спорт',
   movies: 'Кино',
-  series: 'Сериалы',
   kids: 'Детям',
   family: 'Семейное',
   music: 'Музыка',
   entertainment: 'Развлечения',
-  comedy: 'Комедия',
   documentary: 'Документальное',
   lifestyle: 'Стиль жизни',
   education: 'Образование',
@@ -139,10 +133,8 @@ export const categoryNames: Record<string, string> = {
   science: 'Наука',
   culture: 'Культура',
   animation: 'Анимация',
-  classic: 'Классика',
   auto: 'Авто',
   weather: 'Погода',
-  relax: 'Релакс',
   outdoor: 'Активный отдых',
   general: 'Общее',
   religious: 'Религия',
@@ -155,12 +147,10 @@ export const categoryNamesEn: Record<string, string> = {
   news: 'News',
   sports: 'Sports',
   movies: 'Movies',
-  series: 'Series',
   kids: 'Kids',
   family: 'Family',
   music: 'Music',
   entertainment: 'Entertainment',
-  comedy: 'Comedy',
   documentary: 'Documentary',
   lifestyle: 'Lifestyle',
   education: 'Education',
@@ -171,10 +161,8 @@ export const categoryNamesEn: Record<string, string> = {
   science: 'Science',
   culture: 'Culture',
   animation: 'Animation',
-  classic: 'Classic',
   auto: 'Auto',
   weather: 'Weather',
-  relax: 'Relax',
   outdoor: 'Outdoor',
   general: 'General',
   religious: 'Religious',
@@ -183,8 +171,8 @@ export const categoryNamesEn: Record<string, string> = {
 
 // Ordered list for dropdowns (most common first)
 export const categoryOrder = [
-  'news', 'sports', 'movies', 'series', 'kids', 'family', 'music', 'entertainment',
-  'comedy', 'documentary', 'lifestyle', 'education', 'travel', 'gaming', 'cooking',
-  'nature', 'science', 'culture', 'animation', 'classic', 'auto', 'weather',
-  'relax', 'outdoor', 'general', 'religious', 'radio'
+  'news', 'sports', 'movies', 'kids', 'family', 'music', 'entertainment',
+  'documentary', 'lifestyle', 'education', 'travel', 'gaming', 'cooking',
+  'nature', 'science', 'culture', 'animation', 'auto', 'weather',
+  'outdoor', 'general', 'religious', 'radio'
 ];
