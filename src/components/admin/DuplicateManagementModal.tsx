@@ -131,9 +131,8 @@ export function DuplicateManagementModal({
 
     setIsApplying(true)
     try {
-      // For URL duplicates: deactivate all except selected
-      // For name duplicates: just mark primary
-      const idsToDeactivate = duplicate.type === 'url' && selectedPrimaryId
+      // Deactivate all duplicates except selected primary (for both URL and name duplicates)
+      const idsToDeactivate = selectedPrimaryId
         ? duplicate.channels.map(c => c.id).filter(id => id !== selectedPrimaryId)
         : []
 
@@ -330,30 +329,16 @@ export function DuplicateManagementModal({
 
               {/* Selected channel info */}
               {selectedPrimaryId ? (
-                <div className={cn(
-                  'p-3 rounded-lg border',
-                  duplicate.type === 'url'
-                    ? 'bg-orange-500/5 border-orange-500/20'
-                    : 'bg-primary/5 border-primary/20'
-                )}>
-                  <p className={cn(
-                    'text-sm font-medium mb-1',
-                    duplicate.type === 'url' ? 'text-orange-500' : 'text-primary'
-                  )}>
+                <div className="p-3 rounded-lg border bg-orange-500/5 border-orange-500/20">
+                  <p className="text-sm font-medium mb-1 text-orange-500">
                     Выбран как основной:
                   </p>
                   <p className="text-sm">
                     {getFullChannel(selectedPrimaryId)?.name || selectedPrimaryId}
                   </p>
-                  {duplicate.type === 'url' ? (
-                    <p className="text-xs text-orange-400 mt-2">
-                      ⚠️ Остальные {duplicate.count - 1} дубликат(ов) будут ОТКЛЮЧЕНЫ
-                    </p>
-                  ) : (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Остальные каналы получат отметку "не основной"
-                    </p>
-                  )}
+                  <p className="text-xs text-orange-400 mt-2">
+                    ⚠️ Остальные {duplicate.count - 1} дубликат(ов) будут ОТКЛЮЧЕНЫ
+                  </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     Кликните на источник ещё раз чтобы снять выбор
                   </p>
@@ -364,7 +349,7 @@ export function DuplicateManagementModal({
                     Основной источник не выбран
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Выберите источник {duplicate.type === 'url' ? 'чтобы удалить дубликаты' : 'или оставьте без выбора'}
+                    Выберите источник чтобы отключить дубликаты
                   </p>
                 </div>
               )}

@@ -442,13 +442,13 @@ export default function AdminPage() {
 
   // Handle duplicate management
   const handleDuplicateApply = async (primaryId: string | null, idsToDeactivate: string[], type: 'name' | 'url') => {
-    // For URL duplicates: deactivate others (set status to inactive)
-    if (type === 'url' && idsToDeactivate.length > 0) {
+    // Deactivate duplicates (set status to inactive) for both URL and name duplicates
+    if (idsToDeactivate.length > 0) {
       const { bulkUpdateStatus } = await import('@/lib/curatedChannelService')
       await bulkUpdateStatus(idsToDeactivate, 'inactive', user?.email || undefined)
     }
     // Set primary for both types
-    await setPrimaryChannel(primaryId, type === 'url' ? [] : idsToDeactivate)
+    await setPrimaryChannel(primaryId, [])
     // Refresh duplicates list
     await handleFindDuplicates()
     // Reload channels to reflect changes
