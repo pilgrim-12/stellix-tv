@@ -262,6 +262,9 @@ export default function AdminPage() {
   const [brokenChannels, setBrokenChannels] = useState<string[]>([])
   const [selectedBrokenIds, setSelectedBrokenIds] = useState<Set<string>>(new Set())
   const [showBrokenModal, setShowBrokenModal] = useState(false)
+  const [previewChannelId, setPreviewChannelId] = useState<string | null>(null)
+  const brokenVideoRef = useRef<HTMLVideoElement>(null)
+  const brokenHlsRef = useRef<{ destroy: () => void } | null>(null)
   const checkAbortRef = useRef(false)
 
   // Drag and drop state
@@ -536,7 +539,38 @@ export default function AdminPage() {
   const handleOpenBrokenModal = () => {
     // Select all broken channels by default
     setSelectedBrokenIds(new Set(brokenChannels))
+    setPreviewChannelId(null)
     setShowBrokenModal(true)
+  }
+
+  // Preview channel in broken modal
+  const playBrokenPreview = async (channel: CuratedChannel) => {
+    // Cleanup previous HLS instance
+    if (brokenHlsRef.current) {
+      brokenHlsRef.current.destroy()
+      brokenHlsRef.current = null
+    }
+
+    setPreviewChannelId(channel.id)
+
+    if (!brokenVideoRef.current) return
+
+    if (channel.url.includes('.m3u8')) {
+      const Hls = (await import('hls.js')).default
+      if (Hls.isSupported()) {
+        const hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
+        })
+        brokenHlsRef.current = hls
+        hls.loadSource(channel.url)
+        hls.attachMedia(brokenVideoRef.current)
+      } else if (brokenVideoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
+        brokenVideoRef.current.src = channel.url
+      }
+    } else {
+      brokenVideoRef.current.src = channel.url
+    }
   }
 
   // Toggle broken channel selection
@@ -1287,8 +1321,14 @@ export default function AdminPage() {
       />
 
       {/* Broken Channels Modal */}
-      <Dialog open={showBrokenModal} onOpenChange={setShowBrokenModal}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+      <Dialog open={showBrokenModal} onOpenChange={(open) => {
+        if (!open && brokenHlsRef.current) {
+          brokenHlsRef.current.destroy()
+          brokenHlsRef.current = null
+        }
+        setShowBrokenModal(open)
+      }}>
+        <DialogContent className="max-w-5xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <XCircle className="h-5 w-5 text-red-500" />
@@ -1296,88 +1336,144 @@ export default function AdminPage() {
             </DialogTitle>
           </DialogHeader>
 
-          <div className="flex-1 overflow-auto">
-            {/* Select all */}
-            <div
-              className="flex items-center gap-2 p-2 border-b sticky top-0 bg-background cursor-pointer hover:bg-muted/50"
-              onClick={toggleAllBroken}
-            >
-              <div className={cn(
-                'w-5 h-5 rounded border-2 flex items-center justify-center transition-colors',
-                selectedBrokenIds.size === brokenChannels.length && brokenChannels.length > 0
-                  ? 'border-primary bg-primary'
-                  : 'border-muted-foreground'
-              )}>
-                {selectedBrokenIds.size === brokenChannels.length && brokenChannels.length > 0 && (
-                  <Check className="h-3 w-3 text-primary-foreground" />
-                )}
+          <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Left: Channel list */}
+            <div className="flex flex-col overflow-hidden border rounded-lg">
+              {/* Select all */}
+              <div
+                className="flex items-center gap-2 p-2 border-b bg-muted/30 cursor-pointer hover:bg-muted/50 shrink-0"
+                onClick={toggleAllBroken}
+              >
+                <div className={cn(
+                  'w-5 h-5 rounded border-2 flex items-center justify-center transition-colors',
+                  selectedBrokenIds.size === brokenChannels.length && brokenChannels.length > 0
+                    ? 'border-primary bg-primary'
+                    : 'border-muted-foreground'
+                )}>
+                  {selectedBrokenIds.size === brokenChannels.length && brokenChannels.length > 0 && (
+                    <Check className="h-3 w-3 text-primary-foreground" />
+                  )}
+                </div>
+                <span className="text-sm">
+                  Select all ({selectedBrokenIds.size} / {brokenChannels.length})
+                </span>
               </div>
-              <span className="text-sm">
-                Select all ({selectedBrokenIds.size} / {brokenChannels.length})
-              </span>
+
+              {/* Channel list */}
+              <div className="flex-1 overflow-auto">
+                <div className="space-y-1 p-2">
+                  {brokenChannels.map(id => {
+                    const channel = channels.find(ch => ch.id === id)
+                    if (!channel) return null
+                    const isSelected = selectedBrokenIds.has(id)
+                    const isPreviewing = previewChannelId === id
+
+                    return (
+                      <div
+                        key={id}
+                        className={cn(
+                          'flex items-center gap-3 p-2 rounded-lg border cursor-pointer transition-colors',
+                          isPreviewing && 'ring-2 ring-blue-500',
+                          isSelected
+                            ? 'border-red-500/50 bg-red-500/10'
+                            : 'border-border hover:bg-muted/50'
+                        )}
+                        onClick={() => toggleBrokenSelection(id)}
+                      >
+                        {/* Checkbox */}
+                        <div className={cn(
+                          'w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors',
+                          isSelected
+                            ? 'border-red-500 bg-red-500'
+                            : 'border-muted-foreground'
+                        )}>
+                          {isSelected && (
+                            <Check className="h-3 w-3 text-white" />
+                          )}
+                        </div>
+
+                        {/* Logo */}
+                        <div className="w-8 h-8 rounded bg-muted flex items-center justify-center overflow-hidden shrink-0">
+                          {channel.logo ? (
+                            <img src={channel.logo} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <Tv className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </div>
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{channel.name}</p>
+                        </div>
+
+                        {/* Test button */}
+                        <Button
+                          variant={isPreviewing ? 'default' : 'ghost'}
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            playBrokenPreview(channel)
+                          }}
+                        >
+                          <Play className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
             </div>
 
-            {/* Channel list */}
-            <div className="space-y-1 p-2">
-              {brokenChannels.map(id => {
-                const channel = channels.find(ch => ch.id === id)
-                if (!channel) return null
-                const isSelected = selectedBrokenIds.has(id)
-
-                return (
-                  <div
-                    key={id}
-                    className={cn(
-                      'flex items-center gap-3 p-2 rounded-lg border cursor-pointer transition-colors',
-                      isSelected
-                        ? 'border-red-500/50 bg-red-500/10'
-                        : 'border-border hover:bg-muted/50'
-                    )}
-                    onClick={() => toggleBrokenSelection(id)}
-                  >
-                    {/* Checkbox */}
-                    <div className={cn(
-                      'w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors',
-                      isSelected
-                        ? 'border-red-500 bg-red-500'
-                        : 'border-muted-foreground'
-                    )}>
-                      {isSelected && (
-                        <Check className="h-3 w-3 text-white" />
-                      )}
+            {/* Right: Preview player */}
+            <div className="flex flex-col gap-2">
+              <div className="aspect-video bg-black rounded-lg overflow-hidden relative">
+                {previewChannelId ? (
+                  <video
+                    ref={brokenVideoRef}
+                    className="w-full h-full"
+                    controls
+                    autoPlay
+                    playsInline
+                    muted
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                    <div className="text-center">
+                      <Play className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">Click Play to test channel</p>
                     </div>
-
-                    {/* Logo */}
-                    <div className="w-10 h-10 rounded bg-muted flex items-center justify-center overflow-hidden shrink-0">
-                      {channel.logo ? (
-                        <img src={channel.logo} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <Tv className="h-5 w-5 text-muted-foreground" />
-                      )}
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{channel.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {channel.url}
-                      </p>
-                    </div>
-
-                    {/* Test button */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        playChannel(channel)
-                      }}
-                    >
-                      <Play className="h-4 w-4" />
-                    </Button>
                   </div>
-                )
-              })}
+                )}
+              </div>
+
+              {/* Preview channel info */}
+              {previewChannelId && (
+                <div className="p-3 rounded-lg bg-muted/50 border">
+                  {(() => {
+                    const channel = channels.find(ch => ch.id === previewChannelId)
+                    if (!channel) return null
+                    return (
+                      <>
+                        <p className="font-medium">{channel.name}</p>
+                        <p className="text-xs text-muted-foreground truncate mt-1">
+                          {channel.url}
+                        </p>
+                        <div className="flex gap-2 mt-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              toggleBrokenSelection(previewChannelId)
+                            }}
+                          >
+                            {selectedBrokenIds.has(previewChannelId) ? 'Deselect' : 'Select'}
+                          </Button>
+                        </div>
+                      </>
+                    )
+                  })()}
+                </div>
+              )}
             </div>
           </div>
 
