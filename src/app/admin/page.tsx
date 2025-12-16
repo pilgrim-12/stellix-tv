@@ -249,6 +249,12 @@ export default function AdminPage() {
   const [selectedDuplicate, setSelectedDuplicate] = useState<DuplicateInfo | null>(null)
   const [showDuplicatesModal, setShowDuplicatesModal] = useState(false)
 
+  // Channel health check state
+  const [isCheckingChannels, setIsCheckingChannels] = useState(false)
+  const [checkProgress, setCheckProgress] = useState({ checked: 0, total: 0, broken: 0 })
+  const [brokenChannels, setBrokenChannels] = useState<string[]>([])
+  const checkAbortRef = useRef(false)
+
   // Drag and drop state
   const [hasOrderChanged, setHasOrderChanged] = useState(false)
   const [isSavingOrder, setIsSavingOrder] = useState(false)
@@ -453,6 +459,83 @@ export default function AdminPage() {
     await handleFindDuplicates()
     // Reload channels to reflect changes
     await loadData()
+  }
+
+  // Check all channels for broken URLs
+  const handleCheckChannels = async () => {
+    // Only check active channels
+    const activeChannels = channels.filter(ch => ch.status === 'active')
+    if (activeChannels.length === 0) return
+
+    setIsCheckingChannels(true)
+    checkAbortRef.current = false
+    setCheckProgress({ checked: 0, total: activeChannels.length, broken: 0 })
+    setBrokenChannels([])
+
+    const broken: string[] = []
+    const BATCH_SIZE = 5 // Check 5 channels at a time
+
+    try {
+      for (let i = 0; i < activeChannels.length; i += BATCH_SIZE) {
+        if (checkAbortRef.current) break
+
+        const batch = activeChannels.slice(i, i + BATCH_SIZE)
+        const batchData = batch.map(ch => ({ id: ch.id, url: ch.url }))
+
+        try {
+          const response = await fetch('/api/check-channel', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ channels: batchData }),
+          })
+
+          if (response.ok) {
+            const { results } = await response.json()
+            for (const result of results) {
+              if (!result.online) {
+                broken.push(result.id)
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error checking batch:', error)
+        }
+
+        setCheckProgress({
+          checked: Math.min(i + BATCH_SIZE, activeChannels.length),
+          total: activeChannels.length,
+          broken: broken.length,
+        })
+        setBrokenChannels([...broken])
+
+        // Small delay between batches to not overload
+        if (i + BATCH_SIZE < activeChannels.length && !checkAbortRef.current) {
+          await new Promise(resolve => setTimeout(resolve, 200))
+        }
+      }
+    } finally {
+      setIsCheckingChannels(false)
+    }
+  }
+
+  // Stop checking channels
+  const handleStopCheck = () => {
+    checkAbortRef.current = true
+  }
+
+  // Mark broken channels
+  const handleMarkBroken = async () => {
+    if (brokenChannels.length === 0) return
+
+    try {
+      const { bulkUpdateStatus } = await import('@/lib/curatedChannelService')
+      await bulkUpdateStatus(brokenChannels, 'broken', user?.email || undefined)
+      setBrokenChannels([])
+      setCheckProgress({ checked: 0, total: 0, broken: 0 })
+      await loadData()
+    } catch (error) {
+      console.error('Error marking channels as broken:', error)
+    }
   }
 
   // Handle drag end for reordering
@@ -877,6 +960,89 @@ export default function AdminPage() {
                       </div>
                     ))}
                   </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Channel Health Check Card */}
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4" />
+                    Health Check
+                    {brokenChannels.length > 0 && (
+                      <span className="text-sm font-normal text-red-500">
+                        ({brokenChannels.length} broken)
+                      </span>
+                    )}
+                  </CardTitle>
+                  {!isCheckingChannels ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCheckChannels}
+                      disabled={channels.filter(ch => ch.status === 'active').length === 0}
+                    >
+                      <Play className="h-4 w-4" />
+                      <span className="ml-1">Check All</span>
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleStopCheck}
+                    >
+                      <X className="h-4 w-4" />
+                      <span className="ml-1">Stop</span>
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {isCheckingChannels || checkProgress.total > 0 ? (
+                  <div className="space-y-3">
+                    {/* Progress bar */}
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Checking channels...</span>
+                        <span>{checkProgress.checked} / {checkProgress.total}</span>
+                      </div>
+                      <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-primary transition-all duration-300"
+                          style={{ width: `${(checkProgress.checked / checkProgress.total) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Stats */}
+                    <div className="flex items-center gap-4 text-sm">
+                      <span className="text-green-500">
+                        ✓ {checkProgress.checked - checkProgress.broken} online
+                      </span>
+                      <span className="text-red-500">
+                        ✗ {checkProgress.broken} broken
+                      </span>
+                    </div>
+
+                    {/* Mark broken button */}
+                    {!isCheckingChannels && brokenChannels.length > 0 && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="w-full"
+                        onClick={handleMarkBroken}
+                      >
+                        <XCircle className="h-4 w-4 mr-2" />
+                        Mark {brokenChannels.length} channels as broken
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Click &quot;Check All&quot; to verify channel URLs
+                  </p>
                 )}
               </CardContent>
             </Card>
