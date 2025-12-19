@@ -43,9 +43,11 @@ export function Header() {
       <div className="flex h-12 items-center px-4 gap-4">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary">
-            <span className="text-base font-bold text-primary-foreground">S</span>
-          </div>
+          <img
+            src="/icons/icon.svg"
+            alt="Stellix TV"
+            className="h-7 w-7 rounded-lg"
+          />
           <span className="text-lg font-bold tracking-tight hidden sm:block">Stellix TV</span>
         </Link>
 
