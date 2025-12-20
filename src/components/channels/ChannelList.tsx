@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, CSSProperties, ReactElement } from 'react'
+import { List, ListImperativeAPI } from 'react-window'
 import { useChannelStore } from '@/stores'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { useSettings } from '@/contexts/SettingsContext'
@@ -10,27 +11,51 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Search, Tv, CheckCircle2, XCircle, Loader2, Star } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Channel } from '@/types'
+
+const ITEM_HEIGHT = 66 // p-2 (16px) + h-12 (48px) + gap (2px)
+
+// Custom row props type
+interface ChannelRowProps {
+  channels: Channel[]
+}
+
+// Row component for virtualized list
+function RowComponent(props: {
+  ariaAttributes: { "aria-posinset": number; "aria-setsize": number; role: "listitem" }
+  index: number
+  style: CSSProperties
+} & ChannelRowProps): ReactElement {
+  const { index, style, channels } = props
+  const channel = channels[index]
+  return (
+    <div style={style}>
+      <ChannelCard channel={channel} />
+    </div>
+  )
+}
 
 export function ChannelList() {
-  const {
-    setChannels,
-    loadChannelsFromFirebase,
-    getFilteredChannels,
-    searchQuery,
-    setSearchQuery,
-    loadDisabledChannels,
-    loadCustomPlaylists,
-    loadSavedFilters,
-    channels,
-    isLoading,
-    showOnlyFavorites,
-    setShowOnlyFavorites,
-    favorites,
-  } = useChannelStore()
+  // Use individual selectors to prevent unnecessary re-renders
+  const setChannels = useChannelStore((state) => state.setChannels)
+  const loadChannelsFromFirebase = useChannelStore((state) => state.loadChannelsFromFirebase)
+  const getFilteredChannels = useChannelStore((state) => state.getFilteredChannels)
+  const searchQuery = useChannelStore((state) => state.searchQuery)
+  const setSearchQuery = useChannelStore((state) => state.setSearchQuery)
+  const loadDisabledChannels = useChannelStore((state) => state.loadDisabledChannels)
+  const loadCustomPlaylists = useChannelStore((state) => state.loadCustomPlaylists)
+  const loadSavedFilters = useChannelStore((state) => state.loadSavedFilters)
+  const isLoading = useChannelStore((state) => state.isLoading)
+  const showOnlyFavorites = useChannelStore((state) => state.showOnlyFavorites)
+  const setShowOnlyFavorites = useChannelStore((state) => state.setShowOnlyFavorites)
+  const favorites = useChannelStore((state) => state.favorites)
+  const currentChannel = useChannelStore((state) => state.currentChannel)
+
   const { user } = useAuthContext()
   const { t } = useSettings()
 
   const [initialized, setInitialized] = useState(false)
+  const listRef = useRef<ListImperativeAPI>(null)
 
   useEffect(() => {
     const initChannels = async () => {
@@ -91,6 +116,16 @@ export function ChannelList() {
   }, [])
 
   const filteredChannels = getFilteredChannels()
+
+  // Scroll to current channel when it changes
+  useEffect(() => {
+    if (currentChannel && listRef.current && filteredChannels.length > 0) {
+      const index = filteredChannels.findIndex(ch => ch.id === currentChannel.id)
+      if (index !== -1) {
+        listRef.current.scrollToRow({ index, align: 'smart' })
+      }
+    }
+  }, [currentChannel, filteredChannels, listRef])
 
   // Статистика каналов
   const totalChannels = filteredChannels.length
@@ -153,20 +188,24 @@ export function ChannelList() {
       </div>
 
       {/* Channels list */}
-      <div className="flex-1 overflow-auto p-1.5">
+      <div className="flex-1 overflow-hidden">
         {isLoading && !initialized ? (
           <div className="flex items-center justify-center h-32">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : (
           <>
-            <div className="space-y-0.5">
-              {filteredChannels.map((channel) => (
-                <ChannelCard key={channel.id} channel={channel} />
-              ))}
-            </div>
-
-            {filteredChannels.length === 0 && (
+            {filteredChannels.length > 0 ? (
+              <List<ChannelRowProps>
+                listRef={listRef}
+                rowCount={filteredChannels.length}
+                rowHeight={ITEM_HEIGHT}
+                rowComponent={RowComponent}
+                rowProps={{ channels: filteredChannels }}
+                className="scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent"
+                style={{ padding: '6px' }}
+              />
+            ) : (
               <div className="flex items-center justify-center h-32">
                 <p className="text-sm text-muted-foreground">{t('noChannelsFound')}</p>
               </div>

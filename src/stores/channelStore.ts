@@ -353,7 +353,8 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
     const { channels, selectedCategory, selectedLanguage, searchQuery, offlineChannels, disabledChannels, showOnlyFavorites, favorites } = get();
 
     // First, deduplicate by URL (keep only first occurrence or primary)
-    const seenUrls = new Map<string, Channel>();
+    // Store both channel and its index for O(1) replacement
+    const seenUrls = new Map<string, { channel: Channel; index: number }>();
     const deduplicatedChannels: Channel[] = [];
 
     for (const channel of channels) {
@@ -365,52 +366,48 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
       }
 
       if (!seenUrls.has(url)) {
-        // First occurrence of this URL
-        seenUrls.set(url, channel);
+        // First occurrence of this URL - store with index
+        const index = deduplicatedChannels.length;
+        seenUrls.set(url, { channel, index });
         deduplicatedChannels.push(channel);
-      } else {
-        // Duplicate URL - only replace if this one is primary
-        if (channel.isPrimary) {
-          const existingIndex = deduplicatedChannels.findIndex(ch => ch.url?.trim() === url);
-          if (existingIndex !== -1) {
-            deduplicatedChannels[existingIndex] = channel;
-            seenUrls.set(url, channel);
-          }
-        }
+      } else if (channel.isPrimary) {
+        // Duplicate URL but this one is primary - replace in O(1)
+        const existing = seenUrls.get(url)!;
+        deduplicatedChannels[existing.index] = channel;
+        seenUrls.set(url, { channel, index: existing.index });
       }
     }
 
-    return deduplicatedChannels
-      .filter((channel) => !disabledChannels.has(channel.id)) // exclude disabled channels
-      .map((channel) => ({
+    // Precompute lowercase search query once
+    const searchLower = searchQuery?.toLowerCase();
+    // Create Set for O(1) favorites lookup
+    const favoritesSet = new Set(favorites);
+
+    // Single-pass filter and transform
+    const result: Channel[] = [];
+    for (const channel of deduplicatedChannels) {
+      // Skip disabled channels
+      if (disabledChannels.has(channel.id)) continue;
+
+      // Apply filters
+      if (selectedCategory !== 'all' && channel.group.toLowerCase() !== selectedCategory) continue;
+      if (selectedLanguage !== 'all' && channel.language !== selectedLanguage) continue;
+      if (searchLower && !channel.name.toLowerCase().includes(searchLower)) continue;
+      if (showOnlyFavorites && !favoritesSet.has(channel.id)) continue;
+
+      // Add with offline status
+      result.push({
         ...channel,
         isOffline: offlineChannels.has(channel.id),
-      }))
-      .filter((channel) => {
-        const matchesCategory =
-          selectedCategory === 'all' ||
-          channel.group.toLowerCase() === selectedCategory;
-
-        const matchesLanguage =
-          selectedLanguage === 'all' ||
-          channel.language === selectedLanguage;
-
-        const matchesSearch =
-          !searchQuery ||
-          channel.name.toLowerCase().includes(searchQuery.toLowerCase());
-
-        const matchesFavorites =
-          !showOnlyFavorites ||
-          favorites.includes(channel.id);
-
-        return matchesCategory && matchesLanguage && matchesSearch && matchesFavorites;
-      })
-      .sort((a, b) => {
-        // Online channels first, offline at the end
-        if (a.isOffline && !b.isOffline) return 1;
-        if (!a.isOffline && b.isOffline) return -1;
-        return 0;
       });
+    }
+
+    // Sort: online first, offline last
+    return result.sort((a, b) => {
+      if (a.isOffline && !b.isOffline) return 1;
+      if (!a.isOffline && b.isOffline) return -1;
+      return 0;
+    });
   },
 
   getAvailableLanguages: () => {
