@@ -1,10 +1,19 @@
 'use client'
 
 import { useEffect, useRef, useCallback, useState } from 'react'
-import Hls from 'hls.js'
+import type Hls from 'hls.js'
 import { usePlayerStore, useChannelStore } from '@/stores'
 import { useSettings } from '@/contexts/SettingsContext'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+
+// Lazy load HLS.js only when needed
+let HlsModule: typeof Hls | null = null
+const loadHls = async () => {
+  if (!HlsModule) {
+    HlsModule = (await import('hls.js')).default
+  }
+  return HlsModule
+}
 
 export function VideoPlayer() {
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -30,7 +39,7 @@ export function VideoPlayer() {
   } = usePlayerStore()
 
   // Initialize HLS
-  const initializePlayer = useCallback((url: string) => {
+  const initializePlayer = useCallback(async (url: string) => {
     const video = videoRef.current
     if (!video) return
 
@@ -42,6 +51,9 @@ export function VideoPlayer() {
 
     setLoading(true)
     setError(null)
+
+    // Load HLS.js dynamically
+    const Hls = await loadHls()
 
     if (Hls.isSupported()) {
       const hls = new Hls({

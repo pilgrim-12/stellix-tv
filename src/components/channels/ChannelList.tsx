@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef, CSSProperties, ReactElement } from 'react'
+import { useEffect, useState, useRef, CSSProperties, ReactElement, useMemo } from 'react'
 import { List, ListImperativeAPI } from 'react-window'
 import { useChannelStore } from '@/stores'
 import { useAuthContext } from '@/contexts/AuthContext'
@@ -55,7 +55,29 @@ export function ChannelList() {
   const { t } = useSettings()
 
   const [initialized, setInitialized] = useState(false)
+  const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery)
   const listRef = useRef<ListImperativeAPI>(null)
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Debounce search query updates to store (150ms)
+  useEffect(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+    }
+    debounceTimerRef.current = setTimeout(() => {
+      setSearchQuery(localSearchQuery)
+    }, 150)
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+      }
+    }
+  }, [localSearchQuery, setSearchQuery])
+
+  // Sync local state if store changes externally
+  useEffect(() => {
+    setLocalSearchQuery(searchQuery)
+  }, [searchQuery])
 
   useEffect(() => {
     const initChannels = async () => {
@@ -181,8 +203,8 @@ export function ChannelList() {
             type="search"
             placeholder={t('searchChannels')}
             className="pl-8 h-8 text-sm bg-muted/50"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            value={localSearchQuery}
+            onChange={(e) => setLocalSearchQuery(e.target.value)}
           />
         </div>
       </div>

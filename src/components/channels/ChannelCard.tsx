@@ -54,6 +54,8 @@ export const ChannelCard = memo(function ChannelCard({ channel }: ChannelCardPro
               src={channel.logo}
               alt={channel.name}
               className="h-full w-full object-cover"
+              loading="lazy"
+              decoding="async"
               onError={() => setImgError(true)}
             />
           ) : (
