@@ -45,6 +45,7 @@ export function ChannelList() {
   const loadDisabledChannels = useChannelStore((state) => state.loadDisabledChannels)
   const loadCustomPlaylists = useChannelStore((state) => state.loadCustomPlaylists)
   const loadSavedFilters = useChannelStore((state) => state.loadSavedFilters)
+  const initLanguageFromGeo = useChannelStore((state) => state.initLanguageFromGeo)
   const isLoading = useChannelStore((state) => state.isLoading)
   const showOnlyFavorites = useChannelStore((state) => state.showOnlyFavorites)
   const setShowOnlyFavorites = useChannelStore((state) => state.setShowOnlyFavorites)
@@ -84,6 +85,10 @@ export function ChannelList() {
       loadDisabledChannels()
       loadCustomPlaylists()
       loadSavedFilters()
+
+      // Initialize language from geo-detection (async, non-blocking)
+      // This will only run if no manual preference exists
+      initLanguageFromGeo()
 
       // Try loading from Firebase first
       try {

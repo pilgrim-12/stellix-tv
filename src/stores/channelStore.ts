@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { Channel, ChannelCategory } from '@/types';
 import { addFavorite, removeFavorite, getFavorites, setFavorites, addWatchHistory, getUserSettings, updateUserSettings } from '@/lib/userService';
 import { getActiveCuratedChannels } from '@/lib/curatedChannelService';
+import { saveManualLanguageChoice, getDefaultLanguageFilter, shouldAutoDetect } from '@/lib/geoLanguageService';
 
 interface CustomPlaylist {
   id: string;
@@ -36,6 +37,8 @@ interface ChannelState {
   setCurrentChannel: (channel: Channel | null, userId?: string) => void;
   setCategory: (category: ChannelCategory) => void;
   setLanguage: (language: string) => void;
+  setLanguageAuto: (language: string) => void; // Set language without saving as manual choice
+  initLanguageFromGeo: () => Promise<void>; // Initialize language from geo-detection
   setSearchQuery: (query: string) => void;
   toggleFavorite: (channelId: string, userId?: string) => void;
   setShowOnlyFavorites: (show: boolean, userId?: string) => void;
@@ -198,8 +201,42 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
     set({ selectedLanguage: language });
     if (typeof window !== 'undefined') {
       localStorage.setItem('stellix-selected-language', language);
+      // Save as manual choice to prevent auto-detection override
+      saveManualLanguageChoice(language);
     }
   },
+
+  setLanguageAuto: (language) => {
+    // Set language without marking as manual choice (for auto-detection)
+    set({ selectedLanguage: language });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('stellix-selected-language', language);
+    }
+  },
+
+  initLanguageFromGeo: async () => {
+    // Only run auto-detection if no manual preference
+    if (!shouldAutoDetect()) {
+      console.log('[ChannelStore] Manual language preference exists, skipping geo-detection');
+      return;
+    }
+
+    try {
+      const result = await getDefaultLanguageFilter();
+      console.log('[ChannelStore] Geo-detection result:', result);
+
+      // Only set if still should auto-detect (user might have changed during detection)
+      if (shouldAutoDetect()) {
+        set({ selectedLanguage: result.language });
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('stellix-selected-language', result.language);
+        }
+      }
+    } catch (error) {
+      console.error('[ChannelStore] Geo-detection failed:', error);
+    }
+  },
+
   setSearchQuery: (query) => set({ searchQuery: query }),
 
   toggleFavorite: (channelId, userId) => {
@@ -334,6 +371,8 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
   loadSavedFilters: () => {
     if (typeof window !== 'undefined') {
       const savedCategory = localStorage.getItem('stellix-selected-category');
+      // Note: Language is handled by initLanguageFromGeo() which respects manual vs auto preferences
+      // We still load it here as a fallback before geo-detection completes
       const savedLanguage = localStorage.getItem('stellix-selected-language');
 
       const updates: Partial<ChannelState> = {};
