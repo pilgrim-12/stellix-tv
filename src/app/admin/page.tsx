@@ -165,6 +165,12 @@ function SortableChannelItem({
               <span>{languageNames[channel.language] || channel.language}</span>
             </>
           )}
+          {channel.country && (
+            <>
+              <span>•</span>
+              <span className="text-sky-400">{channel.country}</span>
+            </>
+          )}
         </div>
       </div>
 
