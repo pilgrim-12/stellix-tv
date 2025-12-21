@@ -59,12 +59,14 @@ export function Header() {
               <span className="hidden sm:inline">{t('watch')}</span>
             </Link>
           </Button>
+          {/* TODO: Uncomment when Guide feature is ready
           <Button variant="ghost" size="sm" asChild>
             <Link href="/guide" className="flex items-center gap-1.5">
               <Calendar className="h-4 w-4" />
               <span className="hidden sm:inline">{t('program')}</span>
             </Link>
           </Button>
+          */}
           {isAdmin && (
             <Button variant="ghost" size="sm" asChild>
               <Link href="/admin" className="flex items-center gap-1.5">
