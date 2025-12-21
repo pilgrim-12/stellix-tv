@@ -230,6 +230,7 @@ export default function AdminPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedStatus, setSelectedStatus] = useState<ChannelStatus | 'all'>('all')
   const [selectedLanguage, setSelectedLanguage] = useState<string>('all')
+  const [selectedCountry, setSelectedCountry] = useState<string>('all')
 
   // Delete state
   const [deletingChannelId, setDeletingChannelId] = useState<string | null>(null)
@@ -667,7 +668,7 @@ export default function AdminPage() {
   }
 
   // Check if filters are active (drag disabled when filtering)
-  const isFilterActive = searchQuery !== '' || selectedStatus !== 'all' || selectedLanguage !== 'all' || selectedPlaylistId !== 'all'
+  const isFilterActive = searchQuery !== '' || selectedStatus !== 'all' || selectedLanguage !== 'all' || selectedPlaylistId !== 'all' || selectedCountry !== 'all'
 
   // Calculate stats from channels
   const stats = {
@@ -681,13 +682,19 @@ export default function AdminPage() {
   // Get unique languages from channels
   const availableLanguages = [...new Set(channels.map(ch => ch.language).filter(Boolean))] as string[]
 
+  // Get unique countries from channels (including count of channels without country)
+  const availableCountries = [...new Set(channels.map(ch => ch.country).filter(Boolean))] as string[]
+  const channelsWithoutCountry = channels.filter(ch => !ch.country).length
+
   // Filter channels
   const filteredChannels = channels.filter((channel) => {
     const matchesSearch = !searchQuery || channel.name.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesStatus = selectedStatus === 'all' || channel.status === selectedStatus || (!channel.status && selectedStatus === 'pending')
     const matchesLanguage = selectedLanguage === 'all' || channel.language === selectedLanguage
     const matchesPlaylist = selectedPlaylistId === 'all' || channel.playlistId === selectedPlaylistId
-    return matchesSearch && matchesStatus && matchesLanguage && matchesPlaylist
+    const matchesCountry = selectedCountry === 'all' ||
+      (selectedCountry === '__none__' ? !channel.country : channel.country === selectedCountry)
+    return matchesSearch && matchesStatus && matchesLanguage && matchesPlaylist && matchesCountry
   })
 
   return (
@@ -1292,6 +1299,20 @@ export default function AdminPage() {
                     ))}
                   </select>
                 )}
+                {/* Country filter */}
+                <select
+                  className="h-6 rounded-md border border-input bg-background px-2 text-xs"
+                  value={selectedCountry}
+                  onChange={(e) => setSelectedCountry(e.target.value)}
+                >
+                  <option value="all">All countries</option>
+                  <option value="__none__">⚠️ No country ({channelsWithoutCountry})</option>
+                  {availableCountries.sort().map((country) => (
+                    <option key={country} value={country}>
+                      {country}
+                    </option>
+                  ))}
+                </select>
               </div>
             </CardHeader>
             <CardContent className="p-0">

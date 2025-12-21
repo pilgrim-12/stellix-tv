@@ -19,6 +19,7 @@ import {
   Tv,
   CheckCircle2,
   Globe,
+  MapPin,
   ChevronDown,
   ChevronUp,
   LayoutGrid,
@@ -47,6 +48,9 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
     selectedLanguage,
     setLanguage,
     getAvailableLanguages,
+    selectedCountry,
+    setCountry,
+    getAvailableCountries,
     showOnlyFavorites,
     setShowOnlyFavorites,
   } = useChannelStore()
@@ -54,8 +58,10 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
   const [searchQuery, setSearchQuery] = useState('')
   const [showCategories, setShowCategories] = useState(false)
   const [showLanguages, setShowLanguages] = useState(false)
+  const [showCountries, setShowCountries] = useState(false)
 
   const availableLanguages = getAvailableLanguages()
+  const availableCountries = getAvailableCountries()
 
   // Sort languages
   const sortedLanguages = [...availableLanguages].sort((a, b) => {
@@ -80,6 +86,10 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
       }
       // Language
       if (selectedLanguage !== 'all' && channel.language !== selectedLanguage) {
+        return false
+      }
+      // Country
+      if (selectedCountry !== 'all' && channel.country !== selectedCountry) {
         return false
       }
       // Favorites
