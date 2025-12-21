@@ -46,6 +46,8 @@ export function ChannelList() {
   const loadCustomPlaylists = useChannelStore((state) => state.loadCustomPlaylists)
   const loadSavedFilters = useChannelStore((state) => state.loadSavedFilters)
   const initLanguageFromGeo = useChannelStore((state) => state.initLanguageFromGeo)
+  const setLanguage = useChannelStore((state) => state.setLanguage)
+  const setCategory = useChannelStore((state) => state.setCategory)
   const isLoading = useChannelStore((state) => state.isLoading)
   const showOnlyFavorites = useChannelStore((state) => state.showOnlyFavorites)
   const setShowOnlyFavorites = useChannelStore((state) => state.setShowOnlyFavorites)
@@ -86,9 +88,28 @@ export function ChannelList() {
       loadCustomPlaylists()
       loadSavedFilters()
 
-      // Initialize language from geo-detection (async, non-blocking)
-      // This will only run if no manual preference exists
-      initLanguageFromGeo()
+      // Check URL params for lang/category (from landing page links)
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search)
+        const langParam = params.get('lang')
+        const categoryParam = params.get('category')
+
+        if (langParam) {
+          // Set language from URL param (this saves as manual choice)
+          setLanguage(langParam)
+        } else {
+          // Initialize language from geo-detection (async, non-blocking)
+          // This will only run if no manual preference exists
+          initLanguageFromGeo()
+        }
+
+        if (categoryParam) {
+          setCategory(categoryParam as import('@/types').ChannelCategory)
+        }
+      } else {
+        // Fallback: Initialize language from geo-detection
+        initLanguageFromGeo()
+      }
 
       // Try loading from Firebase first
       try {
