@@ -7,7 +7,7 @@ import { channelCategories } from '@/data/channels'
 import { Button } from '@/components/ui/button'
 import { ChannelCategory, languageNames } from '@/types'
 import { cn } from '@/lib/utils'
-import { Globe, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Globe, MapPin, ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface CarouselProps {
   children: React.ReactNode
@@ -119,14 +119,20 @@ export function LanguageFilter() {
     selectedLanguage,
     setLanguage,
     getAvailableLanguages,
+    selectedCountry,
+    setCountry,
+    getAvailableCountries,
   } = useChannelStore()
   const { t } = useSettings()
 
   const [isOpen, setIsOpen] = useState(false)
+  const [isCountryOpen, setIsCountryOpen] = useState(false)
   const popoverRef = useRef<HTMLDivElement>(null)
+  const countryPopoverRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
   const availableLanguages = getAvailableLanguages()
+  const availableCountries = getAvailableCountries()
 
   // Сортировка языков по заданному порядку
   const sortedLanguages = [...availableLanguages].sort((a, b) => {
@@ -138,18 +144,21 @@ export function LanguageFilter() {
     return indexA - indexB
   })
 
-  // Close popover on outside click
+  // Close popovers on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
         setIsOpen(false)
       }
+      if (countryPopoverRef.current && !countryPopoverRef.current.contains(e.target as Node)) {
+        setIsCountryOpen(false)
+      }
     }
-    if (isOpen) {
+    if (isOpen || isCountryOpen) {
       document.addEventListener('mousedown', handleClickOutside)
     }
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [isOpen])
+  }, [isOpen, isCountryOpen])
 
   const scroll = (direction: 'left' | 'right') => {
     const el = containerRef.current
@@ -164,9 +173,18 @@ export function LanguageFilter() {
     ? t('allCategories')
     : (languageNames[selectedLanguage] || selectedLanguage.toUpperCase())
 
+  const selectedCountryLabel = selectedCountry === 'all'
+    ? 'All Countries'
+    : selectedCountry
+
+  // Only show country filter if there are countries available
+  const showCountryFilter = availableCountries.length > 0
+
   return (
-    <div className="flex items-center gap-1 px-1 py-1.5 border-b border-border/40 bg-muted/10 shrink-0">
-      <Globe className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+    <div className="flex items-center gap-2 px-1 py-1.5 border-b border-border/40 bg-muted/10 shrink-0">
+      {/* Language filter */}
+      <div className="flex items-center gap-1 flex-1 min-w-0">
+        <Globe className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
 
       {/* Desktop/Tablet landscape: Popover button */}
       <div className="hidden md:block relative" ref={popoverRef}>
@@ -257,6 +275,51 @@ export function LanguageFilter() {
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
+      </div>
+
+      {/* Country filter - only show if countries are available */}
+      {showCountryFilter && (
+        <div className="flex items-center gap-1 shrink-0">
+          <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <div className="hidden md:block relative" ref={countryPopoverRef}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-6 text-[11px] px-3 gap-1"
+              onClick={() => setIsCountryOpen(!isCountryOpen)}
+            >
+              {selectedCountryLabel}
+              <ChevronRight className={cn("h-3 w-3 transition-transform", isCountryOpen && "rotate-90")} />
+            </Button>
+
+            {isCountryOpen && (
+              <div className="absolute top-full right-0 mt-1 z-50 bg-popover border rounded-lg shadow-lg p-2 min-w-[200px] max-w-[300px]">
+                <div className="flex flex-wrap gap-1">
+                  <Button
+                    variant={selectedCountry === 'all' ? 'default' : 'outline'}
+                    size="sm"
+                    className="h-7 text-xs px-3"
+                    onClick={() => { setCountry('all'); setIsCountryOpen(false) }}
+                  >
+                    All Countries
+                  </Button>
+                  {availableCountries.map((country) => (
+                    <Button
+                      key={country}
+                      variant={selectedCountry === country ? 'default' : 'outline'}
+                      size="sm"
+                      className="h-7 text-xs px-3"
+                      onClick={() => { setCountry(country); setIsCountryOpen(false) }}
+                    >
+                      {country}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

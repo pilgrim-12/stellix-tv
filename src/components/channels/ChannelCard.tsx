@@ -35,6 +35,7 @@ export const ChannelCard = memo(function ChannelCard({ channel }: ChannelCardPro
 
   const categoryName = getCategoryName(channel.group)
   const langName = channel.language ? (languageNames[channel.language] || channel.language.toUpperCase()) : null
+  const countryName = channel.country || null
 
   return (
     <div
@@ -82,6 +83,12 @@ export const ChannelCard = memo(function ChannelCard({ channel }: ChannelCardPro
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
               {categoryName}
             </span>
+            {/* Country badge */}
+            {countryName && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-400">
+                {countryName}
+              </span>
+            )}
             {/* Language badge */}
             {langName && (
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">

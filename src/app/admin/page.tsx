@@ -232,6 +232,7 @@ export default function AdminPage() {
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null)
   const [updatingLanguageId, setUpdatingLanguageId] = useState<string | null>(null)
   const [updatingCategoryId, setUpdatingCategoryId] = useState<string | null>(null)
+  const [updatingCountryId, setUpdatingCountryId] = useState<string | null>(null)
 
   // Player state
   const [selectedChannel, setSelectedChannel] = useState<CuratedChannel | null>(null)
@@ -442,6 +443,24 @@ export default function AdminPage() {
       console.error('Error updating category:', error)
     } finally {
       setUpdatingCategoryId(null)
+    }
+  }
+
+  // Update channel country
+  const handleUpdateCountry = async (channelId: string, newCountry: string) => {
+    setUpdatingCountryId(channelId)
+    try {
+      await updateCuratedChannel(channelId, { country: newCountry || null })
+      setChannels((prev) =>
+        prev.map((ch) => (ch.id === channelId ? { ...ch, country: newCountry || null } : ch))
+      )
+      if (selectedChannel?.id === channelId) {
+        setSelectedChannel({ ...selectedChannel, country: newCountry || null })
+      }
+    } catch (error) {
+      console.error('Error updating country:', error)
+    } finally {
+      setUpdatingCountryId(null)
     }
   }
 
@@ -949,6 +968,38 @@ export default function AdminPage() {
                           </option>
                         ))}
                       </select>
+                    </div>
+
+                    {/* Country input */}
+                    <div className="flex items-center gap-2">
+                      {updatingCountryId === selectedChannel.id ? (
+                        <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />
+                      ) : (
+                        <Globe className="h-4 w-4 text-sky-400" />
+                      )}
+                      <Input
+                        className="flex-1 h-8 text-sm"
+                        placeholder="Country (e.g., USA, Russia, Spain)"
+                        value={selectedChannel.country || ''}
+                        disabled={updatingCountryId === selectedChannel.id}
+                        onChange={(e) => {
+                          // Update local state immediately
+                          setSelectedChannel({ ...selectedChannel, country: e.target.value || null })
+                        }}
+                        onBlur={(e) => {
+                          // Save to Firebase on blur
+                          const newCountry = e.target.value.trim()
+                          const oldCountry = channels.find(ch => ch.id === selectedChannel.id)?.country || ''
+                          if (newCountry !== oldCountry) {
+                            handleUpdateCountry(selectedChannel.id, newCountry)
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.currentTarget.blur()
+                          }
+                        }}
+                      />
                     </div>
 
                     {/* Delete button */}

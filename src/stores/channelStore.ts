@@ -19,6 +19,7 @@ interface ChannelState {
   currentChannel: Channel | null;
   selectedCategory: ChannelCategory;
   selectedLanguage: string; // 'all' or language code
+  selectedCountry: string; // 'all' or country name
   searchQuery: string;
   favorites: string[];
   showOnlyFavorites: boolean;
@@ -39,6 +40,7 @@ interface ChannelState {
   setLanguage: (language: string) => void;
   setLanguageAuto: (language: string) => void; // Set language without saving as manual choice
   initLanguageFromGeo: () => Promise<void>; // Initialize language from geo-detection
+  setCountry: (country: string) => void;
   setSearchQuery: (query: string) => void;
   toggleFavorite: (channelId: string, userId?: string) => void;
   setShowOnlyFavorites: (show: boolean, userId?: string) => void;
@@ -57,6 +59,7 @@ interface ChannelState {
   // Computed
   getFilteredChannels: () => Channel[];
   getAvailableLanguages: () => string[];
+  getAvailableCountries: () => string[];
   getAllChannelsWithStatus: () => Channel[];
 }
 
@@ -66,6 +69,7 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
   currentChannel: null,
   selectedCategory: 'all',
   selectedLanguage: 'all',
+  selectedCountry: 'all',
   searchQuery: '',
   favorites: [],
   showOnlyFavorites: false,
@@ -237,6 +241,13 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
     }
   },
 
+  setCountry: (country) => {
+    set({ selectedCountry: country });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('stellix-selected-country', country);
+    }
+  },
+
   setSearchQuery: (query) => set({ searchQuery: query }),
 
   toggleFavorite: (channelId, userId) => {
@@ -374,6 +385,7 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
       // Note: Language is handled by initLanguageFromGeo() which respects manual vs auto preferences
       // We still load it here as a fallback before geo-detection completes
       const savedLanguage = localStorage.getItem('stellix-selected-language');
+      const savedCountry = localStorage.getItem('stellix-selected-country');
 
       const updates: Partial<ChannelState> = {};
       if (savedCategory) {
@@ -382,6 +394,9 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
       if (savedLanguage) {
         updates.selectedLanguage = savedLanguage;
       }
+      if (savedCountry) {
+        updates.selectedCountry = savedCountry;
+      }
       if (Object.keys(updates).length > 0) {
         set(updates);
       }
@@ -389,7 +404,7 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
   },
 
   getFilteredChannels: () => {
-    const { channels, selectedCategory, selectedLanguage, searchQuery, offlineChannels, disabledChannels, showOnlyFavorites, favorites } = get();
+    const { channels, selectedCategory, selectedLanguage, selectedCountry, searchQuery, offlineChannels, disabledChannels, showOnlyFavorites, favorites } = get();
 
     // First, deduplicate by URL (keep only first occurrence or primary)
     // Store both channel and its index for O(1) replacement
@@ -431,6 +446,7 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
       // Apply filters
       if (selectedCategory !== 'all' && channel.group.toLowerCase() !== selectedCategory) continue;
       if (selectedLanguage !== 'all' && channel.language !== selectedLanguage) continue;
+      if (selectedCountry !== 'all' && channel.country !== selectedCountry) continue;
       if (searchLower && !channel.name.toLowerCase().includes(searchLower)) continue;
       if (showOnlyFavorites && !favoritesSet.has(channel.id)) continue;
 
@@ -456,6 +472,15 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
       if (ch.language) languages.add(ch.language);
     });
     return Array.from(languages).sort();
+  },
+
+  getAvailableCountries: () => {
+    const { channels } = get();
+    const countries = new Set<string>();
+    channels.forEach((ch) => {
+      if (ch.country) countries.add(ch.country);
+    });
+    return Array.from(countries).sort();
   },
 
   getAllChannelsWithStatus: () => {
