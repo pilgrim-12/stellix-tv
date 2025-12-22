@@ -214,7 +214,7 @@ export function LanguageFilter() {
         </Button>
 
         {isOpen && (
-          <div className="absolute top-full left-0 mt-1 z-50 bg-popover border rounded-lg shadow-lg p-2 min-w-[280px] max-w-[400px]">
+          <div className="absolute top-full left-0 mt-1 z-50 bg-popover border rounded-lg shadow-lg p-2 min-w-[280px] max-w-[400px] max-h-[60vh] overflow-y-auto">
             <div className="flex flex-wrap gap-1">
               <Button
                 variant={selectedLanguage === 'all' ? 'default' : 'outline'}
@@ -308,7 +308,7 @@ export function LanguageFilter() {
             </Button>
 
             {isCountryOpen && (
-              <div className="absolute top-full right-0 mt-1 z-50 bg-popover border rounded-lg shadow-lg p-2 min-w-[200px] max-w-[300px]">
+              <div className="absolute top-full right-0 mt-1 z-50 bg-popover border rounded-lg shadow-lg p-2 min-w-[200px] max-w-[300px] max-h-[60vh] overflow-y-auto">
                 <div className="flex flex-wrap gap-1">
                   <Button
                     variant={selectedCountry === 'all' ? 'default' : 'outline'}
