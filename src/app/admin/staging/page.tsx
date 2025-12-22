@@ -26,6 +26,7 @@ import {
   Merge,
   FolderOpen,
   Edit3,
+  MapPin,
 } from 'lucide-react'
 import {
   getStagingPlaylistsList,
@@ -214,7 +215,7 @@ export default function StagingPage() {
   }
 
   // Update channel field
-  const handleUpdateChannel = async (field: 'name' | 'language' | 'group', value: string) => {
+  const handleUpdateChannel = async (field: 'name' | 'language' | 'group' | 'country', value: string) => {
     if (!currentPlaylist || !selectedChannel) return
 
     setSavingField(field)
@@ -651,6 +652,34 @@ export default function StagingPage() {
                           ))}
                         </select>
                       </div>
+
+                      {/* Country input */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground w-16">Country:</span>
+                        {savingField === 'country' ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        ) : (
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                        )}
+                        <Input
+                          className="flex-1 h-8 text-sm"
+                          placeholder="e.g. Russia, USA, Germany..."
+                          value={selectedChannel.country || ''}
+                          disabled={savingField === 'country'}
+                          onChange={(e) => setSelectedChannel({ ...selectedChannel, country: e.target.value || null })}
+                          onBlur={(e) => {
+                            const oldCountry = currentPlaylist?.channels.find(ch => ch.id === selectedChannel.id)?.country || ''
+                            if (e.target.value !== oldCountry) {
+                              handleUpdateChannel('country', e.target.value)
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleUpdateChannel('country', (e.target as HTMLInputElement).value)
+                            }
+                          }}
+                        />
+                      </div>
                     </div>
                   )}
                 </CardContent>
@@ -763,6 +792,7 @@ export default function StagingPage() {
                           <p className="text-xs text-muted-foreground truncate">
                             {categoryNames[channel.group] || channel.group}
                             {channel.language && ` • ${languageNames[channel.language] || channel.language}`}
+                            {channel.country && <span className="text-sky-400"> • {channel.country}</span>}
                           </p>
                         </div>
 

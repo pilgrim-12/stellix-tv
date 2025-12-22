@@ -253,12 +253,12 @@ export async function updateStagingChannelStatus(
 }
 
 /**
- * Update channel data (name, language, group) in staging playlist
+ * Update channel data (name, language, group, country) in staging playlist
  */
 export async function updateStagingChannel(
   playlistId: string,
   channelId: string,
-  updates: Partial<Pick<StagingChannel, 'name' | 'language' | 'group'>>
+  updates: Partial<Pick<StagingChannel, 'name' | 'language' | 'group' | 'country'>>
 ): Promise<void> {
   try {
     const playlist = await getStagingPlaylist(playlistId)
@@ -280,6 +280,9 @@ export async function updateStagingChannel(
     }
     if (updates.group !== undefined) {
       playlist.channels[channelIndex].group = updates.group
+    }
+    if (updates.country !== undefined) {
+      playlist.channels[channelIndex].country = updates.country
     }
 
     // Save
