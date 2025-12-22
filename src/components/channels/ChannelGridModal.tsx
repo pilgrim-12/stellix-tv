@@ -236,6 +236,46 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
               </div>
             )}
           </div>
+
+          {/* Countries - collapsible */}
+          {availableCountries.length > 0 && (
+            <div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs gap-1.5 px-2"
+                onClick={() => setShowCountries(!showCountries)}
+              >
+                <MapPin className="h-3.5 w-3.5" />
+                <span>Country: {selectedCountry === 'all' ? 'All' : selectedCountry}</span>
+                {showCountries ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+              </Button>
+
+              {showCountries && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  <Button
+                    variant={selectedCountry === 'all' ? 'default' : 'outline'}
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => { setCountry('all'); setShowCountries(false) }}
+                  >
+                    All Countries
+                  </Button>
+                  {availableCountries.sort().map((country) => (
+                    <Button
+                      key={country}
+                      variant={selectedCountry === country ? 'default' : 'outline'}
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => { setCountry(country); setShowCountries(false) }}
+                    >
+                      {country}
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Channel grid */}
@@ -283,6 +323,13 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
                     <p className="text-[10px] font-medium text-center line-clamp-2 leading-tight w-full">
                       {channel.name}
                     </p>
+
+                    {/* Country badge */}
+                    {channel.country && (
+                      <p className="text-[8px] text-center text-sky-400 truncate w-full">
+                        {channel.country}
+                      </p>
+                    )}
 
                     {/* Favorite star */}
                     {isFavorite && (

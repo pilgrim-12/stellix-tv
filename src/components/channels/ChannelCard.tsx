@@ -77,21 +77,21 @@ export const ChannelCard = memo(function ChannelCard({ channel }: ChannelCardPro
             {isOffline && <WifiOff className="h-3 w-3 text-red-400 shrink-0" />}
           </div>
 
-          {/* Badges row */}
-          <div className="flex items-center gap-1 mt-1 flex-wrap">
+          {/* Badges row - no wrap, overflow hidden */}
+          <div className="flex items-center gap-1 mt-1 overflow-hidden">
             {/* Category badge */}
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
               {categoryName}
             </span>
             {/* Country badge */}
             {countryName && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-400">
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-400 shrink-0">
                 {countryName}
               </span>
             )}
             {/* Language badge */}
             {langName && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
                 {langName}
               </span>
             )}
@@ -100,7 +100,7 @@ export const ChannelCard = memo(function ChannelCard({ channel }: ChannelCardPro
               <span
                 key={label}
                 className={cn(
-                  'text-[10px] px-1.5 py-0.5 rounded font-medium',
+                  'text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0',
                   labelColors[label] || 'bg-muted text-muted-foreground'
                 )}
               >
