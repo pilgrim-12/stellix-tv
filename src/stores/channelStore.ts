@@ -205,9 +205,11 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
     }
   },
   setLanguage: (language) => {
-    set({ selectedLanguage: language });
+    // Reset country filter when changing language to avoid empty results
+    set({ selectedLanguage: language, selectedCountry: 'all' });
     if (typeof window !== 'undefined') {
       localStorage.setItem('stellix-selected-language', language);
+      localStorage.setItem('stellix-selected-country', 'all');
       // Save as manual choice to prevent auto-detection override
       saveManualLanguageChoice(language);
     }
@@ -245,9 +247,11 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
   },
 
   setCountry: (country) => {
-    set({ selectedCountry: country });
+    // Reset language filter when changing country to avoid empty results
+    set({ selectedCountry: country, selectedLanguage: 'all' });
     if (typeof window !== 'undefined') {
       localStorage.setItem('stellix-selected-country', country);
+      localStorage.setItem('stellix-selected-language', 'all');
     }
   },
 
