@@ -68,6 +68,10 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
   const languageCounts = getLanguageCounts()
   const countryCounts = getCountryCounts()
   const categoryCounts = getCategoryCounts()
+  // Sum of counts = filtered totals
+  const languageTotal = Object.values(languageCounts).reduce((sum, count) => sum + count, 0)
+  const countryTotal = Object.values(countryCounts).reduce((sum, count) => sum + count, 0)
+  const categoryTotal = Object.values(categoryCounts).reduce((sum, count) => sum + count, 0)
 
   // Sort languages
   const sortedLanguages = [...availableLanguages].sort((a, b) => {
@@ -191,7 +195,7 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
             {showCategories && (
               <div className="flex flex-wrap gap-1.5 mt-2 max-h-[200px] overflow-y-auto">
                 {channelCategories.map((cat) => {
-                  const count = cat.id === 'all' ? channels.length : (categoryCounts[cat.id] || 0)
+                  const count = cat.id === 'all' ? categoryTotal : (categoryCounts[cat.id] || 0)
                   return (
                     <Button
                       key={cat.id}
@@ -229,7 +233,7 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
                   className="h-7 text-xs"
                   onClick={() => { setLanguage('all'); setShowLanguages(false) }}
                 >
-                  {t('allLanguages')} <span className="text-muted-foreground ml-1">({channels.length})</span>
+                  {t('allLanguages')} <span className="text-muted-foreground ml-1">({languageTotal})</span>
                 </Button>
                 {sortedLanguages.map((lang) => (
                   <Button
@@ -268,7 +272,7 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
                     className="h-7 text-xs"
                     onClick={() => { setCountry('all'); setShowCountries(false) }}
                   >
-                    All Countries <span className="text-muted-foreground ml-1">({channels.length})</span>
+                    All Countries <span className="text-muted-foreground ml-1">({countryTotal})</span>
                   </Button>
                   {availableCountries.sort().map((country) => (
                     <Button

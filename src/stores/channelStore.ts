@@ -186,16 +186,30 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
     }
   },
   setCurrentChannel: (channel, userId) => {
-    set({ currentChannel: channel });
+    if (channel) {
+      // Update filters to match the selected channel
+      const updates: Partial<ChannelState> = {
+        currentChannel: channel,
+        selectedCategory: (channel.group?.toLowerCase() || 'all') as ChannelCategory,
+        selectedLanguage: channel.language || 'all',
+        selectedCountry: channel.country || 'all',
+      };
+      set(updates);
 
-    // Save last channel to localStorage
-    if (typeof window !== 'undefined' && channel) {
-      localStorage.setItem('stellix-last-channel', channel.id);
-    }
+      // Save to localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('stellix-last-channel', channel.id);
+        localStorage.setItem('stellix-selected-category', updates.selectedCategory as string);
+        localStorage.setItem('stellix-selected-language', updates.selectedLanguage as string);
+        localStorage.setItem('stellix-selected-country', updates.selectedCountry as string);
+      }
 
-    // Track watch history in Firebase if user is logged in
-    if (channel && userId) {
-      addWatchHistory(userId, channel.id, channel.name);
+      // Track watch history in Firebase if user is logged in
+      if (userId) {
+        addWatchHistory(userId, channel.id, channel.name);
+      }
+    } else {
+      set({ currentChannel: null });
     }
   },
   setCategory: (category) => {
@@ -205,11 +219,9 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
     }
   },
   setLanguage: (language) => {
-    // Reset country filter when changing language to avoid empty results
-    set({ selectedLanguage: language, selectedCountry: 'all' });
+    set({ selectedLanguage: language });
     if (typeof window !== 'undefined') {
       localStorage.setItem('stellix-selected-language', language);
-      localStorage.setItem('stellix-selected-country', 'all');
       // Save as manual choice to prevent auto-detection override
       saveManualLanguageChoice(language);
     }
@@ -247,11 +259,9 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
   },
 
   setCountry: (country) => {
-    // Reset language filter when changing country to avoid empty results
-    set({ selectedCountry: country, selectedLanguage: 'all' });
+    set({ selectedCountry: country });
     if (typeof window !== 'undefined') {
       localStorage.setItem('stellix-selected-country', country);
-      localStorage.setItem('stellix-selected-language', 'all');
     }
   },
 
@@ -490,11 +500,15 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
     return Array.from(countries).sort();
   },
 
+  // Smart counts - apply other filters but NOT the filter being counted
   getLanguageCounts: () => {
-    const { channels, disabledChannels } = get();
+    const { channels, disabledChannels, selectedCategory, selectedCountry, showOnlyFavorites, favorites } = get();
     const counts: Record<string, number> = {};
     channels.forEach((ch) => {
       if (disabledChannels.has(ch.id)) return;
+      if (selectedCategory !== 'all' && ch.group.toLowerCase() !== selectedCategory) return;
+      if (selectedCountry !== 'all' && ch.country !== selectedCountry) return;
+      if (showOnlyFavorites && !favorites.includes(ch.id)) return;
       const lang = ch.language || 'unknown';
       counts[lang] = (counts[lang] || 0) + 1;
     });
@@ -502,10 +516,13 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
   },
 
   getCountryCounts: () => {
-    const { channels, disabledChannels } = get();
+    const { channels, disabledChannels, selectedCategory, selectedLanguage, showOnlyFavorites, favorites } = get();
     const counts: Record<string, number> = {};
     channels.forEach((ch) => {
       if (disabledChannels.has(ch.id)) return;
+      if (selectedCategory !== 'all' && ch.group.toLowerCase() !== selectedCategory) return;
+      if (selectedLanguage !== 'all' && ch.language !== selectedLanguage) return;
+      if (showOnlyFavorites && !favorites.includes(ch.id)) return;
       const country = ch.country || 'unknown';
       counts[country] = (counts[country] || 0) + 1;
     });
@@ -513,10 +530,13 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
   },
 
   getCategoryCounts: () => {
-    const { channels, disabledChannels } = get();
+    const { channels, disabledChannels, selectedLanguage, selectedCountry, showOnlyFavorites, favorites } = get();
     const counts: Record<string, number> = {};
     channels.forEach((ch) => {
       if (disabledChannels.has(ch.id)) return;
+      if (selectedLanguage !== 'all' && ch.language !== selectedLanguage) return;
+      if (selectedCountry !== 'all' && ch.country !== selectedCountry) return;
+      if (showOnlyFavorites && !favorites.includes(ch.id)) return;
       const category = ch.group || 'general';
       counts[category] = (counts[category] || 0) + 1;
     });

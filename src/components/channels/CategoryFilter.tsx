@@ -82,18 +82,18 @@ export function CategoryFilter() {
     selectedCategory,
     setCategory,
     getCategoryCounts,
-    channels,
   } = useChannelStore()
   const { getCategoryName } = useSettings()
 
   const categoryCounts = getCategoryCounts()
-  const totalChannels = channels.length
+  // Sum of all category counts = filtered total (with current language/country filters)
+  const filteredTotal = Object.values(categoryCounts).reduce((sum, count) => sum + count, 0)
 
   return (
     <div className="border-b border-border/40 bg-muted/20 shrink-0 px-2 py-1.5">
       <Carousel>
         {channelCategories.map((category) => {
-          const count = category.id === 'all' ? totalChannels : (categoryCounts[category.id] || 0)
+          const count = category.id === 'all' ? filteredTotal : (categoryCounts[category.id] || 0)
           return (
             <Button
               key={category.id}
@@ -133,7 +133,6 @@ export function LanguageFilter() {
     getAvailableCountries,
     getLanguageCounts,
     getCountryCounts,
-    channels,
   } = useChannelStore()
   const { t } = useSettings()
 
@@ -147,7 +146,9 @@ export function LanguageFilter() {
   const availableCountries = getAvailableCountries()
   const languageCounts = getLanguageCounts()
   const countryCounts = getCountryCounts()
-  const totalChannels = channels.length
+  // Sum of counts = filtered total
+  const languageTotal = Object.values(languageCounts).reduce((sum, count) => sum + count, 0)
+  const countryTotal = Object.values(countryCounts).reduce((sum, count) => sum + count, 0)
 
   // Сортировка языков по заданному порядку
   const sortedLanguages = [...availableLanguages].sort((a, b) => {
@@ -222,7 +223,7 @@ export function LanguageFilter() {
                 className="h-7 text-xs px-3"
                 onClick={() => { setLanguage('all'); setIsOpen(false) }}
               >
-                {t('allCategories')} <span className="text-muted-foreground ml-1">({totalChannels})</span>
+                {t('allCategories')} <span className="text-muted-foreground ml-1">({languageTotal})</span>
               </Button>
               {sortedLanguages.map((lang) => (
                 <Button
@@ -316,7 +317,7 @@ export function LanguageFilter() {
                     className="h-7 text-xs px-3"
                     onClick={() => { setCountry('all'); setIsCountryOpen(false) }}
                   >
-                    All Countries <span className="text-muted-foreground ml-1">({totalChannels})</span>
+                    All Countries <span className="text-muted-foreground ml-1">({countryTotal})</span>
                   </Button>
                   {availableCountries.map((country) => (
                     <Button
