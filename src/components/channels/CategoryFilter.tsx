@@ -81,31 +81,40 @@ export function CategoryFilter() {
   const {
     selectedCategory,
     setCategory,
-    selectedLanguage,
-    setLanguage,
-    getAvailableLanguages,
+    getCategoryCounts,
+    channels,
   } = useChannelStore()
   const { getCategoryName } = useSettings()
 
-  const availableLanguages = getAvailableLanguages()
+  const categoryCounts = getCategoryCounts()
+  const totalChannels = channels.length
 
   return (
     <div className="border-b border-border/40 bg-muted/20 shrink-0 px-2 py-1.5">
       <Carousel>
-        {channelCategories.map((category) => (
-          <Button
-            key={category.id}
-            variant={selectedCategory === category.id ? 'default' : 'ghost'}
-            size="sm"
-            className={cn(
-              'h-6 text-[11px] px-2 whitespace-nowrap shrink-0',
-              selectedCategory === category.id && 'bg-primary text-primary-foreground'
-            )}
-            onClick={() => setCategory(category.id as ChannelCategory)}
-          >
-            {getCategoryName(category.id)}
-          </Button>
-        ))}
+        {channelCategories.map((category) => {
+          const count = category.id === 'all' ? totalChannels : (categoryCounts[category.id] || 0)
+          return (
+            <Button
+              key={category.id}
+              variant={selectedCategory === category.id ? 'default' : 'ghost'}
+              size="sm"
+              className={cn(
+                'h-6 text-[11px] px-2 whitespace-nowrap shrink-0 gap-1',
+                selectedCategory === category.id && 'bg-primary text-primary-foreground'
+              )}
+              onClick={() => setCategory(category.id as ChannelCategory)}
+            >
+              {getCategoryName(category.id)}
+              <span className={cn(
+                'text-[10px]',
+                selectedCategory === category.id ? 'opacity-80' : 'text-muted-foreground'
+              )}>
+                ({count})
+              </span>
+            </Button>
+          )
+        })}
       </Carousel>
     </div>
   )
@@ -122,6 +131,9 @@ export function LanguageFilter() {
     selectedCountry,
     setCountry,
     getAvailableCountries,
+    getLanguageCounts,
+    getCountryCounts,
+    channels,
   } = useChannelStore()
   const { t } = useSettings()
 
@@ -133,6 +145,9 @@ export function LanguageFilter() {
 
   const availableLanguages = getAvailableLanguages()
   const availableCountries = getAvailableCountries()
+  const languageCounts = getLanguageCounts()
+  const countryCounts = getCountryCounts()
+  const totalChannels = channels.length
 
   // Сортировка языков по заданному порядку
   const sortedLanguages = [...availableLanguages].sort((a, b) => {
@@ -207,7 +222,7 @@ export function LanguageFilter() {
                 className="h-7 text-xs px-3"
                 onClick={() => { setLanguage('all'); setIsOpen(false) }}
               >
-                {t('allCategories')}
+                {t('allCategories')} <span className="text-muted-foreground ml-1">({totalChannels})</span>
               </Button>
               {sortedLanguages.map((lang) => (
                 <Button
@@ -217,7 +232,7 @@ export function LanguageFilter() {
                   className="h-7 text-xs px-3"
                   onClick={() => { setLanguage(lang); setIsOpen(false) }}
                 >
-                  {languageNames[lang] || lang.toUpperCase()}
+                  {languageNames[lang] || lang.toUpperCase()} <span className="text-muted-foreground ml-1">({languageCounts[lang] || 0})</span>
                 </Button>
               ))}
             </div>
@@ -301,7 +316,7 @@ export function LanguageFilter() {
                     className="h-7 text-xs px-3"
                     onClick={() => { setCountry('all'); setIsCountryOpen(false) }}
                   >
-                    All Countries
+                    All Countries <span className="text-muted-foreground ml-1">({totalChannels})</span>
                   </Button>
                   {availableCountries.map((country) => (
                     <Button
@@ -311,7 +326,7 @@ export function LanguageFilter() {
                       className="h-7 text-xs px-3"
                       onClick={() => { setCountry(country); setIsCountryOpen(false) }}
                     >
-                      {country}
+                      {country} <span className="text-muted-foreground ml-1">({countryCounts[country] || 0})</span>
                     </Button>
                   ))}
                 </div>

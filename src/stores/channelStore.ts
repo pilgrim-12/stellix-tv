@@ -60,6 +60,9 @@ interface ChannelState {
   getFilteredChannels: () => Channel[];
   getAvailableLanguages: () => string[];
   getAvailableCountries: () => string[];
+  getLanguageCounts: () => Record<string, number>;
+  getCountryCounts: () => Record<string, number>;
+  getCategoryCounts: () => Record<string, number>;
   getAllChannelsWithStatus: () => Channel[];
 }
 
@@ -481,6 +484,39 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
       if (ch.country) countries.add(ch.country);
     });
     return Array.from(countries).sort();
+  },
+
+  getLanguageCounts: () => {
+    const { channels, disabledChannels } = get();
+    const counts: Record<string, number> = {};
+    channels.forEach((ch) => {
+      if (disabledChannels.has(ch.id)) return;
+      const lang = ch.language || 'unknown';
+      counts[lang] = (counts[lang] || 0) + 1;
+    });
+    return counts;
+  },
+
+  getCountryCounts: () => {
+    const { channels, disabledChannels } = get();
+    const counts: Record<string, number> = {};
+    channels.forEach((ch) => {
+      if (disabledChannels.has(ch.id)) return;
+      const country = ch.country || 'unknown';
+      counts[country] = (counts[country] || 0) + 1;
+    });
+    return counts;
+  },
+
+  getCategoryCounts: () => {
+    const { channels, disabledChannels } = get();
+    const counts: Record<string, number> = {};
+    channels.forEach((ch) => {
+      if (disabledChannels.has(ch.id)) return;
+      const category = ch.group || 'general';
+      counts[category] = (counts[category] || 0) + 1;
+    });
+    return counts;
   },
 
   getAllChannelsWithStatus: () => {
