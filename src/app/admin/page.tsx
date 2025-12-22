@@ -237,6 +237,7 @@ export default function AdminPage() {
 
   // Status update loading state
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null)
+  const [updatingNameId, setUpdatingNameId] = useState<string | null>(null)
   const [updatingLanguageId, setUpdatingLanguageId] = useState<string | null>(null)
   const [updatingCategoryId, setUpdatingCategoryId] = useState<string | null>(null)
   const [updatingCountryId, setUpdatingCountryId] = useState<string | null>(null)
@@ -414,6 +415,25 @@ export default function AdminPage() {
       console.error('Error deleting channel:', error)
     } finally {
       setDeletingChannelId(null)
+    }
+  }
+
+  // Update channel name
+  const handleUpdateName = async (channelId: string, newName: string) => {
+    if (!newName.trim()) return
+    setUpdatingNameId(channelId)
+    try {
+      await updateCuratedChannel(channelId, { name: newName.trim() })
+      setChannels((prev) =>
+        prev.map((ch) => (ch.id === channelId ? { ...ch, name: newName.trim() } : ch))
+      )
+      if (selectedChannel?.id === channelId) {
+        setSelectedChannel({ ...selectedChannel, name: newName.trim() })
+      }
+    } catch (error) {
+      console.error('Error updating name:', error)
+    } finally {
+      setUpdatingNameId(null)
     }
   }
 
@@ -887,9 +907,34 @@ export default function AdminPage() {
 
                 {selectedChannel && (
                   <div className="mt-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <p className="font-medium truncate">{selectedChannel.name}</p>
-                      <span className={cn('text-[10px] px-2 py-0.5 rounded font-medium', statusColors[selectedChannel.status || 'pending'])}>
+                    {/* Channel name - editable */}
+                    <div className="flex items-center gap-2">
+                      {updatingNameId === selectedChannel.id ? (
+                        <Loader2 className="h-4 w-4 text-muted-foreground animate-spin shrink-0" />
+                      ) : (
+                        <Tv className="h-4 w-4 text-muted-foreground shrink-0" />
+                      )}
+                      <Input
+                        className="flex-1 h-8 text-sm font-medium"
+                        value={selectedChannel.name}
+                        disabled={updatingNameId === selectedChannel.id}
+                        onChange={(e) => {
+                          setSelectedChannel({ ...selectedChannel, name: e.target.value })
+                        }}
+                        onBlur={(e) => {
+                          const newName = e.target.value.trim()
+                          const oldName = channels.find(ch => ch.id === selectedChannel.id)?.name || ''
+                          if (newName && newName !== oldName) {
+                            handleUpdateName(selectedChannel.id, newName)
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.currentTarget.blur()
+                          }
+                        }}
+                      />
+                      <span className={cn('text-[10px] px-2 py-0.5 rounded font-medium shrink-0', statusColors[selectedChannel.status || 'pending'])}>
                         {statusNames[selectedChannel.status || 'pending']}
                       </span>
                     </div>
