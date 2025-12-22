@@ -186,30 +186,16 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
     }
   },
   setCurrentChannel: (channel, userId) => {
-    if (channel) {
-      // Update filters to match the selected channel
-      const updates: Partial<ChannelState> = {
-        currentChannel: channel,
-        selectedCategory: (channel.group?.toLowerCase() || 'all') as ChannelCategory,
-        selectedLanguage: channel.language || 'all',
-        selectedCountry: channel.country || 'all',
-      };
-      set(updates);
+    set({ currentChannel: channel });
 
-      // Save to localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('stellix-last-channel', channel.id);
-        localStorage.setItem('stellix-selected-category', updates.selectedCategory as string);
-        localStorage.setItem('stellix-selected-language', updates.selectedLanguage as string);
-        localStorage.setItem('stellix-selected-country', updates.selectedCountry as string);
-      }
+    // Save last channel to localStorage
+    if (typeof window !== 'undefined' && channel) {
+      localStorage.setItem('stellix-last-channel', channel.id);
+    }
 
-      // Track watch history in Firebase if user is logged in
-      if (userId) {
-        addWatchHistory(userId, channel.id, channel.name);
-      }
-    } else {
-      set({ currentChannel: null });
+    // Track watch history in Firebase if user is logged in
+    if (channel && userId) {
+      addWatchHistory(userId, channel.id, channel.name);
     }
   },
   setCategory: (category) => {
