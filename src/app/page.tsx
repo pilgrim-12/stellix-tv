@@ -81,7 +81,7 @@ export default function Home() {
               </span>
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-500/10 text-blue-500 font-medium">
                 <Zap className="h-4 w-4" />
-                No signup required
+                Free registration
               </span>
             </div>
 
