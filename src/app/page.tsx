@@ -9,10 +9,10 @@ import { getDefaultLanguageFilter } from '@/lib/geoLanguageService'
 // Language data with emoji flags
 const languageData = [
   { code: 'en', name: 'English', flag: '🇬🇧', channels: 444 },
-  { code: 'ru', name: 'Русский', flag: '🇷🇺', channels: 375 },
   { code: 'es', name: 'Español', flag: '🇪🇸', channels: 99 },
   { code: 'fr', name: 'Français', flag: '🇫🇷', channels: 85 },
-  { code: 'pt', name: 'Português', flag: '🇧🇷', channels: 45 },
+  { code: 'it', name: 'Italiano', flag: '🇮🇹', channels: 35 },
+  { code: 'ru', name: 'Русский', flag: '🇷🇺', channels: 375 },
   { code: 'de', name: 'Deutsch', flag: '🇩🇪', channels: 38 },
 ]
 

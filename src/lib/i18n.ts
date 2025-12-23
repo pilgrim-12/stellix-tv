@@ -4,11 +4,11 @@ export const uiLanguages: { code: UILanguage; name: string; nativeName: string }
   { code: 'en', name: 'English', nativeName: 'English' },
   { code: 'es', name: 'Spanish', nativeName: 'Español' },
   { code: 'fr', name: 'French', nativeName: 'Français' },
+  { code: 'it', name: 'Italian', nativeName: 'Italiano' },
   { code: 'ru', name: 'Russian', nativeName: 'Русский' },
   { code: 'de', name: 'German', nativeName: 'Deutsch' },
   { code: 'uk', name: 'Ukrainian', nativeName: 'Українська' },
   { code: 'ka', name: 'Georgian', nativeName: 'ქართული' },
-  { code: 'it', name: 'Italian', nativeName: 'Italiano' },
 ]
 
 export const translations = {
