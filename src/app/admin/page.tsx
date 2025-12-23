@@ -32,6 +32,7 @@ import {
   Copy,
   GripVertical,
   Save,
+  Languages,
 } from 'lucide-react'
 import {
   getAllCuratedChannelsRaw,
@@ -43,6 +44,7 @@ import {
   findDuplicateChannels,
   setPrimaryChannel,
   updateChannelOrder,
+  migrateLanguages,
   CuratedChannel,
   PlaylistSource,
   DuplicateInfo,
@@ -256,6 +258,10 @@ export default function AdminPage() {
   // Firebase Quota Tracking
   const [quotaStats, setQuotaStats] = useState<ReturnType<typeof getStatsSummary> | null>(null)
   const [showQuotaStats, setShowQuotaStats] = useState(false)
+
+  // Language migration state
+  const [isMigrating, setIsMigrating] = useState(false)
+  const [migrationResult, setMigrationResult] = useState<{ updated: number; unchanged: number } | null>(null)
 
   // Duplicates state
   const [duplicates, setDuplicates] = useState<DuplicateInfo[]>([])
@@ -479,6 +485,25 @@ export default function AdminPage() {
       console.error('Error updating country:', error)
     } finally {
       setUpdatingCountryId(null)
+    }
+  }
+
+  // Migrate languages to ISO codes
+  const handleMigrateLanguages = async () => {
+    if (!confirm('Migrate all channel languages to ISO codes? This will update all channels with old language formats.')) return
+
+    setIsMigrating(true)
+    setMigrationResult(null)
+    try {
+      const result = await migrateLanguages()
+      setMigrationResult(result)
+      // Reload data to reflect changes
+      await loadData()
+    } catch (error) {
+      console.error('Error migrating languages:', error)
+      alert('Error migrating languages. Check console for details.')
+    } finally {
+      setIsMigrating(false)
     }
   }
 
@@ -755,6 +780,22 @@ export default function AdminPage() {
         <span>Quota: {quotaStats?.total ?? 0}</span>
       </Button>
 
+      {/* Migrate Languages button */}
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-7 text-xs gap-1.5"
+        onClick={handleMigrateLanguages}
+        disabled={isMigrating}
+      >
+        {isMigrating ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        ) : (
+          <Languages className="h-3.5 w-3.5" />
+        )}
+        <span>Migrate</span>
+      </Button>
+
       <Button variant="outline" size="sm" onClick={loadData} disabled={isLoading}>
         <RefreshCw className={cn('h-4 w-4 mr-2', isLoading && 'animate-spin')} />
         Refresh
@@ -772,19 +813,35 @@ export default function AdminPage() {
         {/* Firebase Quota Stats Panel */}
         {showQuotaStats && quotaStats && (
           <div className="mb-4 p-4 border rounded-lg bg-card">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-3">
               <h4 className="text-sm font-medium">Firebase Quota (today)</h4>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-6 text-xs"
-                onClick={() => {
-                  resetStats()
-                  setQuotaStats(getStatsSummary())
-                }}
-              >
-                Reset
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="h-8 text-sm gap-2 bg-purple-600 hover:bg-purple-700"
+                  onClick={handleMigrateLanguages}
+                  disabled={isMigrating}
+                >
+                  {isMigrating ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Languages className="h-4 w-4" />
+                  )}
+                  Migrate Languages
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 text-xs"
+                  onClick={() => {
+                    resetStats()
+                    setQuotaStats(getStatsSummary())
+                  }}
+                >
+                  Reset
+                </Button>
+              </div>
             </div>
             <div className="grid grid-cols-4 gap-2 text-xs mb-3">
               <div className="bg-muted/50 rounded p-2 text-center">
@@ -831,6 +888,13 @@ export default function AdminPage() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+        {/* Migration result notification */}
+        {migrationResult && (
+          <div className="mb-4 p-3 rounded-lg bg-green-500/10 border border-green-500/30 text-sm">
+            <span className="text-green-500 font-medium">Language migration complete:</span>{' '}
+            {migrationResult.updated} channels updated, {migrationResult.unchanged} unchanged
           </div>
         )}
         {/* Main content: Player + Channels */}
