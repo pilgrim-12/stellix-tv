@@ -1,14 +1,14 @@
 export type UILanguage = 'ru' | 'en' | 'uk' | 'es' | 'it' | 'fr' | 'de' | 'ka'
 
 export const uiLanguages: { code: UILanguage; name: string; nativeName: string }[] = [
-  { code: 'ru', name: 'Russian', nativeName: 'Русский' },
   { code: 'en', name: 'English', nativeName: 'English' },
-  { code: 'uk', name: 'Ukrainian', nativeName: 'Українська' },
   { code: 'es', name: 'Spanish', nativeName: 'Español' },
-  { code: 'it', name: 'Italian', nativeName: 'Italiano' },
   { code: 'fr', name: 'French', nativeName: 'Français' },
+  { code: 'ru', name: 'Russian', nativeName: 'Русский' },
   { code: 'de', name: 'German', nativeName: 'Deutsch' },
+  { code: 'uk', name: 'Ukrainian', nativeName: 'Українська' },
   { code: 'ka', name: 'Georgian', nativeName: 'ქართული' },
+  { code: 'it', name: 'Italian', nativeName: 'Italiano' },
 ]
 
 export const translations = {
@@ -21,6 +21,7 @@ export const translations = {
     signUp: 'Регистрация',
     signOut: 'Выйти',
     favorites: 'Избранное',
+    recent: 'Недавние',
     adminPanel: 'Админ панель',
     settings: 'Настройки',
 
@@ -91,6 +92,7 @@ export const translations = {
     signUp: 'Sign Up',
     signOut: 'Sign Out',
     favorites: 'Favorites',
+    recent: 'Recent',
     adminPanel: 'Admin Panel',
     settings: 'Settings',
 
@@ -161,6 +163,7 @@ export const translations = {
     signUp: 'Реєстрація',
     signOut: 'Вийти',
     favorites: 'Обране',
+    recent: 'Нещодавні',
     adminPanel: 'Адмін панель',
     settings: 'Налаштування',
 
@@ -231,6 +234,7 @@ export const translations = {
     signUp: 'Registrarse',
     signOut: 'Cerrar sesión',
     favorites: 'Favoritos',
+    recent: 'Recientes',
     adminPanel: 'Panel de admin',
     settings: 'Configuración',
 
@@ -301,6 +305,7 @@ export const translations = {
     signUp: 'Registrati',
     signOut: 'Esci',
     favorites: 'Preferiti',
+    recent: 'Recenti',
     adminPanel: 'Pannello admin',
     settings: 'Impostazioni',
 
@@ -371,6 +376,7 @@ export const translations = {
     signUp: 'Inscription',
     signOut: 'Déconnexion',
     favorites: 'Favoris',
+    recent: 'Récents',
     adminPanel: 'Panneau admin',
     settings: 'Paramètres',
 
@@ -441,6 +447,7 @@ export const translations = {
     signUp: 'Registrieren',
     signOut: 'Abmelden',
     favorites: 'Favoriten',
+    recent: 'Zuletzt',
     adminPanel: 'Admin-Panel',
     settings: 'Einstellungen',
 
@@ -511,6 +518,7 @@ export const translations = {
     signUp: 'რეგისტრაცია',
     signOut: 'გასვლა',
     favorites: 'რჩეულები',
+    recent: 'ბოლოს ნანახი',
     adminPanel: 'ადმინ პანელი',
     settings: 'პარამეტრები',
 

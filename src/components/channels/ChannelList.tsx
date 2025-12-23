@@ -9,7 +9,7 @@ import { sampleChannels } from '@/data/channels'
 import { ChannelCard } from './ChannelCard'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Search, Tv, CheckCircle2, XCircle, Loader2, Star } from 'lucide-react'
+import { Search, Tv, CheckCircle2, XCircle, Loader2, Star, History } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Channel } from '@/types'
 
@@ -45,6 +45,7 @@ export function ChannelList() {
   const loadDisabledChannels = useChannelStore((state) => state.loadDisabledChannels)
   const loadCustomPlaylists = useChannelStore((state) => state.loadCustomPlaylists)
   const loadSavedFilters = useChannelStore((state) => state.loadSavedFilters)
+  const loadWatchHistory = useChannelStore((state) => state.loadWatchHistory)
   const initLanguageFromGeo = useChannelStore((state) => state.initLanguageFromGeo)
   const setLanguage = useChannelStore((state) => state.setLanguage)
   const setCategory = useChannelStore((state) => state.setCategory)
@@ -53,12 +54,15 @@ export function ChannelList() {
   const setShowOnlyFavorites = useChannelStore((state) => state.setShowOnlyFavorites)
   const favorites = useChannelStore((state) => state.favorites)
   const currentChannel = useChannelStore((state) => state.currentChannel)
+  const watchHistory = useChannelStore((state) => state.watchHistory)
+  const getRecentChannels = useChannelStore((state) => state.getRecentChannels)
 
   const { user } = useAuthContext()
   const { t } = useSettings()
 
   const [initialized, setInitialized] = useState(false)
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery)
+  const [showRecentChannels, setShowRecentChannels] = useState(false)
   const listRef = useRef<ListImperativeAPI>(null)
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -87,6 +91,7 @@ export function ChannelList() {
       loadDisabledChannels()
       loadCustomPlaylists()
       loadSavedFilters()
+      loadWatchHistory()
 
       // Check URL params for lang/category (from landing page links)
       if (typeof window !== 'undefined') {
@@ -163,7 +168,9 @@ export function ChannelList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const filteredChannels = getFilteredChannels()
+  // Get channels based on current mode
+  const recentChannels = getRecentChannels()
+  const filteredChannels = showRecentChannels ? recentChannels : getFilteredChannels()
 
   // Scroll to current channel when it changes
   useEffect(() => {
@@ -200,10 +207,31 @@ export function ChannelList() {
                   ? 'text-yellow-500 bg-yellow-500/10'
                   : 'text-muted-foreground hover:text-yellow-500'
               )}
-              onClick={() => setShowOnlyFavorites(!showOnlyFavorites, user?.uid)}
+              onClick={() => {
+                if (showRecentChannels) setShowRecentChannels(false)
+                setShowOnlyFavorites(!showOnlyFavorites, user?.uid)
+              }}
             >
               <Star className={cn('h-3 w-3', showOnlyFavorites && 'fill-current')} />
               {favorites.length > 0 && <span>{favorites.length}</span>}
+            </Button>
+            {/* Recent channels toggle button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn(
+                'h-5 px-1.5 text-[10px] gap-1',
+                showRecentChannels
+                  ? 'text-blue-500 bg-blue-500/10'
+                  : 'text-muted-foreground hover:text-blue-500'
+              )}
+              onClick={() => {
+                if (showOnlyFavorites) setShowOnlyFavorites(false, user?.uid)
+                setShowRecentChannels(!showRecentChannels)
+              }}
+            >
+              <History className="h-3 w-3" />
+              {watchHistory.length > 0 && <span>{watchHistory.length}</span>}
             </Button>
           </div>
           {offlineCount > 0 && (

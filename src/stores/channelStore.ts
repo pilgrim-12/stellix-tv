@@ -13,6 +13,12 @@ interface CustomPlaylist {
   enabled: boolean;
 }
 
+interface WatchHistoryItem {
+  channelId: string;
+  channelName: string;
+  watchedAt: number;
+}
+
 interface ChannelState {
   channels: Channel[];
   customPlaylists: CustomPlaylist[];
@@ -22,6 +28,7 @@ interface ChannelState {
   selectedCountry: string; // 'all' or country name
   searchQuery: string;
   favorites: string[];
+  watchHistory: WatchHistoryItem[];
   showOnlyFavorites: boolean;
   isLoading: boolean;
   error: string | null;
@@ -55,6 +62,9 @@ interface ChannelState {
   toggleChannelEnabled: (channelId: string) => void;
   loadDisabledChannels: () => void;
   loadSavedFilters: () => void;
+  loadWatchHistory: () => void;
+  addToWatchHistory: (channel: Channel) => void;
+  getRecentChannels: () => Channel[];
 
   // Computed
   getFilteredChannels: () => Channel[];
@@ -75,6 +85,7 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
   selectedCountry: 'all',
   searchQuery: '',
   favorites: [],
+  watchHistory: [],
   showOnlyFavorites: false,
   isLoading: false,
   error: null,
@@ -188,9 +199,10 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
   setCurrentChannel: (channel, userId) => {
     set({ currentChannel: channel });
 
-    // Save last channel to localStorage
+    // Save last channel to localStorage and add to local watch history
     if (typeof window !== 'undefined' && channel) {
       localStorage.setItem('stellix-last-channel', channel.id);
+      get().addToWatchHistory(channel);
     }
 
     // Track watch history in Firebase if user is logged in
@@ -404,6 +416,50 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
         set(updates);
       }
     }
+  },
+
+  loadWatchHistory: () => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('stellix-watch-history');
+      if (saved) {
+        try {
+          const history = JSON.parse(saved) as WatchHistoryItem[];
+          set({ watchHistory: history });
+        } catch {
+          // Invalid JSON, ignore
+        }
+      }
+    }
+  },
+
+  addToWatchHistory: (channel) => {
+    const { watchHistory } = get();
+    const now = Date.now();
+
+    // Remove if already exists (to move to top)
+    const filtered = watchHistory.filter(h => h.channelId !== channel.id);
+
+    // Add to beginning
+    const newHistory = [
+      { channelId: channel.id, channelName: channel.name, watchedAt: now },
+      ...filtered,
+    ].slice(0, 20); // Keep only last 20
+
+    set({ watchHistory: newHistory });
+
+    // Save to localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('stellix-watch-history', JSON.stringify(newHistory));
+    }
+  },
+
+  getRecentChannels: () => {
+    const { channels, watchHistory } = get();
+    const channelMap = new Map(channels.map(ch => [ch.id, ch]));
+
+    return watchHistory
+      .map(h => channelMap.get(h.channelId))
+      .filter((ch): ch is Channel => ch !== undefined);
   },
 
   getFilteredChannels: () => {
