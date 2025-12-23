@@ -866,3 +866,141 @@ export async function updateChannelOrder(orderedIds: string[]): Promise<void> {
   await saveCuratedChannels(channels)
   console.log('[CuratedChannels] Updated channel order for', orderedIds.length, 'channels')
 }
+
+// ==================== LANGUAGE MIGRATION ====================
+
+/**
+ * Migrate language codes/names to standardized format
+ * Maps old native language names to ISO 639-1 codes
+ */
+export async function migrateLanguages(): Promise<{ updated: number; unchanged: number }> {
+  // Map of old language values to new ISO codes
+  const languageMapping: Record<string, string> = {
+    // Native names to ISO codes
+    'Русский': 'ru',
+    'English': 'en',
+    'Español': 'es',
+    'ქართული': 'ka',
+    'Қазақша': 'kk',
+    'Қazaқша': 'kk',
+    'Հայdelays': 'hy',
+    'Հայերdelays': 'hy',
+    'Azərbaycan': 'az',
+    'Français': 'fr',
+    'Italiano': 'it',
+    'Deutsch': 'de',
+    'Português': 'pt',
+    'العربية': 'ar',
+    'Türkçe': 'tr',
+    'Українська': 'uk',
+    'Polski': 'pl',
+    '中文': 'zh',
+    '日本語': 'ja',
+    '한국어': 'ko',
+    'हिन्दी': 'hi',
+    'Nederlands': 'nl',
+    'Bosanski': 'bs',
+    'Српски': 'sr',
+    'Hrvatski': 'hr',
+    'Shqip': 'sq',
+    'Български': 'bg',
+    'Română': 'ro',
+    'Ελληνικά': 'el',
+    'Čeština': 'cs',
+    'Slovenčina': 'sk',
+    'Magyar': 'hu',
+    'Svenska': 'sv',
+    'Norsk': 'no',
+    'Dansk': 'da',
+    'Suomi': 'fi',
+    'עברית': 'he',
+    'فارسی': 'fa',
+    'Tiếng Việt': 'vi',
+    'ไทย': 'th',
+    'Indonesia': 'id',
+    'Melayu': 'ms',
+    'Català': 'ca',
+    // Common English names to ISO codes
+    'Russian': 'ru',
+    'Spanish': 'es',
+    'Georgian': 'ka',
+    'Kazakh': 'kk',
+    'Armenian': 'hy',
+    'Azerbaijani': 'az',
+    'French': 'fr',
+    'Italian': 'it',
+    'German': 'de',
+    'Portuguese': 'pt',
+    'Arabic': 'ar',
+    'Turkish': 'tr',
+    'Ukrainian': 'uk',
+    'Polish': 'pl',
+    'Chinese': 'zh',
+    'Japanese': 'ja',
+    'Korean': 'ko',
+    'Hindi': 'hi',
+    'Dutch': 'nl',
+    'Bosnian': 'bs',
+    'Serbian': 'sr',
+    'Croatian': 'hr',
+    'Albanian': 'sq',
+    'Bulgarian': 'bg',
+    'Romanian': 'ro',
+    'Greek': 'el',
+    'Czech': 'cs',
+    'Slovak': 'sk',
+    'Hungarian': 'hu',
+    'Swedish': 'sv',
+    'Norwegian': 'no',
+    'Danish': 'da',
+    'Finnish': 'fi',
+    'Hebrew': 'he',
+    'Persian': 'fa',
+    'Vietnamese': 'vi',
+    'Thai': 'th',
+    'Indonesian': 'id',
+    'Malay': 'ms',
+    'Catalan': 'ca',
+  }
+
+  const channels = await getCuratedChannelsRaw()
+  let updated = 0
+  let unchanged = 0
+
+  channels.forEach(ch => {
+    if (!ch.language) {
+      unchanged++
+      return
+    }
+
+    const currentLang = ch.language.trim()
+
+    // Check if it needs mapping
+    if (languageMapping[currentLang]) {
+      ch.language = languageMapping[currentLang]
+      ch.updatedAt = new Date().toISOString()
+      updated++
+    } else if (currentLang.length === 2 && currentLang === currentLang.toLowerCase()) {
+      // Already a valid ISO code
+      unchanged++
+    } else {
+      // Try case-insensitive match
+      const lowerLang = currentLang.toLowerCase()
+      const matchKey = Object.keys(languageMapping).find(k => k.toLowerCase() === lowerLang)
+      if (matchKey) {
+        ch.language = languageMapping[matchKey]
+        ch.updatedAt = new Date().toISOString()
+        updated++
+      } else {
+        unchanged++
+      }
+    }
+  })
+
+  if (updated > 0) {
+    await saveCuratedChannels(channels)
+  }
+
+  console.log(`[CuratedChannels] Language migration: ${updated} updated, ${unchanged} unchanged`)
+  return { updated, unchanged }
+}
