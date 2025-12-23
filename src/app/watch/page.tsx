@@ -111,6 +111,17 @@ function WatchContent() {
         case 'm':
           toggleMute()
           break
+        case 'p':
+          // Toggle Picture-in-Picture
+          const video = document.querySelector('video')
+          if (video) {
+            if (document.pictureInPictureElement) {
+              document.exitPictureInPicture().catch(() => {})
+            } else if (document.pictureInPictureEnabled) {
+              video.requestPictureInPicture().catch(() => {})
+            }
+          }
+          break
         case '+':
         case '=':
           e.preventDefault()
@@ -279,6 +290,10 @@ function WatchContent() {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Volume Down</span>
                     <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px]">-</kbd>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Picture-in-Picture</span>
+                    <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px]">P</kbd>
                   </div>
                   <div className="border-t border-border pt-2 mt-2">
                     <div className="flex justify-between">

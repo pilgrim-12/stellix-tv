@@ -4,7 +4,8 @@ import { useEffect, useRef, useCallback, useState } from 'react'
 import type Hls from 'hls.js'
 import { usePlayerStore, useChannelStore } from '@/stores'
 import { useSettings } from '@/contexts/SettingsContext'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, PictureInPicture2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 // Lazy load HLS.js only when needed
 let HlsModule: typeof Hls | null = null
@@ -22,6 +23,8 @@ export function VideoPlayer() {
   const touchStartX = useRef<number | null>(null)
   const touchStartY = useRef<number | null>(null)
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null)
+  const [isPiPActive, setIsPiPActive] = useState(false)
+  const [isPiPSupported, setIsPiPSupported] = useState(false)
 
   const { currentChannel, markChannelOffline, markChannelOnline, getFilteredChannels, setCurrentChannel } = useChannelStore()
   const { t } = useSettings()
@@ -185,6 +188,41 @@ export function VideoPlayer() {
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
   }, [setFullscreen])
 
+  // Check PiP support and handle PiP events
+  useEffect(() => {
+    setIsPiPSupported('pictureInPictureEnabled' in document && document.pictureInPictureEnabled)
+
+    const video = videoRef.current
+    if (!video) return
+
+    const handleEnterPiP = () => setIsPiPActive(true)
+    const handleLeavePiP = () => setIsPiPActive(false)
+
+    video.addEventListener('enterpictureinpicture', handleEnterPiP)
+    video.addEventListener('leavepictureinpicture', handleLeavePiP)
+
+    return () => {
+      video.removeEventListener('enterpictureinpicture', handleEnterPiP)
+      video.removeEventListener('leavepictureinpicture', handleLeavePiP)
+    }
+  }, [])
+
+  // Toggle Picture-in-Picture
+  const togglePiP = useCallback(async () => {
+    const video = videoRef.current
+    if (!video) return
+
+    try {
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture()
+      } else if (document.pictureInPictureEnabled) {
+        await video.requestPictureInPicture()
+      }
+    } catch (error) {
+      console.error('PiP error:', error)
+    }
+  }, [])
+
   // Video event handlers
   const handlePlay = () => setPlaying(true)
   const handlePause = () => setPlaying(false)
@@ -302,6 +340,19 @@ export function VideoPlayer() {
           onPlay={handlePlay}
           onPause={handlePause}
         />
+
+        {/* PiP button - top right corner */}
+        {isPiPSupported && currentChannel && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className={`absolute top-2 right-2 z-20 h-8 w-8 bg-black/50 hover:bg-black/70 text-white opacity-0 group-hover:opacity-100 transition-opacity ${isPiPActive ? 'bg-primary/50' : ''}`}
+            onClick={togglePiP}
+            title={isPiPActive ? 'Exit Picture-in-Picture' : 'Picture-in-Picture'}
+          >
+            <PictureInPicture2 className="h-4 w-4" />
+          </Button>
+        )}
 
         {/* Swipe indicators - only visible on touch devices */}
         {swipeDirection && (
