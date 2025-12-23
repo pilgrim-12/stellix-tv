@@ -83,6 +83,11 @@ export function VideoPlayer() {
         })
       })
 
+      // Clear error when stream recovers (fragment loaded successfully)
+      hls.on(Hls.Events.FRAG_LOADED, () => {
+        setError(null)
+      })
+
       let retryCount = 0
       const maxRetries = 2
 
