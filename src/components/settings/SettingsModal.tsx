@@ -8,10 +8,16 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Settings, Globe, Check } from 'lucide-react'
-import { useSettings } from '@/contexts/SettingsContext'
+import { Settings, Globe, Check, Sun, Moon, Monitor } from 'lucide-react'
+import { useSettings, Theme } from '@/contexts/SettingsContext'
 import { uiLanguages, UILanguage } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
+
+const themeOptions: { value: Theme; icon: typeof Sun; label: string }[] = [
+  { value: 'light', icon: Sun, label: 'Light' },
+  { value: 'dark', icon: Moon, label: 'Dark' },
+  { value: 'system', icon: Monitor, label: 'System' },
+]
 
 interface SettingsModalProps {
   open: boolean
@@ -19,10 +25,14 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
-  const { uiLanguage, setUILanguage, t } = useSettings()
+  const { uiLanguage, setUILanguage, theme, setTheme, t } = useSettings()
 
   const handleLanguageSelect = (lang: UILanguage) => {
     setUILanguage(lang)
+  }
+
+  const handleThemeSelect = (newTheme: Theme) => {
+    setTheme(newTheme)
   }
 
   return (
@@ -36,6 +46,34 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          {/* Theme */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Sun className="h-4 w-4" />
+              {t('theme')}
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {themeOptions.map((option) => {
+                const Icon = option.icon
+                return (
+                  <button
+                    key={option.value}
+                    onClick={() => handleThemeSelect(option.value)}
+                    className={cn(
+                      'flex flex-col items-center gap-2 px-3 py-3 rounded-lg border transition-all',
+                      theme === option.value
+                        ? 'border-primary bg-primary/10'
+                        : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                    )}
+                  >
+                    <Icon className={cn('h-5 w-5', theme === option.value ? 'text-primary' : 'text-muted-foreground')} />
+                    <span className="text-xs font-medium">{option.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
           {/* Interface Language */}
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-sm font-medium">
