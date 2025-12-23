@@ -9,7 +9,7 @@ import { useChannelStore } from '@/stores'
 import { useSettings } from '@/contexts/SettingsContext'
 import { sampleChannels } from '@/data/channels'
 import { getCurrentProgram, getUpcomingPrograms } from '@/data/programs'
-import { Keyboard } from 'lucide-react'
+import { Keyboard, Share2, Check } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
 
@@ -38,6 +38,7 @@ function WatchContent() {
   const { currentChannel, channels, setCurrentChannel } = useChannelStore()
   const { uiLanguage } = useSettings()
   const [currentTime, setCurrentTime] = useState(new Date())
+  const [shareSuccess, setShareSuccess] = useState(false)
   const locale = localeMap[uiLanguage] || 'ru-RU'
 
   // Update time every minute
@@ -89,6 +90,41 @@ function WatchContent() {
     const upcoming = getUpcomingPrograms(currentChannel.id, 1)
     return upcoming[0]
   }, [currentChannel, currentTime])
+
+  // Share channel
+  const handleShare = async () => {
+    if (!currentChannel) return
+
+    const shareUrl = `${window.location.origin}/watch?channel=${currentChannel.id}`
+    const shareData = {
+      title: `${currentChannel.name} - Stellix TV`,
+      text: `Watch ${currentChannel.name} on Stellix TV`,
+      url: shareUrl,
+    }
+
+    try {
+      // Try native share API first (mobile)
+      if (navigator.share && navigator.canShare?.(shareData)) {
+        await navigator.share(shareData)
+      } else {
+        // Fallback: copy to clipboard
+        await navigator.clipboard.writeText(shareUrl)
+        setShareSuccess(true)
+        setTimeout(() => setShareSuccess(false), 2000)
+      }
+    } catch (error) {
+      // User cancelled or error - try clipboard as fallback
+      if ((error as Error).name !== 'AbortError') {
+        try {
+          await navigator.clipboard.writeText(shareUrl)
+          setShareSuccess(true)
+          setTimeout(() => setShareSuccess(false), 2000)
+        } catch {
+          console.error('Failed to share:', error)
+        }
+      }
+    }
+  }
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -198,11 +234,26 @@ function WatchContent() {
               <VideoPlayer />
               {currentChannel && (
                 <div className="shrink-0 flex items-start gap-3 mobile-landscape:hidden">
-                  <div className="shrink-0">
-                    <h1 className="text-sm font-semibold">{currentChannel.name}</h1>
-                    <p className="text-[10px] text-muted-foreground capitalize">
-                      {currentChannel.group} • {currentChannel.country}
-                    </p>
+                  <div className="shrink-0 flex items-center gap-2">
+                    <div>
+                      <h1 className="text-sm font-semibold">{currentChannel.name}</h1>
+                      <p className="text-[10px] text-muted-foreground capitalize">
+                        {currentChannel.group} • {currentChannel.country}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                      onClick={handleShare}
+                      title={shareSuccess ? 'Link copied!' : 'Share channel'}
+                    >
+                      {shareSuccess ? (
+                        <Check className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <Share2 className="h-4 w-4" />
+                      )}
+                    </Button>
                   </div>
 
                   {/* Current & next program - inline */}
