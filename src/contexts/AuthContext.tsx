@@ -16,6 +16,7 @@ import { useChannelStore } from '@/stores'
 interface AuthContextType {
   user: User | null
   loading: boolean
+  adminLoading: boolean
   error: string | null
   isAdmin: boolean
   login: (email: string, password: string) => Promise<void>
@@ -31,6 +32,7 @@ const AuthContext = createContext<AuthContextType | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [adminLoading, setAdminLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
 
@@ -40,14 +42,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false)
 
       if (user) {
+        // Check admin status first (important for admin page access)
+        setAdminLoading(true)
+        try {
+          const adminStatus = await isUserAdmin(user.uid)
+          setIsAdmin(adminStatus)
+        } finally {
+          setAdminLoading(false)
+        }
+
         // Initialize user in Firestore and load favorites + settings
         await initializeUser(user.uid, user.email || undefined)
         useChannelStore.getState().loadFavoritesFromFirebase(user.uid)
         useChannelStore.getState().loadUserSettings(user.uid)
-
-        // Check admin status
-        const adminStatus = await isUserAdmin(user.uid)
-        setIsAdmin(adminStatus)
 
         // Get and save user IP + country
         try {
@@ -64,6 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } else {
         setIsAdmin(false)
+        setAdminLoading(false)
       }
     })
 
@@ -131,6 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         loading,
+        adminLoading,
         error,
         isAdmin,
         login,

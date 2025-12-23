@@ -31,16 +31,17 @@ const navItems = [
 export function AdminLayout({ children, title, icon, headerActions }: AdminLayoutProps) {
   const router = useRouter()
   const pathname = usePathname()
-  const { isAdmin, loading } = useAuthContext()
+  const { isAdmin, loading, adminLoading } = useAuthContext()
 
-  // Redirect non-admins
+  // Redirect non-admins only after admin status is fully loaded
   useEffect(() => {
-    if (!loading && !isAdmin) {
+    if (!loading && !adminLoading && !isAdmin) {
       router.push('/watch')
     }
-  }, [loading, isAdmin, router])
+  }, [loading, adminLoading, isAdmin, router])
 
-  if (loading) {
+  // Show loading while checking auth or admin status
+  if (loading || adminLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
