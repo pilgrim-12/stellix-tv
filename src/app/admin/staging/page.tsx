@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,7 +8,6 @@ import { parseM3U, convertToAppChannels, fetchM3UPlaylist } from '@/lib/m3uParse
 import {
   Search,
   Tv,
-  ArrowLeft,
   Globe,
   CheckCircle2,
   XCircle,
@@ -41,6 +39,7 @@ import {
   StagingChannelStatus,
 } from '@/lib/stagingPlaylistService'
 import { useAuthContext } from '@/contexts/AuthContext'
+import { AdminLayout } from '@/components/admin/AdminLayout'
 import { cn } from '@/lib/utils'
 import { languageNames, languageOrder, categoryNames, categoryOrder } from '@/types'
 
@@ -59,8 +58,7 @@ const statusNames: Record<StagingChannelStatus, string> = {
 }
 
 export default function StagingPage() {
-  const router = useRouter()
-  const { user, isAdmin, loading } = useAuthContext()
+  const { user } = useAuthContext()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const hlsRef = useRef<{ destroy: () => void } | null>(null)
@@ -106,13 +104,6 @@ export default function StagingPage() {
   const [isMerging, setIsMerging] = useState(false)
   const [mergeResult, setMergeResult] = useState<{ merged: number; skipped: number } | null>(null)
   const [deletingPlaylistId, setDeletingPlaylistId] = useState<string | null>(null)
-
-  // Redirect non-admins
-  useEffect(() => {
-    if (!loading && !isAdmin) {
-      router.push('/watch')
-    }
-  }, [loading, isAdmin, router])
 
   // Load playlists list
   const loadPlaylists = async () => {
@@ -396,45 +387,36 @@ export default function StagingPage() {
     return matchesSearch && matchesStatus
   }) || []
 
+  const headerActions = (
+    <div className="flex items-center gap-2 flex-1 max-w-xl">
+      <Input
+        type="url"
+        placeholder="https://example.com/playlist.m3u"
+        className="h-8 text-sm"
+        value={playlistUrl}
+        onChange={(e) => setPlaylistUrl(e.target.value)}
+        disabled={isImporting}
+      />
+      <Button onClick={handleImportFromUrl} disabled={isImporting || !playlistUrl.trim()} size="sm" className="h-8">
+        {isImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link className="h-4 w-4" />}
+      </Button>
+      <input ref={fileInputRef} type="file" accept=".m3u,.m3u8" className="hidden" onChange={handleFileUpload} disabled={isImporting} />
+      <Button variant="outline" size="sm" className="h-8" onClick={() => fileInputRef.current?.click()} disabled={isImporting}>
+        <Upload className="h-4 w-4" />
+      </Button>
+      <Button variant="outline" size="sm" className="h-8" onClick={loadPlaylists} disabled={isLoadingList}>
+        <RefreshCw className={cn('h-4 w-4', isLoadingList && 'animate-spin')} />
+      </Button>
+    </div>
+  )
+
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
-        <div className="px-4 flex h-12 items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => router.push('/admin')}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex items-center gap-2">
-            <FolderOpen className="h-5 w-5 text-primary" />
-            <h1 className="text-lg font-semibold">Staging</h1>
-          </div>
-
-          {/* Import controls in header */}
-          <div className="flex items-center gap-2 flex-1 max-w-xl">
-            <Input
-              type="url"
-              placeholder="https://example.com/playlist.m3u"
-              className="h-8 text-sm"
-              value={playlistUrl}
-              onChange={(e) => setPlaylistUrl(e.target.value)}
-              disabled={isImporting}
-            />
-            <Button onClick={handleImportFromUrl} disabled={isImporting || !playlistUrl.trim()} size="sm" className="h-8">
-              {isImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link className="h-4 w-4" />}
-            </Button>
-            <input ref={fileInputRef} type="file" accept=".m3u,.m3u8" className="hidden" onChange={handleFileUpload} disabled={isImporting} />
-            <Button variant="outline" size="sm" className="h-8" onClick={() => fileInputRef.current?.click()} disabled={isImporting}>
-              <Upload className="h-4 w-4" />
-            </Button>
-          </div>
-
-          <Button variant="outline" size="sm" className="h-8" onClick={loadPlaylists} disabled={isLoadingList}>
-            <RefreshCw className={cn('h-4 w-4', isLoadingList && 'animate-spin')} />
-          </Button>
-        </div>
-      </header>
-
-      <main className="px-4 py-3">
+    <AdminLayout
+      title="Staging"
+      icon={<FolderOpen className="h-5 w-5 text-primary" />}
+      headerActions={headerActions}
+    >
+      <div className="p-4">
         {/* Import messages */}
         {(importError || importSuccess) && (
           <div className="mb-3">
@@ -910,7 +892,7 @@ export default function StagingPage() {
             </CardContent>
           </Card>
         </div>
-      </main>
-    </div>
+      </div>
+    </AdminLayout>
   )
 }

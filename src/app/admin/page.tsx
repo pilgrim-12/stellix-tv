@@ -15,7 +15,6 @@ import {
 import {
   Search,
   Tv,
-  ArrowLeft,
   Globe,
   CheckCircle2,
   XCircle,
@@ -30,7 +29,6 @@ import {
   Check,
   X,
   Database,
-  FolderOpen,
   Copy,
   GripVertical,
   Save,
@@ -73,6 +71,7 @@ import { ChannelReorderModal } from '@/components/admin/ChannelReorderModal'
 import { getTotalUsersCount } from '@/lib/userService'
 import { getStatsSummary, resetStats } from '@/lib/firebaseQuotaTracker'
 import { useAuthContext } from '@/contexts/AuthContext'
+import { AdminLayout } from '@/components/admin/AdminLayout'
 import { cn } from '@/lib/utils'
 import { languageNames, languageOrder, categoryNames, categoryOrder, ChannelStatus } from '@/types'
 
@@ -217,8 +216,7 @@ function SortableChannelItem({
 }
 
 export default function AdminPage() {
-  const router = useRouter()
-  const { user, isAdmin, loading } = useAuthContext()
+  const { user } = useAuthContext()
   const videoRef = useRef<HTMLVideoElement>(null)
   const hlsRef = useRef<{ destroy: () => void } | null>(null)
 
@@ -298,13 +296,6 @@ export default function AdminPage() {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   )
-
-  // Redirect non-admins
-  useEffect(() => {
-    if (!loading && !isAdmin) {
-      router.push('/watch')
-    }
-  }, [loading, isAdmin, router])
 
   // Load all data from curated_channels (single document = 1 read)
   const loadData = async () => {
@@ -717,91 +708,70 @@ export default function AdminPage() {
     return matchesSearch && matchesStatus && matchesLanguage && matchesPlaylist && matchesCountry
   })
 
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-14 items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => router.push('/watch')}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex items-center gap-2">
-            <Tv className="h-5 w-5 text-primary" />
-            <h1 className="text-lg font-semibold">Channel Management</h1>
-          </div>
-
-          {/* Stats in header */}
-          <div className="flex items-center gap-4 flex-wrap">
-            {/* Channel Stats */}
-            <div className="flex items-center gap-3 text-xs">
-              <div className="flex items-center gap-1">
-                <Tv className="h-3 w-3 text-muted-foreground" />
-                <span className="font-bold">{stats?.total ?? '—'}</span>
-                <span className="text-muted-foreground">channels</span>
-              </div>
-              <div className="flex items-center gap-1 text-green-500">
-                <CheckCircle2 className="h-3 w-3" />
-                <span className="font-bold">{stats?.active ?? '—'}</span>
-              </div>
-              <div className="flex items-center gap-1 text-red-500">
-                <XCircle className="h-3 w-3" />
-                <span className="font-bold">{stats?.broken ?? '—'}</span>
-              </div>
-              <div className="flex items-center gap-1 text-yellow-500">
-                <Clock className="h-3 w-3" />
-                <span className="font-bold">{stats?.pending ?? '—'}</span>
-              </div>
-            </div>
-
-            {/* Users count */}
-            <div className="flex items-center gap-1 text-xs text-purple-500">
-              <Users className="h-3 w-3" />
-              <span className="font-bold">{usersCount ?? '—'}</span>
-              <span className="text-muted-foreground">users</span>
-            </div>
-
-            {/* Database info */}
-            {metadata && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Database className="h-3 w-3" />
-                <span>v{metadata.version}</span>
-                {metadata.updatedAt && (
-                  <span>• {metadata.updatedAt.toLocaleString('en-US')}</span>
-                )}
-              </div>
-            )}
-
-            {/* Firebase Quota Stats toggle */}
-            <Button
-              variant={showQuotaStats ? "secondary" : "ghost"}
-              size="sm"
-              className="h-7 text-xs gap-1.5"
-              onClick={() => setShowQuotaStats(!showQuotaStats)}
-            >
-              <AlertCircle className="h-3.5 w-3.5" />
-              <span>Quota: {quotaStats?.total ?? 0}</span>
-            </Button>
-          </div>
-
-          <div className="ml-auto flex items-center gap-2">
-            <Button variant="default" size="sm" onClick={() => router.push('/admin/staging')}>
-              <FolderOpen className="h-4 w-4 mr-2" />
-              Staging
-            </Button>
-            <Button variant="default" size="sm" onClick={() => router.push('/admin/users')}>
-              <Users className="h-4 w-4 mr-2" />
-              Users
-            </Button>
-            <Button variant="outline" size="sm" onClick={loadData} disabled={isLoading}>
-              <RefreshCw className={cn('h-4 w-4 mr-2', isLoading && 'animate-spin')} />
-              Refresh
-            </Button>
-          </div>
+  const headerActions = (
+    <div className="flex items-center gap-4">
+      {/* Channel Stats */}
+      <div className="flex items-center gap-3 text-xs">
+        <div className="flex items-center gap-1">
+          <Tv className="h-3 w-3 text-muted-foreground" />
+          <span className="font-bold">{stats?.total ?? '—'}</span>
         </div>
+        <div className="flex items-center gap-1 text-green-500">
+          <CheckCircle2 className="h-3 w-3" />
+          <span className="font-bold">{stats?.active ?? '—'}</span>
+        </div>
+        <div className="flex items-center gap-1 text-red-500">
+          <XCircle className="h-3 w-3" />
+          <span className="font-bold">{stats?.broken ?? '—'}</span>
+        </div>
+        <div className="flex items-center gap-1 text-yellow-500">
+          <Clock className="h-3 w-3" />
+          <span className="font-bold">{stats?.pending ?? '—'}</span>
+        </div>
+      </div>
 
+      {/* Users count */}
+      <div className="flex items-center gap-1 text-xs text-purple-500">
+        <Users className="h-3 w-3" />
+        <span className="font-bold">{usersCount ?? '—'}</span>
+      </div>
+
+      {/* Database info */}
+      {metadata && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Database className="h-3 w-3" />
+          <span>v{metadata.version}</span>
+        </div>
+      )}
+
+      {/* Firebase Quota Stats toggle */}
+      <Button
+        variant={showQuotaStats ? "secondary" : "ghost"}
+        size="sm"
+        className="h-7 text-xs gap-1.5"
+        onClick={() => setShowQuotaStats(!showQuotaStats)}
+      >
+        <AlertCircle className="h-3.5 w-3.5" />
+        <span>Quota: {quotaStats?.total ?? 0}</span>
+      </Button>
+
+      <Button variant="outline" size="sm" onClick={loadData} disabled={isLoading}>
+        <RefreshCw className={cn('h-4 w-4 mr-2', isLoading && 'animate-spin')} />
+        Refresh
+      </Button>
+    </div>
+  )
+
+  return (
+    <AdminLayout
+      title="Channel Management"
+      icon={<Tv className="h-5 w-5 text-primary" />}
+      headerActions={headerActions}
+    >
+      <div className="p-4">
         {/* Firebase Quota Stats Panel */}
         {showQuotaStats && quotaStats && (
-          <div className="container border-t py-2">
+          <div className="mb-4 p-4 border rounded-lg bg-card">
             <div className="flex items-center justify-between mb-2">
               <h4 className="text-sm font-medium">Firebase Quota (today)</h4>
               <Button
@@ -863,9 +833,6 @@ export default function AdminPage() {
             )}
           </div>
         )}
-      </header>
-
-      <main className="container py-4">
         {/* Main content: Player + Channels */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left column - Player + Playlists */}
@@ -1404,8 +1371,7 @@ export default function AdminPage() {
             </CardContent>
           </Card>
         </div>
-
-      </main>
+      </div>
 
       {/* Duplicate Management Modal */}
       <DuplicateManagementModal
@@ -1615,6 +1581,6 @@ export default function AdminPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </AdminLayout>
   )
 }

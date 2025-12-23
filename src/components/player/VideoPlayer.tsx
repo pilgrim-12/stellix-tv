@@ -6,6 +6,7 @@ import { usePlayerStore, useChannelStore } from '@/stores'
 import { useSettings } from '@/contexts/SettingsContext'
 import { ChevronLeft, ChevronRight, PictureInPicture2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { startWatchSession, endWatchSession, markSessionError } from '@/lib/channelAnalytics'
 
 // Lazy load HLS.js only when needed
 let HlsModule: typeof Hls | null = null
@@ -97,6 +98,8 @@ export function VideoPlayer() {
       hls.on(Hls.Events.ERROR, (_, data) => {
         if (data.fatal) {
           retryCount++
+          // Mark analytics session as having error
+          markSessionError()
           if (retryCount <= maxRetries) {
             switch (data.type) {
               case Hls.ErrorTypes.NETWORK_ERROR:
@@ -146,16 +149,20 @@ export function VideoPlayer() {
   // Load channel when changed
   useEffect(() => {
     if (currentChannel?.url) {
+      // Start analytics tracking for new channel
+      startWatchSession(currentChannel.id, currentChannel.name)
       initializePlayer(currentChannel.url)
     }
 
     return () => {
+      // End analytics tracking when channel changes or component unmounts
+      endWatchSession(false)
       if (hlsRef.current) {
         hlsRef.current.destroy()
         hlsRef.current = null
       }
     }
-  }, [currentChannel?.url, initializePlayer])
+  }, [currentChannel?.url, currentChannel?.id, currentChannel?.name, initializePlayer])
 
   // Sync play state
   useEffect(() => {

@@ -1,12 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
-  ArrowLeft,
   RefreshCw,
   Loader2,
   Users,
@@ -38,6 +36,7 @@ import {
   WatchHistoryEntry,
 } from '@/lib/userService'
 import { useAuthContext } from '@/contexts/AuthContext'
+import { AdminLayout } from '@/components/admin/AdminLayout'
 import { cn } from '@/lib/utils'
 
 type UserData = Awaited<ReturnType<typeof getAllUsers>>[0]
@@ -45,8 +44,7 @@ type SortField = 'email' | 'totalVisits' | 'favoritesCount' | 'lastVisit' | 'cre
 type SortDirection = 'asc' | 'desc'
 
 export default function UsersPage() {
-  const router = useRouter()
-  const { user, isAdmin, loading } = useAuthContext()
+  const { user } = useAuthContext()
 
   const [allUsers, setAllUsers] = useState<UserData[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -75,13 +73,6 @@ export default function UsersPage() {
     activeToday: 0,
     countries: [] as string[],
   })
-
-  // Redirect non-admins
-  useEffect(() => {
-    if (!loading && !isAdmin) {
-      router.push('/watch')
-    }
-  }, [loading, isAdmin, router])
 
   // Load users
   const loadUsers = async () => {
@@ -280,66 +271,47 @@ export default function UsersPage() {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+  const headerStats = (
+    <div className="flex items-center gap-4 text-xs">
+      <div className="flex items-center gap-1">
+        <Users className="h-3 w-3 text-muted-foreground" />
+        <span className="font-bold">{stats.total}</span>
+        <span className="text-muted-foreground">total</span>
       </div>
-    )
-  }
+      <div className="flex items-center gap-1 text-green-500">
+        <Shield className="h-3 w-3" />
+        <span className="font-bold">{stats.admins}</span>
+        <span className="opacity-70">admins</span>
+      </div>
+      <div className="flex items-center gap-1 text-purple-500">
+        <Heart className="h-3 w-3" />
+        <span className="font-bold">{stats.withFavorites}</span>
+        <span className="opacity-70">with favs</span>
+      </div>
+      <div className="flex items-center gap-1 text-blue-500">
+        <Eye className="h-3 w-3" />
+        <span className="font-bold">{stats.activeToday}</span>
+        <span className="opacity-70">today</span>
+      </div>
+      <div className="flex items-center gap-1 text-orange-500">
+        <Globe className="h-3 w-3" />
+        <span className="font-bold">{stats.countries.length}</span>
+        <span className="opacity-70">countries</span>
+      </div>
+      <Button variant="outline" size="sm" onClick={loadUsers} disabled={isLoading}>
+        <RefreshCw className={cn('h-4 w-4 mr-2', isLoading && 'animate-spin')} />
+        Refresh
+      </Button>
+    </div>
+  )
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-14 items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => router.push('/admin')}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-primary" />
-            <h1 className="text-lg font-semibold">User Management</h1>
-          </div>
-
-          {/* Stats */}
-          <div className="flex items-center gap-4 text-xs">
-            <div className="flex items-center gap-1">
-              <Users className="h-3 w-3 text-muted-foreground" />
-              <span className="font-bold">{stats.total}</span>
-              <span className="text-muted-foreground">total</span>
-            </div>
-            <div className="flex items-center gap-1 text-green-500">
-              <Shield className="h-3 w-3" />
-              <span className="font-bold">{stats.admins}</span>
-              <span className="text-muted-foreground text-green-500/70">admins</span>
-            </div>
-            <div className="flex items-center gap-1 text-purple-500">
-              <Heart className="h-3 w-3" />
-              <span className="font-bold">{stats.withFavorites}</span>
-              <span className="text-muted-foreground text-purple-500/70">with favs</span>
-            </div>
-            <div className="flex items-center gap-1 text-blue-500">
-              <Eye className="h-3 w-3" />
-              <span className="font-bold">{stats.activeToday}</span>
-              <span className="text-muted-foreground text-blue-500/70">today</span>
-            </div>
-            <div className="flex items-center gap-1 text-orange-500">
-              <Globe className="h-3 w-3" />
-              <span className="font-bold">{stats.countries.length}</span>
-              <span className="text-muted-foreground text-orange-500/70">countries</span>
-            </div>
-          </div>
-
-          <div className="ml-auto">
-            <Button variant="outline" size="sm" onClick={loadUsers} disabled={isLoading}>
-              <RefreshCw className={cn('h-4 w-4 mr-2', isLoading && 'animate-spin')} />
-              Refresh
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      <main className="container py-6">
+    <AdminLayout
+      title="User Management"
+      icon={<Users className="h-5 w-5 text-primary" />}
+      headerActions={headerStats}
+    >
+      <div className="p-6">
         <div className="flex gap-6">
           {/* Main content */}
           <div className={cn("flex-1 min-w-0", selectedUserId && "max-w-[calc(100%-400px)]")}>
@@ -757,7 +729,7 @@ export default function UsersPage() {
             </div>
           )}
         </div>
-      </main>
-    </div>
+      </div>
+    </AdminLayout>
   )
 }
