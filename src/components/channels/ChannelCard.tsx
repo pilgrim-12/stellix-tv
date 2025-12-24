@@ -37,7 +37,9 @@ export const ChannelCard = memo(function ChannelCard({ channel }: ChannelCardPro
   const isOffline = channel.isOffline
   const [imgError, setImgError] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
+  const [previewPos, setPreviewPos] = useState({ x: 0, y: 0 })
   const hoverTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const logoRef = useRef<HTMLDivElement>(null)
 
   // Cleanup timer on unmount
   useEffect(() => {
@@ -50,6 +52,11 @@ export const ChannelCard = memo(function ChannelCard({ channel }: ChannelCardPro
 
   const handleMouseEnter = () => {
     if (!hoverPreview || isActive || isOffline) return
+    // Calculate position based on logo element
+    const rect = logoRef.current?.getBoundingClientRect()
+    if (rect) {
+      setPreviewPos({ x: rect.left, y: rect.top })
+    }
     hoverTimerRef.current = setTimeout(() => {
       setShowPreview(true)
     }, HOVER_DELAY)
@@ -81,7 +88,7 @@ export const ChannelCard = memo(function ChannelCard({ channel }: ChannelCardPro
     >
       <div className="flex items-center gap-3">
         {/* Channel logo */}
-        <div className="shrink-0 h-12 w-12 flex items-center justify-center rounded-md bg-black/40 overflow-hidden relative">
+        <div ref={logoRef} className="shrink-0 h-12 w-12 flex items-center justify-center rounded-md bg-black/40 overflow-hidden relative">
           {channel.logo && !imgError ? (
             <img
               src={channel.logo}
@@ -159,10 +166,15 @@ export const ChannelCard = memo(function ChannelCard({ channel }: ChannelCardPro
         </button>
       </div>
 
-      {/* Hover preview popup - inside logo area */}
-      <div className="absolute left-2 top-2 z-20">
-        <ChannelPreview url={channel.url} isVisible={showPreview} />
-      </div>
+      {/* Hover preview popup - fixed position overlay */}
+      {showPreview && (
+        <div
+          className="fixed z-[9999] pointer-events-none"
+          style={{ left: previewPos.x, top: previewPos.y }}
+        >
+          <ChannelPreview url={channel.url} isVisible={showPreview} />
+        </div>
+      )}
     </div>
   )
 })
