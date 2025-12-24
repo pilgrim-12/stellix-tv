@@ -382,7 +382,13 @@ export function VideoPlayer() {
               </button>
               <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.05" value="${video.muted ? 0 : video.volume}">
               <div class="spacer"></div>
-              <button class="btn" id="expandBtn" title="Back to browser">
+              <button class="btn" id="refreshBtn" title="Reload stream">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="23 4 23 10 17 10"></polyline>
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                </svg>
+              </button>
+              <button class="btn" id="expandBtn" title="Fullscreen">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="15 3 21 3 21 9"></polyline>
                   <polyline points="9 21 3 21 3 15"></polyline>
@@ -428,6 +434,15 @@ export function VideoPlayer() {
           updateMuteIcon()
         })
 
+        // Refresh button - reload the stream
+        const refreshBtn = pipDoc.getElementById('refreshBtn') as HTMLButtonElement
+        refreshBtn?.addEventListener('click', () => {
+          if (currentChannel?.url) {
+            // Re-initialize the player with the same URL
+            initializePlayer(currentChannel.url)
+          }
+        })
+
         // Expand button - close PiP and go fullscreen in main browser
         const expandBtn = pipDoc.getElementById('expandBtn') as HTMLButtonElement
         expandBtn?.addEventListener('click', () => {
@@ -461,7 +476,7 @@ export function VideoPlayer() {
     } catch (error) {
       console.error('PiP error:', error)
     }
-  }, [isDocPiPSupported, currentChannel, setMuted])
+  }, [isDocPiPSupported, currentChannel, setMuted, initializePlayer])
 
   // Video event handlers
   const handlePlay = () => setPlaying(true)
