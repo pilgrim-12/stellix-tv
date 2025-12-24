@@ -240,6 +240,14 @@ export default function StagingPage() {
   const handleImportFromUrl = async () => {
     if (!playlistUrl.trim()) return
 
+    // Check if playlist with this URL already exists
+    const normalizedUrl = playlistUrl.trim().toLowerCase()
+    const existingPlaylist = playlists.find(p => p.url?.toLowerCase() === normalizedUrl)
+    if (existingPlaylist) {
+      setImportError(`Playlist with this URL already exists: "${existingPlaylist.name}"`)
+      return
+    }
+
     setIsImporting(true)
     setImportError(null)
     setImportSuccess(null)
