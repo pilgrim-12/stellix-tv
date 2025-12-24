@@ -428,10 +428,11 @@ export function VideoPlayer() {
           updateMuteIcon()
         })
 
-        // Expand button - close PiP and return to browser
+        // Expand button - focus main browser window (keeps PiP open)
         const expandBtn = pipDoc.getElementById('expandBtn') as HTMLButtonElement
         expandBtn?.addEventListener('click', () => {
-          pipWindow.close()
+          // Focus the main window - this brings browser to front while keeping PiP
+          window.focus()
         })
 
         setIsPiPActive(true)
