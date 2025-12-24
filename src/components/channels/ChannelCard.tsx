@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, memo } from 'react'
+import { createPortal } from 'react-dom'
 import { Channel, languageNames } from '@/types'
 import { useChannelStore } from '@/stores'
 import { useAuthContext } from '@/contexts/AuthContext'
@@ -38,10 +39,9 @@ export const ChannelCard = memo(function ChannelCard({ channel }: ChannelCardPro
   const [imgError, setImgError] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
   const [previewPos, setPreviewPos] = useState({ x: 0, y: 0 })
-  const hoverTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const logoRef = useRef<HTMLDivElement>(null)
 
-  // Cleanup timer on unmount
   useEffect(() => {
     return () => {
       if (hoverTimerRef.current) {
@@ -52,7 +52,6 @@ export const ChannelCard = memo(function ChannelCard({ channel }: ChannelCardPro
 
   const handleMouseEnter = () => {
     if (!hoverPreview || isActive || isOffline) return
-    // Calculate position based on logo element
     const rect = logoRef.current?.getBoundingClientRect()
     if (rect) {
       setPreviewPos({ x: rect.left, y: rect.top })
@@ -166,14 +165,15 @@ export const ChannelCard = memo(function ChannelCard({ channel }: ChannelCardPro
         </button>
       </div>
 
-      {/* Hover preview popup - fixed position overlay */}
-      {showPreview && (
+      {/* Hover preview - rendered via portal to body */}
+      {showPreview && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed z-[9999] pointer-events-none"
-          style={{ left: previewPos.x, top: previewPos.y }}
+          className="fixed pointer-events-none"
+          style={{ left: previewPos.x, top: previewPos.y, zIndex: 99999 }}
         >
           <ChannelPreview url={channel.url} isVisible={showPreview} />
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
