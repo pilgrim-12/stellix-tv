@@ -96,8 +96,8 @@ export function ChannelPreview({ url, isVisible }: ChannelPreviewProps) {
   if (!isVisible) return null
 
   return (
-    <div className="w-24 h-24 rounded-md overflow-hidden bg-black">
-      {/* Video container - square */}
+    <div className="w-40 h-24 rounded-md overflow-hidden bg-black shadow-xl">
+      {/* Video container - 16:9 */}
       <div className="relative w-full h-full">
         <video
           ref={videoRef}
