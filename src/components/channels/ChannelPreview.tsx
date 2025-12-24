@@ -7,9 +7,10 @@ import { Loader2, XCircle } from 'lucide-react'
 interface ChannelPreviewProps {
   url: string
   isVisible: boolean
+  channelName?: string
 }
 
-export function ChannelPreview({ url, isVisible }: ChannelPreviewProps) {
+export function ChannelPreview({ url, isVisible, channelName }: ChannelPreviewProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const hlsRef = useRef<Hls | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -96,34 +97,45 @@ export function ChannelPreview({ url, isVisible }: ChannelPreviewProps) {
   if (!isVisible) return null
 
   return (
-    <div className="absolute inset-0 z-20 bg-black rounded-lg overflow-hidden">
-      <video
-        ref={videoRef}
-        className="w-full h-full object-cover"
-        muted
-        playsInline
-        onCanPlay={handleCanPlay}
-        onError={handleError}
-      />
+    <div className="w-72 rounded-lg overflow-hidden shadow-2xl border border-border/50 bg-black">
+      {/* Video container - 16:9 aspect ratio */}
+      <div className="relative aspect-video">
+        <video
+          ref={videoRef}
+          className="w-full h-full object-cover"
+          muted
+          playsInline
+          onCanPlay={handleCanPlay}
+          onError={handleError}
+        />
 
-      {/* Loading indicator */}
-      {isLoading && !hasError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-          <Loader2 className="h-6 w-6 animate-spin text-white/70" />
-        </div>
-      )}
+        {/* Loading indicator */}
+        {isLoading && !hasError && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+            <Loader2 className="h-8 w-8 animate-spin text-white/70" />
+          </div>
+        )}
 
-      {/* Error indicator */}
-      {hasError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/80">
-          <XCircle className="h-6 w-6 text-red-500/70" />
-        </div>
-      )}
+        {/* Error indicator */}
+        {hasError && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 gap-2">
+            <XCircle className="h-8 w-8 text-red-500/70" />
+            <span className="text-xs text-red-400">Не удалось загрузить</span>
+          </div>
+        )}
 
-      {/* Live badge */}
-      {!isLoading && !hasError && (
-        <div className="absolute top-1 right-1 px-1.5 py-0.5 bg-red-600 text-white text-[9px] font-semibold rounded">
-          LIVE
+        {/* Live badge */}
+        {!isLoading && !hasError && (
+          <div className="absolute top-2 right-2 px-2 py-1 bg-red-600 text-white text-xs font-semibold rounded">
+            LIVE
+          </div>
+        )}
+      </div>
+
+      {/* Channel name footer */}
+      {channelName && (
+        <div className="px-3 py-2 bg-background/95 border-t border-border/30">
+          <p className="text-sm font-medium truncate">{channelName}</p>
         </div>
       )}
     </div>

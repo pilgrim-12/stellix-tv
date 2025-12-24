@@ -80,10 +80,8 @@ export const ChannelCard = memo(function ChannelCard({ channel }: ChannelCardPro
       onMouseLeave={handleMouseLeave}
     >
       <div className="flex items-center gap-3">
-        {/* Channel logo with preview */}
+        {/* Channel logo */}
         <div className="shrink-0 h-12 w-12 flex items-center justify-center rounded-md bg-black/40 overflow-hidden relative">
-          {/* Preview player */}
-          <ChannelPreview url={channel.url} isVisible={showPreview} />
           {channel.logo && !imgError ? (
             <img
               src={channel.logo}
@@ -160,6 +158,13 @@ export const ChannelCard = memo(function ChannelCard({ channel }: ChannelCardPro
           <Star className={cn('h-4 w-4', isFavorite && 'fill-current')} />
         </button>
       </div>
+
+      {/* Hover preview popup */}
+      {showPreview && (
+        <div className="absolute left-0 top-full mt-2 z-50">
+          <ChannelPreview url={channel.url} isVisible={showPreview} channelName={channel.name} />
+        </div>
+      )}
     </div>
   )
 })
