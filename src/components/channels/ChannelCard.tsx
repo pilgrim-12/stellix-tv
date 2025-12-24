@@ -37,7 +37,9 @@ export const ChannelCard = memo(function ChannelCard({ channel }: ChannelCardPro
   const isOffline = channel.isOffline
   const [imgError, setImgError] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
+  const [previewPos, setPreviewPos] = useState({ x: 0, y: 0 })
   const hoverTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const cardRef = useRef<HTMLDivElement>(null)
 
   // Cleanup timer on unmount
   useEffect(() => {
@@ -50,6 +52,11 @@ export const ChannelCard = memo(function ChannelCard({ channel }: ChannelCardPro
 
   const handleMouseEnter = () => {
     if (!hoverPreview || isActive || isOffline) return
+    const rect = cardRef.current?.getBoundingClientRect()
+    if (rect) {
+      // Position preview to the left of the sidebar
+      setPreviewPos({ x: rect.left - 218, y: rect.top })
+    }
     hoverTimerRef.current = setTimeout(() => {
       setShowPreview(true)
     }, HOVER_DELAY)
@@ -69,6 +76,7 @@ export const ChannelCard = memo(function ChannelCard({ channel }: ChannelCardPro
 
   return (
     <div
+      ref={cardRef}
       className={cn(
         'group relative cursor-pointer rounded-lg p-2 transition-all',
         'hover:bg-muted/60',
@@ -161,8 +169,11 @@ export const ChannelCard = memo(function ChannelCard({ channel }: ChannelCardPro
 
       {/* Hover preview popup */}
       {showPreview && (
-        <div className="absolute left-0 top-full mt-2 z-50">
-          <ChannelPreview url={channel.url} isVisible={showPreview} channelName={channel.name} />
+        <div
+          className="fixed z-[9999]"
+          style={{ left: previewPos.x, top: previewPos.y }}
+        >
+          <ChannelPreview url={channel.url} isVisible={showPreview} />
         </div>
       )}
     </div>

@@ -7,10 +7,9 @@ import { Loader2, XCircle } from 'lucide-react'
 interface ChannelPreviewProps {
   url: string
   isVisible: boolean
-  channelName?: string
 }
 
-export function ChannelPreview({ url, isVisible, channelName }: ChannelPreviewProps) {
+export function ChannelPreview({ url, isVisible }: ChannelPreviewProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const hlsRef = useRef<Hls | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -97,7 +96,7 @@ export function ChannelPreview({ url, isVisible, channelName }: ChannelPreviewPr
   if (!isVisible) return null
 
   return (
-    <div className="w-72 rounded-lg overflow-hidden shadow-2xl border border-border/50 bg-black">
+    <div className="w-52 rounded-lg overflow-hidden shadow-2xl border border-border/50 bg-black">
       {/* Video container - 16:9 aspect ratio */}
       <div className="relative aspect-video">
         <video
@@ -132,12 +131,6 @@ export function ChannelPreview({ url, isVisible, channelName }: ChannelPreviewPr
         )}
       </div>
 
-      {/* Channel name footer */}
-      {channelName && (
-        <div className="px-3 py-2 bg-background/95 border-t border-border/30">
-          <p className="text-sm font-medium truncate">{channelName}</p>
-        </div>
-      )}
     </div>
   )
 }
