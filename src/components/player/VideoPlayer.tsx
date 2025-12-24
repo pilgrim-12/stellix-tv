@@ -8,6 +8,17 @@ import { ChevronLeft, ChevronRight, PictureInPicture2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { startWatchSession, endWatchSession, markSessionError } from '@/lib/channelAnalytics'
 
+// Document PiP types
+interface DocumentPictureInPicture {
+  requestWindow(options?: { width?: number; height?: number }): Promise<Window>
+}
+
+declare global {
+  interface Window {
+    documentPictureInPicture?: DocumentPictureInPicture
+  }
+}
+
 // Lazy load HLS.js only when needed
 let HlsModule: typeof Hls | null = null
 const loadHls = async () => {
@@ -26,6 +37,8 @@ export function VideoPlayer() {
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null)
   const [isPiPActive, setIsPiPActive] = useState(false)
   const [isPiPSupported, setIsPiPSupported] = useState(false)
+  const [isDocPiPSupported, setIsDocPiPSupported] = useState(false)
+  const pipWindowRef = useRef<Window | null>(null)
 
   const { currentChannel, markChannelOffline, markChannelOnline, getFilteredChannels, setCurrentChannel } = useChannelStore()
   const { t } = useSettings()
@@ -198,6 +211,7 @@ export function VideoPlayer() {
   // Check PiP support and handle PiP events
   useEffect(() => {
     setIsPiPSupported('pictureInPictureEnabled' in document && document.pictureInPictureEnabled)
+    setIsDocPiPSupported('documentPictureInPicture' in window)
 
     const video = videoRef.current
     if (!video) return
@@ -214,21 +228,214 @@ export function VideoPlayer() {
     }
   }, [])
 
-  // Toggle Picture-in-Picture
+  // Setup Media Session API for PiP metadata
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return
+
+    const video = videoRef.current
+    if (!video || !currentChannel) return
+
+    // Set media metadata for PiP window
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: currentChannel.name,
+      artist: currentChannel.group || 'Live TV',
+      album: 'Stellix TV',
+      artwork: currentChannel.logo ? [
+        { src: currentChannel.logo, sizes: '96x96', type: 'image/png' },
+        { src: currentChannel.logo, sizes: '256x256', type: 'image/png' },
+      ] : [],
+    })
+
+    // Handle play/pause actions from PiP
+    navigator.mediaSession.setActionHandler('play', () => {
+      video.play()
+      setPlaying(true)
+    })
+
+    navigator.mediaSession.setActionHandler('pause', () => {
+      video.pause()
+      setPlaying(false)
+    })
+
+    return () => {
+      // Cleanup action handlers
+      try {
+        navigator.mediaSession.setActionHandler('play', null)
+        navigator.mediaSession.setActionHandler('pause', null)
+      } catch {
+        // Ignore cleanup errors
+      }
+    }
+  }, [currentChannel, setPlaying])
+
+  // Toggle Picture-in-Picture (with Document PiP for volume control)
   const togglePiP = useCallback(async () => {
     const video = videoRef.current
     if (!video) return
 
     try {
+      // If Document PiP is active, close it
+      if (pipWindowRef.current && !pipWindowRef.current.closed) {
+        pipWindowRef.current.close()
+        pipWindowRef.current = null
+        setIsPiPActive(false)
+        return
+      }
+
+      // If regular PiP is active, exit
       if (document.pictureInPictureElement) {
         await document.exitPictureInPicture()
+        return
+      }
+
+      // Try Document PiP first (supports custom controls with volume slider)
+      if (isDocPiPSupported && window.documentPictureInPicture) {
+        const pipWindow = await window.documentPictureInPicture.requestWindow({
+          width: 400,
+          height: 300,
+        })
+        pipWindowRef.current = pipWindow
+
+        // Copy styles to PiP window
+        const pipDoc = pipWindow.document
+        pipDoc.head.innerHTML = `
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body {
+              background: #000;
+              display: flex;
+              flex-direction: column;
+              height: 100vh;
+              font-family: system-ui, -apple-system, sans-serif;
+            }
+            .video-wrapper { flex: 1; position: relative; overflow: hidden; }
+            video { width: 100%; height: 100%; object-fit: contain; }
+            .controls {
+              position: absolute;
+              bottom: 0;
+              left: 0;
+              right: 0;
+              background: linear-gradient(transparent, rgba(0,0,0,0.8));
+              padding: 12px;
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              opacity: 0;
+              transition: opacity 0.2s;
+            }
+            .video-wrapper:hover .controls { opacity: 1; }
+            .btn {
+              background: rgba(255,255,255,0.2);
+              border: none;
+              color: white;
+              width: 32px;
+              height: 32px;
+              border-radius: 4px;
+              cursor: pointer;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+            .btn:hover { background: rgba(255,255,255,0.3); }
+            .btn svg { width: 18px; height: 18px; }
+            .volume-slider {
+              flex: 1;
+              max-width: 100px;
+              height: 4px;
+              -webkit-appearance: none;
+              appearance: none;
+              background: rgba(255,255,255,0.3);
+              border-radius: 2px;
+              cursor: pointer;
+            }
+            .volume-slider::-webkit-slider-thumb {
+              -webkit-appearance: none;
+              width: 12px;
+              height: 12px;
+              background: white;
+              border-radius: 50%;
+            }
+            .channel-info {
+              color: white;
+              font-size: 12px;
+              padding: 8px 12px;
+              background: rgba(0,0,0,0.5);
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+            }
+          </style>
+        `
+
+        // Create PiP content
+        pipDoc.body.innerHTML = `
+          <div class="channel-info">${currentChannel?.name || 'Stellix TV'}</div>
+          <div class="video-wrapper">
+            <div class="controls">
+              <button class="btn" id="muteBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+                </svg>
+              </button>
+              <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.05" value="${video.muted ? 0 : video.volume}">
+            </div>
+          </div>
+        `
+
+        // Move video to PiP window
+        const wrapper = pipDoc.querySelector('.video-wrapper')
+        const controls = pipDoc.querySelector('.controls')
+        wrapper?.insertBefore(video, controls)
+
+        // Setup volume controls
+        const muteBtn = pipDoc.getElementById('muteBtn') as HTMLButtonElement
+        const volumeSlider = pipDoc.getElementById('volumeSlider') as HTMLInputElement
+
+        const updateMuteIcon = () => {
+          if (muteBtn) {
+            muteBtn.innerHTML = video.muted || video.volume === 0
+              ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>'
+              : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>'
+          }
+        }
+
+        muteBtn?.addEventListener('click', () => {
+          video.muted = !video.muted
+          setMuted(video.muted)
+          if (volumeSlider) volumeSlider.value = video.muted ? '0' : String(video.volume)
+          updateMuteIcon()
+        })
+
+        volumeSlider?.addEventListener('input', (e) => {
+          const val = parseFloat((e.target as HTMLInputElement).value)
+          video.volume = val
+          video.muted = val === 0
+          setMuted(val === 0)
+          usePlayerStore.getState().setVolume(val)
+          updateMuteIcon()
+        })
+
+        setIsPiPActive(true)
+
+        // Handle window close - return video to main page
+        pipWindow.addEventListener('pagehide', () => {
+          const mainWrapper = containerRef.current?.querySelector('.relative')
+          if (mainWrapper && video.parentElement !== mainWrapper) {
+            mainWrapper.insertBefore(video, mainWrapper.firstChild)
+          }
+          pipWindowRef.current = null
+          setIsPiPActive(false)
+        })
       } else if (document.pictureInPictureEnabled) {
+        // Fallback to regular PiP (no volume control)
         await video.requestPictureInPicture()
       }
     } catch (error) {
       console.error('PiP error:', error)
     }
-  }, [])
+  }, [isDocPiPSupported, currentChannel, setMuted])
 
   // Video event handlers
   const handlePlay = () => setPlaying(true)
