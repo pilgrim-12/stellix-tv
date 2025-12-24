@@ -384,9 +384,10 @@ export function VideoPlayer() {
           </div>
         `
 
-        // Move video to PiP window
+        // Move video to PiP window and hide native controls
         const wrapper = pipDoc.querySelector('.video-wrapper')
         const controls = pipDoc.querySelector('.controls')
+        video.removeAttribute('controls') // Hide native browser controls in PiP
         wrapper?.insertBefore(video, controls)
 
         // Setup volume controls
@@ -421,6 +422,7 @@ export function VideoPlayer() {
 
         // Handle window close - return video to main page
         pipWindow.addEventListener('pagehide', () => {
+          video.setAttribute('controls', '') // Restore native controls
           const mainWrapper = containerRef.current?.querySelector('.relative')
           if (mainWrapper && video.parentElement !== mainWrapper) {
             mainWrapper.insertBefore(video, mainWrapper.firstChild)
