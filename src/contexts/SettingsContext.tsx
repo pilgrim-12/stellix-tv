@@ -11,6 +11,8 @@ interface SettingsContextType {
   theme: Theme
   setTheme: (theme: Theme) => void
   resolvedTheme: 'dark' | 'light'
+  hoverPreview: boolean
+  setHoverPreview: (enabled: boolean) => void
   t: (key: TranslationKey, params?: Record<string, string | number>) => string
   getCategoryName: (category: string) => string
 }
@@ -19,6 +21,7 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 
 const STORAGE_KEY = 'stellix-ui-language'
 const THEME_STORAGE_KEY = 'stellix-theme'
+const HOVER_PREVIEW_KEY = 'stellix-hover-preview'
 
 // Helper to get system theme preference
 function getSystemTheme(): 'dark' | 'light' {
@@ -30,6 +33,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [uiLanguage, setUILanguageState] = useState<UILanguage>('ru')
   const [theme, setThemeState] = useState<Theme>('dark')
   const [resolvedTheme, setResolvedTheme] = useState<'dark' | 'light'>('dark')
+  const [hoverPreview, setHoverPreviewState] = useState(false)
   const [mounted, setMounted] = useState(false)
 
   // Apply theme to document
@@ -66,6 +70,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       applyTheme('dark')
     }
 
+    // Load hover preview setting
+    const savedHoverPreview = localStorage.getItem(HOVER_PREVIEW_KEY)
+    if (savedHoverPreview === 'true') {
+      setHoverPreviewState(true)
+    }
+
     setMounted(true)
   }, [])
 
@@ -91,6 +101,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     applyTheme(newTheme)
   }
 
+  const setHoverPreview = (enabled: boolean) => {
+    setHoverPreviewState(enabled)
+    localStorage.setItem(HOVER_PREVIEW_KEY, String(enabled))
+  }
+
   const t = (key: TranslationKey, params?: Record<string, string | number>) => {
     return translate(uiLanguage, key, params)
   }
@@ -108,6 +123,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         theme: 'dark',
         setTheme: () => {},
         resolvedTheme: 'dark',
+        hoverPreview: false,
+        setHoverPreview: () => {},
         t: (key) => translate('ru', key),
         getCategoryName: (cat) => getCatName('ru', cat)
       }}>
@@ -117,7 +134,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <SettingsContext.Provider value={{ uiLanguage, setUILanguage, theme, setTheme, resolvedTheme, t, getCategoryName }}>
+    <SettingsContext.Provider value={{ uiLanguage, setUILanguage, theme, setTheme, resolvedTheme, hoverPreview, setHoverPreview, t, getCategoryName }}>
       {children}
     </SettingsContext.Provider>
   )

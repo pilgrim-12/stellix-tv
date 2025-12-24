@@ -8,7 +8,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Settings, Globe, Check, Sun, Moon, Monitor } from 'lucide-react'
+import { Settings, Globe, Check, Sun, Moon, Monitor, Eye } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
 import { useSettings, Theme } from '@/contexts/SettingsContext'
 import { uiLanguages, UILanguage } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
@@ -25,7 +26,7 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
-  const { uiLanguage, setUILanguage, theme, setTheme, t } = useSettings()
+  const { uiLanguage, setUILanguage, theme, setTheme, hoverPreview, setHoverPreview, t } = useSettings()
 
   const handleLanguageSelect = (lang: UILanguage) => {
     setUILanguage(lang)
@@ -72,6 +73,21 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 )
               })}
             </div>
+          </div>
+
+          {/* Hover Preview */}
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2">
+              <Eye className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">{t('hoverPreview')}</p>
+                <p className="text-xs text-muted-foreground">{t('hoverPreviewDesc')}</p>
+              </div>
+            </div>
+            <Switch
+              checked={hoverPreview}
+              onCheckedChange={setHoverPreview}
+            />
           </div>
 
           {/* Interface Language */}

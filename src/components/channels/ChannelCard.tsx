@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, memo } from 'react'
+import { useState, useRef, useEffect, memo } from 'react'
 import { Channel, languageNames } from '@/types'
 import { useChannelStore } from '@/stores'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { useSettings } from '@/contexts/SettingsContext'
 import { Star, WifiOff, Radio } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ChannelPreview } from './ChannelPreview'
 
 interface ChannelCardProps {
   channel: Channel
@@ -21,17 +22,46 @@ const labelColors: Record<string, string> = {
   Free: 'bg-emerald-500/20 text-emerald-400',
 }
 
+// Hover delay before showing preview (ms)
+const HOVER_DELAY = 400
+
 export const ChannelCard = memo(function ChannelCard({ channel }: ChannelCardProps) {
   const currentChannel = useChannelStore((state) => state.currentChannel)
   const setCurrentChannel = useChannelStore((state) => state.setCurrentChannel)
   const favorites = useChannelStore((state) => state.favorites)
   const toggleFavorite = useChannelStore((state) => state.toggleFavorite)
   const { user } = useAuthContext()
-  const { getCategoryName } = useSettings()
+  const { getCategoryName, hoverPreview } = useSettings()
   const isActive = currentChannel?.id === channel.id
   const isFavorite = favorites.includes(channel.id)
   const isOffline = channel.isOffline
   const [imgError, setImgError] = useState(false)
+  const [showPreview, setShowPreview] = useState(false)
+  const hoverTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (hoverTimerRef.current) {
+        clearTimeout(hoverTimerRef.current)
+      }
+    }
+  }, [])
+
+  const handleMouseEnter = () => {
+    if (!hoverPreview || isActive || isOffline) return
+    hoverTimerRef.current = setTimeout(() => {
+      setShowPreview(true)
+    }, HOVER_DELAY)
+  }
+
+  const handleMouseLeave = () => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current)
+      hoverTimerRef.current = null
+    }
+    setShowPreview(false)
+  }
 
   const categoryName = getCategoryName(channel.group)
   const langName = channel.language ? (languageNames[channel.language] || channel.language.toUpperCase()) : null
@@ -46,10 +76,14 @@ export const ChannelCard = memo(function ChannelCard({ channel }: ChannelCardPro
         isOffline && 'opacity-40'
       )}
       onClick={() => setCurrentChannel(channel, user?.uid)}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       <div className="flex items-center gap-3">
-        {/* Channel logo */}
-        <div className="shrink-0 h-12 w-12 flex items-center justify-center rounded-md bg-black/40 overflow-hidden">
+        {/* Channel logo with preview */}
+        <div className="shrink-0 h-12 w-12 flex items-center justify-center rounded-md bg-black/40 overflow-hidden relative">
+          {/* Preview player */}
+          <ChannelPreview url={channel.url} isVisible={showPreview} />
           {channel.logo && !imgError ? (
             <img
               src={channel.logo}

@@ -71,6 +71,8 @@ export const translations = {
     themeSystem: 'Системная',
     themeLight: 'Светлая',
     themeDark: 'Темная',
+    hoverPreview: 'Превью при наведении',
+    hoverPreviewDesc: 'Показывать превью канала при наведении',
     saveSettings: 'Сохранить',
     close: 'Закрыть',
 
@@ -142,6 +144,8 @@ export const translations = {
     themeSystem: 'System',
     themeLight: 'Light',
     themeDark: 'Dark',
+    hoverPreview: 'Hover Preview',
+    hoverPreviewDesc: 'Show channel preview on hover',
     saveSettings: 'Save',
     close: 'Close',
 
@@ -213,6 +217,8 @@ export const translations = {
     themeSystem: 'Системна',
     themeLight: 'Світла',
     themeDark: 'Темна',
+    hoverPreview: 'Превью при наведенні',
+    hoverPreviewDesc: 'Показувати превью каналу при наведенні',
     saveSettings: 'Зберегти',
     close: 'Закрити',
 
@@ -284,6 +290,8 @@ export const translations = {
     themeSystem: 'Sistema',
     themeLight: 'Claro',
     themeDark: 'Oscuro',
+    hoverPreview: 'Vista previa al pasar',
+    hoverPreviewDesc: 'Mostrar vista previa del canal al pasar el mouse',
     saveSettings: 'Guardar',
     close: 'Cerrar',
 
@@ -355,6 +363,8 @@ export const translations = {
     themeSystem: 'Sistema',
     themeLight: 'Chiaro',
     themeDark: 'Scuro',
+    hoverPreview: 'Anteprima al passaggio',
+    hoverPreviewDesc: 'Mostra anteprima del canale al passaggio del mouse',
     saveSettings: 'Salva',
     close: 'Chiudi',
 
@@ -426,6 +436,8 @@ export const translations = {
     themeSystem: 'Système',
     themeLight: 'Clair',
     themeDark: 'Sombre',
+    hoverPreview: 'Aperçu au survol',
+    hoverPreviewDesc: 'Afficher un aperçu de la chaîne au survol',
     saveSettings: 'Enregistrer',
     close: 'Fermer',
 
@@ -497,6 +509,8 @@ export const translations = {
     themeSystem: 'System',
     themeLight: 'Hell',
     themeDark: 'Dunkel',
+    hoverPreview: 'Vorschau beim Hover',
+    hoverPreviewDesc: 'Kanalvorschau beim Hover anzeigen',
     saveSettings: 'Speichern',
     close: 'Schließen',
 
@@ -568,6 +582,8 @@ export const translations = {
     themeSystem: 'სისტემური',
     themeLight: 'ნათელი',
     themeDark: 'მუქი',
+    hoverPreview: 'გადახედვა დაჰოვერებისას',
+    hoverPreviewDesc: 'არხის გადახედვა დაჰოვერებისას',
     saveSettings: 'შენახვა',
     close: 'დახურვა',
 
