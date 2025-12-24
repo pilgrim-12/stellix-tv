@@ -33,7 +33,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [uiLanguage, setUILanguageState] = useState<UILanguage>('ru')
   const [theme, setThemeState] = useState<Theme>('dark')
   const [resolvedTheme, setResolvedTheme] = useState<'dark' | 'light'>('dark')
-  const [hoverPreview, setHoverPreviewState] = useState(false)
+  const [hoverPreview, setHoverPreviewState] = useState(true)
   const [mounted, setMounted] = useState(false)
 
   // Apply theme to document
@@ -70,10 +70,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       applyTheme('dark')
     }
 
-    // Load hover preview setting
+    // Load hover preview setting (default is true)
     const savedHoverPreview = localStorage.getItem(HOVER_PREVIEW_KEY)
-    if (savedHoverPreview === 'true') {
-      setHoverPreviewState(true)
+    if (savedHoverPreview === 'false') {
+      setHoverPreviewState(false)
     }
 
     setMounted(true)
