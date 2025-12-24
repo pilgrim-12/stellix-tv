@@ -96,9 +96,9 @@ export function ChannelPreview({ url, isVisible }: ChannelPreviewProps) {
   if (!isVisible) return null
 
   return (
-    <div className="w-52 rounded-lg overflow-hidden shadow-2xl border border-border/50 bg-black">
-      {/* Video container - 16:9 aspect ratio */}
-      <div className="relative aspect-video">
+    <div className="w-24 h-24 rounded-md overflow-hidden bg-black">
+      {/* Video container - square */}
+      <div className="relative w-full h-full">
         <video
           ref={videoRef}
           className="w-full h-full object-cover"
@@ -111,21 +111,20 @@ export function ChannelPreview({ url, isVisible }: ChannelPreviewProps) {
         {/* Loading indicator */}
         {isLoading && !hasError && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-            <Loader2 className="h-8 w-8 animate-spin text-white/70" />
+            <Loader2 className="h-6 w-6 animate-spin text-white/70" />
           </div>
         )}
 
         {/* Error indicator */}
         {hasError && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 gap-2">
-            <XCircle className="h-8 w-8 text-red-500/70" />
-            <span className="text-xs text-red-400">Не удалось загрузить</span>
+          <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+            <XCircle className="h-6 w-6 text-red-500/70" />
           </div>
         )}
 
         {/* Live badge */}
         {!isLoading && !hasError && (
-          <div className="absolute top-2 right-2 px-2 py-1 bg-red-600 text-white text-xs font-semibold rounded">
+          <div className="absolute top-1 right-1 px-1.5 py-0.5 bg-red-600 text-white text-[9px] font-semibold rounded">
             LIVE
           </div>
         )}
