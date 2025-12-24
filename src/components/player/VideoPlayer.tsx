@@ -428,11 +428,18 @@ export function VideoPlayer() {
           updateMuteIcon()
         })
 
-        // Expand button - focus main browser window (keeps PiP open)
+        // Expand button - close PiP and go fullscreen in main browser
         const expandBtn = pipDoc.getElementById('expandBtn') as HTMLButtonElement
         expandBtn?.addEventListener('click', () => {
-          // Focus the main window - this brings browser to front while keeping PiP
-          window.focus()
+          // Set flag to enter fullscreen after PiP closes
+          const shouldGoFullscreen = true
+          pipWindow.close()
+          // After PiP closes, video returns to main page, then go fullscreen
+          setTimeout(() => {
+            if (shouldGoFullscreen && containerRef.current) {
+              containerRef.current.requestFullscreen?.().catch(() => {})
+            }
+          }, 100)
         })
 
         setIsPiPActive(true)
