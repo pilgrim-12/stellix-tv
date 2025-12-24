@@ -338,6 +338,7 @@ export function VideoPlayer() {
             }
             .btn:hover { background: rgba(255,255,255,0.3); }
             .btn svg { width: 18px; height: 18px; }
+            .spacer { flex: 1; }
             .volume-slider {
               flex: 1;
               max-width: 100px;
@@ -380,6 +381,15 @@ export function VideoPlayer() {
                 </svg>
               </button>
               <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.05" value="${video.muted ? 0 : video.volume}">
+              <div class="spacer"></div>
+              <button class="btn" id="expandBtn" title="Back to browser">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="15 3 21 3 21 9"></polyline>
+                  <polyline points="9 21 3 21 3 15"></polyline>
+                  <line x1="21" y1="3" x2="14" y2="10"></line>
+                  <line x1="3" y1="21" x2="10" y2="14"></line>
+                </svg>
+              </button>
             </div>
           </div>
         `
@@ -416,6 +426,12 @@ export function VideoPlayer() {
           setMuted(val === 0)
           usePlayerStore.getState().setVolume(val)
           updateMuteIcon()
+        })
+
+        // Expand button - close PiP and return to browser
+        const expandBtn = pipDoc.getElementById('expandBtn') as HTMLButtonElement
+        expandBtn?.addEventListener('click', () => {
+          pipWindow.close()
         })
 
         setIsPiPActive(true)
