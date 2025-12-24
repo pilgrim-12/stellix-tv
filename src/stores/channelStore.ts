@@ -525,19 +525,31 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
   },
 
   getAvailableLanguages: () => {
-    const { channels } = get();
+    // Return languages that have at least one channel with current filters (except language filter)
+    const { channels, disabledChannels, selectedCategory, selectedCountry, showOnlyFavorites, favorites } = get();
     const languages = new Set<string>();
     channels.forEach((ch) => {
-      if (ch.language) languages.add(ch.language);
+      if (!ch.language) return;
+      if (disabledChannels.has(ch.id)) return;
+      if (selectedCategory !== 'all' && ch.group.toLowerCase() !== selectedCategory) return;
+      if (selectedCountry !== 'all' && ch.country !== selectedCountry) return;
+      if (showOnlyFavorites && !favorites.includes(ch.id)) return;
+      languages.add(ch.language);
     });
     return Array.from(languages).sort();
   },
 
   getAvailableCountries: () => {
-    const { channels } = get();
+    // Return countries that have at least one channel with current filters (except country filter)
+    const { channels, disabledChannels, selectedCategory, selectedLanguage, showOnlyFavorites, favorites } = get();
     const countries = new Set<string>();
     channels.forEach((ch) => {
-      if (ch.country) countries.add(ch.country);
+      if (!ch.country) return;
+      if (disabledChannels.has(ch.id)) return;
+      if (selectedCategory !== 'all' && ch.group.toLowerCase() !== selectedCategory) return;
+      if (selectedLanguage !== 'all' && ch.language !== selectedLanguage) return;
+      if (showOnlyFavorites && !favorites.includes(ch.id)) return;
+      countries.add(ch.country);
     });
     return Array.from(countries).sort();
   },
