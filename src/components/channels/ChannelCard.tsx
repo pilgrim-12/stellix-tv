@@ -51,8 +51,8 @@ export const ChannelCard = memo(function ChannelCard({ channel }: ChannelCardPro
   }, [])
 
   const handleMouseEnter = () => {
-    // Disable preview on touch devices (mobile/tablet)
-    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) return
+    // Disable preview on touch-only devices (no hover capability)
+    if (typeof window !== 'undefined' && !window.matchMedia('(hover: hover)').matches) return
     if (!hoverPreview || isActive || isOffline) return
     const rect = logoRef.current?.getBoundingClientRect()
     if (rect) {
