@@ -30,7 +30,6 @@ export type ChannelCategory =
   | 'sports'
   | 'movies'
   | 'kids'
-  | 'family'
   | 'music'
   | 'entertainment'
   | 'documentary'
@@ -42,7 +41,6 @@ export type ChannelCategory =
   | 'nature'
   | 'science'
   | 'culture'
-  | 'animation'
   | 'auto'
   | 'weather'
   | 'outdoor'
@@ -175,7 +173,6 @@ export const categoryNames: Record<string, string> = {
   sports: 'Спорт',
   movies: 'Кино',
   kids: 'Детям',
-  family: 'Семейное',
   music: 'Музыка',
   entertainment: 'Развлечения',
   documentary: 'Документальное',
@@ -187,7 +184,6 @@ export const categoryNames: Record<string, string> = {
   nature: 'Природа',
   science: 'Наука',
   culture: 'Культура',
-  animation: 'Анимация',
   auto: 'Авто',
   weather: 'Погода',
   outdoor: 'Активный отдых',
@@ -203,7 +199,6 @@ export const categoryNamesEn: Record<string, string> = {
   sports: 'Sports',
   movies: 'Movies',
   kids: 'Kids',
-  family: 'Family',
   music: 'Music',
   entertainment: 'Entertainment',
   documentary: 'Documentary',
@@ -215,7 +210,6 @@ export const categoryNamesEn: Record<string, string> = {
   nature: 'Nature',
   science: 'Science',
   culture: 'Culture',
-  animation: 'Animation',
   auto: 'Auto',
   weather: 'Weather',
   outdoor: 'Outdoor',
@@ -226,8 +220,8 @@ export const categoryNamesEn: Record<string, string> = {
 
 // Ordered list for dropdowns (most common first)
 export const categoryOrder = [
-  'news', 'sports', 'movies', 'kids', 'family', 'music', 'entertainment',
+  'news', 'sports', 'movies', 'kids', 'music', 'entertainment',
   'documentary', 'lifestyle', 'education', 'travel', 'gaming', 'cooking',
-  'nature', 'science', 'culture', 'animation', 'auto', 'weather',
+  'nature', 'science', 'culture', 'auto', 'weather',
   'outdoor', 'general', 'religious', 'radio'
 ];
