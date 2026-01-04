@@ -46,7 +46,7 @@ interface GeoInfo {
 let cachedGeoInfo: GeoInfo | null = null
 let geoFetchPromise: Promise<GeoInfo> | null = null
 
-// Get geo info from free API
+// Get geo info - first try our server API (reliable IP from headers), then fallback to external APIs
 async function getGeoInfo(): Promise<GeoInfo> {
   if (cachedGeoInfo) return cachedGeoInfo
 
@@ -54,7 +54,42 @@ async function getGeoInfo(): Promise<GeoInfo> {
   if (geoFetchPromise) return geoFetchPromise
 
   geoFetchPromise = (async () => {
-    // Try multiple APIs in order of preference
+    // First try our own API endpoint - this gets real IP from server headers (100% reliable)
+    try {
+      const res = await fetch('/api/visitor-info', { signal: AbortSignal.timeout(3000) })
+      const data = await res.json()
+      if (data.ip && data.ip !== 'unknown') {
+        // If we got IP but no country, try to get country from external API
+        if (!data.country || data.country === data.countryCode) {
+          try {
+            const geoRes = await fetch(`https://ipapi.co/${data.ip}/json/`, { signal: AbortSignal.timeout(3000) })
+            const geoData = await geoRes.json()
+            if (!geoData.error) {
+              cachedGeoInfo = {
+                ip: data.ip,
+                country: geoData.country_name || data.country || 'Unknown',
+                countryCode: geoData.country_code || data.countryCode || 'XX',
+                city: geoData.city || data.city
+              }
+              return cachedGeoInfo
+            }
+          } catch {
+            // External geo lookup failed, use what we have
+          }
+        }
+        cachedGeoInfo = {
+          ip: data.ip,
+          country: data.country || 'Unknown',
+          countryCode: data.countryCode || 'XX',
+          city: data.city
+        }
+        return cachedGeoInfo
+      }
+    } catch {
+      // Our API failed, try external APIs
+    }
+
+    // Fallback: Try external APIs
     const apis = [
       // ipapi.co - HTTPS, free 1000/day
       async () => {
@@ -68,7 +103,7 @@ async function getGeoInfo(): Promise<GeoInfo> {
           ip: data.ip
         }
       },
-      // ipinfo.io - HTTPS, free 50k/month (returns country code, not name)
+      // ipinfo.io - HTTPS, free 50k/month
       async () => {
         const res = await fetch('https://ipinfo.io/json', { signal: AbortSignal.timeout(5000) })
         const data = await res.json()
