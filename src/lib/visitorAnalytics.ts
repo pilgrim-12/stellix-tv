@@ -1,5 +1,5 @@
 import { db } from './firebase'
-import { doc, setDoc, updateDoc, increment, collection, getDocs, query, orderBy, limit, where, Timestamp } from 'firebase/firestore'
+import { doc, setDoc, getDoc, updateDoc, deleteDoc, increment, collection, getDocs, query, orderBy, limit, where, Timestamp } from 'firebase/firestore'
 
 // Visitor session interface
 export interface VisitorSession {
@@ -155,6 +155,40 @@ function getOrCreateVisitorId(): string {
 // Current session
 let currentVisitorSession: VisitorSession | null = null
 
+// Get or create session ID (persisted in localStorage for the day)
+function getOrCreateSessionId(visitorId: string): { sessionId: string; isNew: boolean } {
+  if (typeof window === 'undefined') return { sessionId: 'server', isNew: false }
+
+  const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD
+  const storageKey = `stellix-session-${today}`
+  const stored = localStorage.getItem(storageKey)
+
+  if (stored) {
+    try {
+      const data = JSON.parse(stored)
+      // Check if session belongs to this visitor
+      if (data.visitorId === visitorId) {
+        return { sessionId: data.sessionId, isNew: false }
+      }
+    } catch {
+      // Invalid data, create new
+    }
+  }
+
+  // Clean up old session keys (from previous days)
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (key && key.startsWith('stellix-session-') && key !== storageKey) {
+      localStorage.removeItem(key)
+    }
+  }
+
+  // Create new session for today
+  const sessionId = `session_${visitorId}_${today}_${Math.random().toString(36).substr(2, 4)}`
+  localStorage.setItem(storageKey, JSON.stringify({ sessionId, visitorId }))
+  return { sessionId, isNew: true }
+}
+
 // Start visitor session
 export async function startVisitorSession(userId?: string, userEmail?: string): Promise<void> {
   if (typeof window === 'undefined') return
@@ -162,7 +196,21 @@ export async function startVisitorSession(userId?: string, userEmail?: string): 
   const geoInfo = await getGeoInfo()
   const userAgent = navigator.userAgent
   const visitorId = userId || getOrCreateVisitorId()
-  const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`
+  const { sessionId, isNew } = getOrCreateSessionId(visitorId)
+
+  // If resuming existing session, try to load previous data
+  let existingSession: Partial<VisitorSession> = {}
+  if (!isNew) {
+    try {
+      const sessionRef = doc(db, 'visitorSessions', sessionId)
+      const sessionDoc = await getDoc(sessionRef)
+      if (sessionDoc.exists()) {
+        existingSession = sessionDoc.data() as VisitorSession
+      }
+    } catch {
+      // Failed to load existing session, start fresh
+    }
+  }
 
   currentVisitorSession = {
     sessionId,
@@ -177,17 +225,21 @@ export async function startVisitorSession(userId?: string, userEmail?: string): 
     userAgent,
     device: detectDevice(userAgent),
     browser: detectBrowser(userAgent),
-    startTime: Date.now(),
+    // Preserve original start time if resuming, otherwise use now
+    startTime: existingSession.startTime || Date.now(),
     lastActivity: Date.now(),
-    channelsWatched: 0,
-    totalWatchTime: 0
+    // Preserve accumulated stats if resuming
+    channelsWatched: existingSession.channelsWatched || 0,
+    totalWatchTime: existingSession.totalWatchTime || 0
   }
 
-  // Save initial session
+  // Save session (will merge with existing if session already exists)
   await saveVisitorSession()
 
-  // Update daily stats
-  await updateDailyStats('new_visitor')
+  // Only update daily stats for truly new visitors (first visit of the day)
+  if (isNew) {
+    await updateDailyStats('new_visitor')
+  }
 }
 
 // Update session when user logs in
@@ -415,6 +467,44 @@ export async function getVisitorStatsSummary(): Promise<{
       topCountries: [],
       recentSessions: []
     }
+  }
+}
+
+// Clear all visitor data (admin function)
+export async function clearAllVisitorData(): Promise<{ sessionsDeleted: number; statsDeleted: number }> {
+  let sessionsDeleted = 0
+  let statsDeleted = 0
+
+  try {
+    // Delete all visitor sessions
+    const sessionsRef = collection(db, 'visitorSessions')
+    const sessionsSnapshot = await getDocs(sessionsRef)
+
+    for (const docSnapshot of sessionsSnapshot.docs) {
+      await deleteDoc(doc(db, 'visitorSessions', docSnapshot.id))
+      sessionsDeleted++
+    }
+
+    // Delete all daily stats (including country subcollections)
+    const statsRef = collection(db, 'dailyVisitorStats')
+    const statsSnapshot = await getDocs(statsRef)
+
+    for (const docSnapshot of statsSnapshot.docs) {
+      // Delete countries subcollection first
+      const countriesRef = collection(db, 'dailyVisitorStats', docSnapshot.id, 'countries')
+      const countriesSnapshot = await getDocs(countriesRef)
+      for (const countryDoc of countriesSnapshot.docs) {
+        await deleteDoc(doc(db, 'dailyVisitorStats', docSnapshot.id, 'countries', countryDoc.id))
+      }
+      // Then delete the daily stat document
+      await deleteDoc(doc(db, 'dailyVisitorStats', docSnapshot.id))
+      statsDeleted++
+    }
+
+    return { sessionsDeleted, statsDeleted }
+  } catch (error) {
+    console.error('Failed to clear visitor data:', error)
+    throw error
   }
 }
 

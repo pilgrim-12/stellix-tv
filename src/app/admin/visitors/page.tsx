@@ -17,7 +17,8 @@ import {
   MapPin,
 } from 'lucide-react'
 import { AdminLayout } from '@/components/admin/AdminLayout'
-import { getVisitorStatsSummary, getRecentSessions, VisitorSession } from '@/lib/visitorAnalytics'
+import { getVisitorStatsSummary, getRecentSessions, clearAllVisitorData, VisitorSession } from '@/lib/visitorAnalytics'
+import { Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 // Country flag emoji from country code
@@ -56,6 +57,7 @@ function formatTimeAgo(timestamp: number): string {
 
 export default function VisitorsPage() {
   const [isLoading, setIsLoading] = useState(true)
+  const [isClearing, setIsClearing] = useState(false)
   const [summary, setSummary] = useState<{
     today: { total: number; anonymous: number; loggedIn: number }
     week: { total: number; anonymous: number; loggedIn: number }
@@ -75,6 +77,23 @@ export default function VisitorsPage() {
     }
   }
 
+  const handleClearData = async () => {
+    if (!confirm('Are you sure you want to delete ALL visitor data? This cannot be undone.')) {
+      return
+    }
+    setIsClearing(true)
+    try {
+      const result = await clearAllVisitorData()
+      alert(`Deleted ${result.sessionsDeleted} sessions and ${result.statsDeleted} daily stats.`)
+      await loadData()
+    } catch (error) {
+      console.error('Error clearing data:', error)
+      alert('Failed to clear data. Check console for details.')
+    } finally {
+      setIsClearing(false)
+    }
+  }
+
   useEffect(() => {
     loadData()
   }, [])
@@ -84,10 +103,25 @@ export default function VisitorsPage() {
       title="Visitor Analytics"
       icon={<Users className="h-5 w-5 text-primary" />}
       headerActions={
-        <Button variant="outline" size="sm" onClick={loadData} disabled={isLoading}>
-          <RefreshCw className={cn('h-4 w-4 mr-2', isLoading && 'animate-spin')} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={loadData} disabled={isLoading}>
+            <RefreshCw className={cn('h-4 w-4 mr-2', isLoading && 'animate-spin')} />
+            Refresh
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleClearData}
+            disabled={isClearing || isLoading}
+          >
+            {isClearing ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4 mr-2" />
+            )}
+            Clear All
+          </Button>
+        </div>
       }
     >
       <div className="p-6 space-y-6">
