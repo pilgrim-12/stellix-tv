@@ -85,6 +85,7 @@ export const translations = {
     // Misc
     browseChannels: 'Обзор каналов',
     openChannelGrid: 'Открыть все каналы',
+    signInToSave: 'Войдите, чтобы сохранить',
   },
   en: {
     // Header
@@ -156,6 +157,7 @@ export const translations = {
     // Misc
     browseChannels: 'Browse Channels',
     openChannelGrid: 'Open all channels',
+    signInToSave: 'Sign in to save',
   },
   uk: {
     // Header
@@ -227,6 +229,7 @@ export const translations = {
     // Misc
     browseChannels: 'Огляд каналів',
     openChannelGrid: 'Відкрити всі канали',
+    signInToSave: 'Увійдіть, щоб зберегти',
   },
   es: {
     // Header
@@ -298,6 +301,7 @@ export const translations = {
     // Misc
     browseChannels: 'Explorar canales',
     openChannelGrid: 'Abrir todos los canales',
+    signInToSave: 'Inicia sesión para guardar',
   },
   it: {
     // Header
@@ -369,6 +373,7 @@ export const translations = {
     // Misc
     browseChannels: 'Sfoglia canali',
     openChannelGrid: 'Apri tutti i canali',
+    signInToSave: 'Accedi per salvare',
   },
   fr: {
     // Header
@@ -440,6 +445,7 @@ export const translations = {
     // Misc
     browseChannels: 'Parcourir les chaînes',
     openChannelGrid: 'Ouvrir toutes les chaînes',
+    signInToSave: 'Connectez-vous pour sauvegarder',
   },
   de: {
     // Header
@@ -511,6 +517,7 @@ export const translations = {
     // Misc
     browseChannels: 'Sender durchsuchen',
     openChannelGrid: 'Alle Sender öffnen',
+    signInToSave: 'Anmelden zum Speichern',
   },
   ka: {
     // Header
@@ -582,6 +589,7 @@ export const translations = {
     // Misc
     browseChannels: 'არხების დათვალიერება',
     openChannelGrid: 'ყველა არხის გახსნა',
+    signInToSave: 'შედით შესანახად',
   },
 
   pl: {
@@ -654,6 +662,7 @@ export const translations = {
     // Misc
     browseChannels: 'Przeglądaj kanały',
     openChannelGrid: 'Otwórz wszystkie kanały',
+    signInToSave: 'Zaloguj się, aby zapisać',
   },
 
   hu: {
@@ -726,6 +735,7 @@ export const translations = {
     // Misc
     browseChannels: 'Csatornák böngészése',
     openChannelGrid: 'Összes csatorna megnyitása',
+    signInToSave: 'Jelentkezz be a mentéshez',
   },
 
   el: {
@@ -798,6 +808,7 @@ export const translations = {
     // Misc
     browseChannels: 'Περιήγηση καναλιών',
     openChannelGrid: 'Άνοιγμα όλων των καναλιών',
+    signInToSave: 'Συνδεθείτε για αποθήκευση',
   },
 } as const
 

@@ -197,24 +197,26 @@ export function ChannelList() {
               <Tv className="h-3 w-3" />
               <span>{totalChannels}</span>
             </div>
-            {/* Favorites toggle button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                'h-5 px-1.5 text-[10px] gap-1',
-                showOnlyFavorites
-                  ? 'text-yellow-500 bg-yellow-500/10'
-                  : 'text-muted-foreground hover:text-yellow-500'
-              )}
-              onClick={() => {
-                if (showRecentChannels) setShowRecentChannels(false)
-                setShowOnlyFavorites(!showOnlyFavorites, user?.uid)
-              }}
-            >
-              <Star className={cn('h-3 w-3', showOnlyFavorites && 'fill-current')} />
-              {favorites.length > 0 && <span>{favorites.length}</span>}
-            </Button>
+            {/* Favorites toggle button - only for logged in users */}
+            {user && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  'h-5 px-1.5 text-[10px] gap-1',
+                  showOnlyFavorites
+                    ? 'text-yellow-500 bg-yellow-500/10'
+                    : 'text-muted-foreground hover:text-yellow-500'
+                )}
+                onClick={() => {
+                  if (showRecentChannels) setShowRecentChannels(false)
+                  setShowOnlyFavorites(!showOnlyFavorites, user?.uid)
+                }}
+              >
+                <Star className={cn('h-3 w-3', showOnlyFavorites && 'fill-current')} />
+                {favorites.length > 0 && <span>{favorites.length}</span>}
+              </Button>
+            )}
             {/* Recent channels toggle button */}
             <Button
               variant="ghost"

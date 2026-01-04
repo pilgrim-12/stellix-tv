@@ -4,7 +4,6 @@ import { useEffect, useState, useMemo, useRef } from 'react'
 import { Header } from '@/components/layout'
 import { VideoPlayer } from '@/components/player'
 import { ChannelList, CategoryFilter, LanguageFilter, ChannelGridTrigger } from '@/components/channels'
-import { ProtectedRoute } from '@/components/auth'
 import { useChannelStore } from '@/stores'
 import { useSettings } from '@/contexts/SettingsContext'
 import { sampleChannels } from '@/data/channels'
@@ -14,11 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Button } from '@/components/ui/button'
 
 export default function WatchPage() {
-  return (
-    <ProtectedRoute>
-      <WatchContent />
-    </ProtectedRoute>
-  )
+  return <WatchContent />
 }
 
 function formatTime(date: Date): string {

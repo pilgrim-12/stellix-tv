@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, memo } from 'react'
+import { useState, useRef, useEffect, memo, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Channel, languageNames } from '@/types'
 import { useChannelStore } from '@/stores'
@@ -32,14 +32,16 @@ export const ChannelCard = memo(function ChannelCard({ channel }: ChannelCardPro
   const favorites = useChannelStore((state) => state.favorites)
   const toggleFavorite = useChannelStore((state) => state.toggleFavorite)
   const { user } = useAuthContext()
-  const { getCategoryName, hoverPreview } = useSettings()
+  const { getCategoryName, hoverPreview, t } = useSettings()
   const isActive = currentChannel?.id === channel.id
   const isFavorite = favorites.includes(channel.id)
   const isOffline = channel.isOffline
   const [imgError, setImgError] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
   const [previewPos, setPreviewPos] = useState({ x: 0, y: 0 })
+  const [showSignInTooltip, setShowSignInTooltip] = useState(false)
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const signInTooltipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const logoRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -47,8 +49,27 @@ export const ChannelCard = memo(function ChannelCard({ channel }: ChannelCardPro
       if (hoverTimerRef.current) {
         clearTimeout(hoverTimerRef.current)
       }
+      if (signInTooltipTimerRef.current) {
+        clearTimeout(signInTooltipTimerRef.current)
+      }
     }
   }, [])
+
+  const handleFavoriteClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!user) {
+      // Show tooltip for anonymous users
+      setShowSignInTooltip(true)
+      if (signInTooltipTimerRef.current) {
+        clearTimeout(signInTooltipTimerRef.current)
+      }
+      signInTooltipTimerRef.current = setTimeout(() => {
+        setShowSignInTooltip(false)
+      }, 2000)
+      return
+    }
+    toggleFavorite(channel.id, user?.uid)
+  }, [user, channel.id, toggleFavorite])
 
   const handleMouseEnter = () => {
     // Disable preview on touch-only devices (no hover capability)
@@ -151,20 +172,25 @@ export const ChannelCard = memo(function ChannelCard({ channel }: ChannelCardPro
         </div>
 
         {/* Favorite button */}
-        <button
-          className={cn(
-            'shrink-0 rounded-full p-1.5 transition-colors',
-            'opacity-0 group-hover:opacity-100',
-            isFavorite && 'opacity-100',
-            isFavorite ? 'text-yellow-500' : 'text-muted-foreground/50 hover:text-yellow-500'
+        <div className="relative">
+          <button
+            className={cn(
+              'shrink-0 rounded-full p-1.5 transition-colors',
+              'opacity-0 group-hover:opacity-100',
+              isFavorite && 'opacity-100',
+              isFavorite ? 'text-yellow-500' : 'text-muted-foreground/50 hover:text-yellow-500'
+            )}
+            onClick={handleFavoriteClick}
+          >
+            <Star className={cn('h-4 w-4', isFavorite && 'fill-current')} />
+          </button>
+          {/* Sign in tooltip for anonymous users */}
+          {showSignInTooltip && (
+            <div className="absolute right-0 top-full mt-1 whitespace-nowrap rounded bg-zinc-800 px-2 py-1 text-xs text-white shadow-lg z-50">
+              {t('signInToSave')}
+            </div>
           )}
-          onClick={(e) => {
-            e.stopPropagation()
-            toggleFavorite(channel.id, user?.uid)
-          }}
-        >
-          <Star className={cn('h-4 w-4', isFavorite && 'fill-current')} />
-        </button>
+        </div>
       </div>
 
       {/* Hover preview - rendered via portal to body */}
