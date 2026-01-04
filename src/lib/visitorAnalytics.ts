@@ -60,26 +60,27 @@ async function getGeoInfo(): Promise<GeoInfo> {
       async () => {
         const res = await fetch('https://ipapi.co/json/')
         const data = await res.json()
-        if (data.country_name) {
+        if (data.country_name && data.ip) {
           return {
             country: data.country_name,
             countryCode: data.country_code || 'XX',
             city: data.city,
-            ip: data.ip || undefined // Full IP for admin
+            ip: data.ip
           }
         }
         throw new Error('No data')
       },
-      // ipinfo.io - HTTPS, free 50k/month
+      // ipinfo.io - HTTPS, free 50k/month (returns country code, not name)
       async () => {
         const res = await fetch('https://ipinfo.io/json')
         const data = await res.json()
-        if (data.country) {
+        if (data.country && data.ip) {
+          // ipinfo returns country code (ES, GE, etc), use it for both
           return {
-            country: data.country,
-            countryCode: data.country || 'XX',
+            country: data.country, // Will show as code, but better than nothing
+            countryCode: data.country,
             city: data.city,
-            ip: data.ip || undefined // Full IP for admin
+            ip: data.ip
           }
         }
         throw new Error('No data')
@@ -88,12 +89,12 @@ async function getGeoInfo(): Promise<GeoInfo> {
       async () => {
         const res = await fetch('https://freeipapi.com/api/json')
         const data = await res.json()
-        if (data.countryName) {
+        if (data.countryName && data.ipAddress) {
           return {
             country: data.countryName,
             countryCode: data.countryCode || 'XX',
             city: data.cityName,
-            ip: data.ipAddress || undefined // Full IP for admin
+            ip: data.ipAddress
           }
         }
         throw new Error('No data')
