@@ -725,8 +725,8 @@ export async function findDuplicateChannels(
   playlistSources: PlaylistSource[]
 ): Promise<DuplicateInfo[]> {
   const allChannels = await getCuratedChannelsRaw()
-  // Only check active/pending channels, skip inactive/broken
-  const channels = allChannels.filter(ch => ch.status !== 'inactive')
+  // Only check active/pending channels, skip inactive and broken
+  const channels = allChannels.filter(ch => ch.status !== 'inactive' && ch.status !== 'broken')
 
   // Create playlist name map
   const playlistNames = new Map<string, string>()

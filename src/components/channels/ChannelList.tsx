@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef, CSSProperties, ReactElement, useMemo } from 'react'
+import { useEffect, useState, useRef, CSSProperties, ReactElement } from 'react'
 import { List, ListImperativeAPI } from 'react-window'
 import { useChannelStore } from '@/stores'
 import { useAuthContext } from '@/contexts/AuthContext'
@@ -264,7 +264,7 @@ export function ChannelList() {
       </div>
 
       {/* Channels list */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden min-h-0">
         {isLoading && !initialized ? (
           <div className="flex items-center justify-center h-32">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
