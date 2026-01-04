@@ -14,6 +14,7 @@ import {
   X,
   Copy,
   AlertCircle,
+  Globe,
 } from 'lucide-react'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
@@ -31,6 +32,7 @@ const navItems = [
   { path: '/admin/duplicates', label: 'Duplicates', icon: Copy },
   { path: '/admin/health', label: 'Health Check', icon: AlertCircle },
   { path: '/admin/users', label: 'Users', icon: Users },
+  { path: '/admin/visitors', label: 'Visitors', icon: Globe },
   { path: '/admin/stats', label: 'Statistics', icon: BarChart3 },
 ]
 

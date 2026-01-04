@@ -12,6 +12,7 @@ import {
 } from '@/lib/auth'
 import { initializeUser, saveUserIP, saveUserCountry, isUserAdmin } from '@/lib/userService'
 import { useChannelStore } from '@/stores'
+import { startVisitorSession, updateSessionWithUser } from '@/lib/visitorAnalytics'
 
 interface AuthContextType {
   user: User | null
@@ -36,6 +37,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
 
+  // Start visitor session on mount (for both anonymous and logged in users)
+  const [sessionStarted, setSessionStarted] = useState(false)
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user)
@@ -56,6 +60,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         useChannelStore.getState().loadFavoritesFromFirebase(user.uid)
         useChannelStore.getState().loadUserSettings(user.uid)
 
+        // Update visitor session with user info (or start new session)
+        if (sessionStarted) {
+          await updateSessionWithUser(user.uid, user.email || undefined)
+        } else {
+          await startVisitorSession(user.uid, user.email || undefined)
+          setSessionStarted(true)
+        }
+
         // Get and save user IP + country
         try {
           const res = await fetch('https://ipapi.co/json/')
@@ -72,11 +84,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setIsAdmin(false)
         setAdminLoading(false)
+
+        // Start anonymous visitor session
+        if (!sessionStarted) {
+          await startVisitorSession()
+          setSessionStarted(true)
+        }
       }
     })
 
     return () => unsubscribe()
-  }, [])
+  }, [sessionStarted])
 
   const login = async (email: string, password: string) => {
     try {
