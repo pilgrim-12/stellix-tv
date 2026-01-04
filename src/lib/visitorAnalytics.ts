@@ -54,26 +54,63 @@ async function getGeoInfo(): Promise<GeoInfo> {
   if (geoFetchPromise) return geoFetchPromise
 
   geoFetchPromise = (async () => {
-    try {
-      // Using ip-api.com (free, no API key needed, 45 req/min limit)
-      const response = await fetch('http://ip-api.com/json/?fields=status,country,countryCode,city,query')
-      if (!response.ok) throw new Error('Geo API failed')
-
-      const data = await response.json()
-      if (data.status === 'success') {
-        cachedGeoInfo = {
-          country: data.country || 'Unknown',
-          countryCode: data.countryCode || 'XX',
-          city: data.city,
-          ip: data.query ? `${data.query.split('.').slice(0, 2).join('.')}.*.*` : undefined // Partial IP for privacy
+    // Try multiple APIs in order of preference
+    const apis = [
+      // ipapi.co - HTTPS, free 1000/day
+      async () => {
+        const res = await fetch('https://ipapi.co/json/')
+        const data = await res.json()
+        if (data.country_name) {
+          return {
+            country: data.country_name,
+            countryCode: data.country_code || 'XX',
+            city: data.city,
+            ip: data.ip ? `${data.ip.split('.').slice(0, 2).join('.')}.*.*` : undefined
+          }
         }
-        return cachedGeoInfo
+        throw new Error('No data')
+      },
+      // ipinfo.io - HTTPS, free 50k/month
+      async () => {
+        const res = await fetch('https://ipinfo.io/json')
+        const data = await res.json()
+        if (data.country) {
+          return {
+            country: data.country,
+            countryCode: data.country || 'XX',
+            city: data.city,
+            ip: data.ip ? `${data.ip.split('.').slice(0, 2).join('.')}.*.*` : undefined
+          }
+        }
+        throw new Error('No data')
+      },
+      // freeipapi.com - HTTPS, free
+      async () => {
+        const res = await fetch('https://freeipapi.com/api/json')
+        const data = await res.json()
+        if (data.countryName) {
+          return {
+            country: data.countryName,
+            countryCode: data.countryCode || 'XX',
+            city: data.cityName,
+            ip: data.ipAddress ? `${data.ipAddress.split('.').slice(0, 2).join('.')}.*.*` : undefined
+          }
+        }
+        throw new Error('No data')
       }
-    } catch (error) {
-      console.error('Failed to get geo info:', error)
+    ]
+
+    for (const api of apis) {
+      try {
+        cachedGeoInfo = await api()
+        return cachedGeoInfo
+      } catch {
+        // Try next API
+      }
     }
 
-    // Fallback
+    // All APIs failed
+    console.error('All geo APIs failed')
     cachedGeoInfo = { country: 'Unknown', countryCode: 'XX' }
     return cachedGeoInfo
   })()
@@ -246,10 +283,19 @@ export function getCurrentSession(): VisitorSession | null {
 export async function getRecentSessions(limitCount: number = 100): Promise<VisitorSession[]> {
   try {
     const sessionsRef = collection(db, 'visitorSessions')
-    const q = query(sessionsRef, orderBy('startTime', 'desc'), limit(limitCount))
-    const snapshot = await getDocs(q)
+    // Try with orderBy first, fallback to simple query if index not ready
+    let snapshot
+    try {
+      const q = query(sessionsRef, orderBy('startTime', 'desc'), limit(limitCount))
+      snapshot = await getDocs(q)
+    } catch {
+      // Fallback: get all and sort client-side
+      snapshot = await getDocs(sessionsRef)
+    }
 
-    return snapshot.docs.map(doc => doc.data() as VisitorSession)
+    const sessions = snapshot.docs.map(doc => doc.data() as VisitorSession)
+    // Sort by startTime descending
+    return sessions.sort((a, b) => (b.startTime || 0) - (a.startTime || 0)).slice(0, limitCount)
   } catch (error) {
     console.error('Failed to get recent sessions:', error)
     return []
@@ -264,12 +310,25 @@ export async function getDailyStats(days: number = 30): Promise<DailyVisitorStat
     startDate.setDate(startDate.getDate() - days)
     const startDateStr = startDate.toISOString().split('T')[0]
 
-    const q = query(statsRef, where('date', '>=', startDateStr), orderBy('date', 'desc'))
-    const snapshot = await getDocs(q)
+    // Try with compound query, fallback to simple if index not ready
+    let snapshot
+    try {
+      const q = query(statsRef, where('date', '>=', startDateStr), orderBy('date', 'desc'))
+      snapshot = await getDocs(q)
+    } catch {
+      // Fallback: get all and filter client-side
+      snapshot = await getDocs(statsRef)
+    }
 
     const stats: DailyVisitorStats[] = []
 
-    for (const docSnapshot of snapshot.docs) {
+    // Filter docs by date if using fallback
+    const filteredDocs = snapshot.docs.filter(doc => {
+      const data = doc.data()
+      return data.date && data.date >= startDateStr
+    })
+
+    for (const docSnapshot of filteredDocs) {
       const data = docSnapshot.data()
 
       // Get country breakdown for this day
@@ -293,7 +352,8 @@ export async function getDailyStats(days: number = 30): Promise<DailyVisitorStat
       })
     }
 
-    return stats
+    // Sort by date descending
+    return stats.sort((a, b) => b.date.localeCompare(a.date))
   } catch (error) {
     console.error('Failed to get daily stats:', error)
     return []
