@@ -65,7 +65,7 @@ async function getGeoInfo(): Promise<GeoInfo> {
             country: data.country_name,
             countryCode: data.country_code || 'XX',
             city: data.city,
-            ip: data.ip ? `${data.ip.split('.').slice(0, 2).join('.')}.*.*` : undefined
+            ip: data.ip || undefined // Full IP for admin
           }
         }
         throw new Error('No data')
@@ -79,7 +79,7 @@ async function getGeoInfo(): Promise<GeoInfo> {
             country: data.country,
             countryCode: data.country || 'XX',
             city: data.city,
-            ip: data.ip ? `${data.ip.split('.').slice(0, 2).join('.')}.*.*` : undefined
+            ip: data.ip || undefined // Full IP for admin
           }
         }
         throw new Error('No data')
@@ -93,7 +93,7 @@ async function getGeoInfo(): Promise<GeoInfo> {
             country: data.countryName,
             countryCode: data.countryCode || 'XX',
             city: data.cityName,
-            ip: data.ipAddress ? `${data.ipAddress.split('.').slice(0, 2).join('.')}.*.*` : undefined
+            ip: data.ipAddress || undefined // Full IP for admin
           }
         }
         throw new Error('No data')

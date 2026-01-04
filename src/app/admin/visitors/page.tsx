@@ -256,39 +256,66 @@ export default function VisitorsPage() {
                       {summary.recentSessions.map((session) => (
                         <div
                           key={session.sessionId}
-                          className="flex items-center justify-between py-2 border-b border-border/40 last:border-0"
+                          className="p-3 rounded-lg border border-border/40 hover:bg-muted/30 transition-colors"
                         >
-                          <div className="flex items-center gap-3">
-                            <span className="text-lg">{getCountryFlag(session.countryCode)}</span>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className={cn(
-                                  'text-xs px-1.5 py-0.5 rounded',
-                                  session.isAnonymous
-                                    ? 'bg-orange-500/20 text-orange-500'
-                                    : 'bg-green-500/20 text-green-500'
-                                )}>
-                                  {session.isAnonymous ? 'Anonymous' : 'User'}
-                                </span>
+                          {/* Header row */}
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xl">{getCountryFlag(session.countryCode)}</span>
+                              <span className={cn(
+                                'text-xs px-2 py-0.5 rounded font-medium',
+                                session.isAnonymous
+                                  ? 'bg-orange-500/20 text-orange-500'
+                                  : 'bg-green-500/20 text-green-500'
+                              )}>
+                                {session.isAnonymous ? 'Anonymous' : 'Logged In'}
+                              </span>
+                              <div className="flex items-center gap-1 text-muted-foreground">
                                 <DeviceIcon device={session.device} />
-                                <span className="text-xs text-muted-foreground">{session.browser}</span>
-                              </div>
-                              <div className="text-xs text-muted-foreground mt-0.5">
-                                {session.country}
-                                {session.city && `, ${session.city}`}
-                                {!session.isAnonymous && session.userEmail && (
-                                  <span className="ml-2 text-foreground">{session.userEmail}</span>
-                                )}
+                                <span className="text-xs">{session.browser}</span>
                               </div>
                             </div>
-                          </div>
-                          <div className="text-right">
                             <div className="text-xs text-muted-foreground">
                               {formatTimeAgo(session.startTime)}
                             </div>
+                          </div>
+
+                          {/* Details */}
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                              <span className="text-muted-foreground">Location: </span>
+                              <span>{session.country}{session.city && `, ${session.city}`}</span>
+                            </div>
+                            {session.ip && (
+                              <div>
+                                <span className="text-muted-foreground">IP: </span>
+                                <span className="font-mono">{session.ip}</span>
+                              </div>
+                            )}
+                            {!session.isAnonymous && session.userEmail && (
+                              <div className="col-span-2">
+                                <span className="text-muted-foreground">Email: </span>
+                                <span className="text-foreground">{session.userEmail}</span>
+                              </div>
+                            )}
+                            <div>
+                              <span className="text-muted-foreground">Started: </span>
+                              <span>{new Date(session.startTime).toLocaleString()}</span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Last active: </span>
+                              <span>{new Date(session.lastActivity).toLocaleString()}</span>
+                            </div>
                             {session.channelsWatched > 0 && (
-                              <div className="text-xs text-muted-foreground">
-                                {session.channelsWatched} channels
+                              <div>
+                                <span className="text-muted-foreground">Channels: </span>
+                                <span>{session.channelsWatched}</span>
+                              </div>
+                            )}
+                            {session.totalWatchTime > 0 && (
+                              <div>
+                                <span className="text-muted-foreground">Watch time: </span>
+                                <span>{Math.floor(session.totalWatchTime / 60)}m {session.totalWatchTime % 60}s</span>
                               </div>
                             )}
                           </div>
