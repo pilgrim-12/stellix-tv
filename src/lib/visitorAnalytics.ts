@@ -58,46 +58,37 @@ async function getGeoInfo(): Promise<GeoInfo> {
     const apis = [
       // ipapi.co - HTTPS, free 1000/day
       async () => {
-        const res = await fetch('https://ipapi.co/json/')
+        const res = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(5000) })
         const data = await res.json()
-        if (data.country_name && data.ip) {
-          return {
-            country: data.country_name,
-            countryCode: data.country_code || 'XX',
-            city: data.city,
-            ip: data.ip
-          }
+        if (data.error) throw new Error(data.reason || 'API error')
+        return {
+          country: data.country_name || 'Unknown',
+          countryCode: data.country_code || 'XX',
+          city: data.city,
+          ip: data.ip
         }
-        throw new Error('No data')
       },
       // ipinfo.io - HTTPS, free 50k/month (returns country code, not name)
       async () => {
-        const res = await fetch('https://ipinfo.io/json')
+        const res = await fetch('https://ipinfo.io/json', { signal: AbortSignal.timeout(5000) })
         const data = await res.json()
-        if (data.country && data.ip) {
-          // ipinfo returns country code (ES, GE, etc), use it for both
-          return {
-            country: data.country, // Will show as code, but better than nothing
-            countryCode: data.country,
-            city: data.city,
-            ip: data.ip
-          }
+        return {
+          country: data.country || 'Unknown',
+          countryCode: data.country || 'XX',
+          city: data.city,
+          ip: data.ip
         }
-        throw new Error('No data')
       },
       // freeipapi.com - HTTPS, free
       async () => {
-        const res = await fetch('https://freeipapi.com/api/json')
+        const res = await fetch('https://freeipapi.com/api/json', { signal: AbortSignal.timeout(5000) })
         const data = await res.json()
-        if (data.countryName && data.ipAddress) {
-          return {
-            country: data.countryName,
-            countryCode: data.countryCode || 'XX',
-            city: data.cityName,
-            ip: data.ipAddress
-          }
+        return {
+          country: data.countryName || 'Unknown',
+          countryCode: data.countryCode || 'XX',
+          city: data.cityName,
+          ip: data.ipAddress
         }
-        throw new Error('No data')
       }
     ]
 
