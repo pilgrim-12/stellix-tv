@@ -266,14 +266,34 @@ export async function recordChannelWatch(watchTimeSeconds: number): Promise<void
 
 // Save session to Firestore
 async function saveVisitorSession(): Promise<void> {
-  if (!currentVisitorSession) return
+  if (!currentVisitorSession) {
+    console.error('saveVisitorSession: No current session')
+    return
+  }
 
   try {
     const sessionRef = doc(db, 'visitorSessions', currentVisitorSession.sessionId)
-    await setDoc(sessionRef, {
-      ...currentVisitorSession,
+    // Explicitly include all fields, convert undefined to null for Firestore
+    const sessionData = {
+      sessionId: currentVisitorSession.sessionId,
+      visitorId: currentVisitorSession.visitorId,
+      userId: currentVisitorSession.userId || null,
+      userEmail: currentVisitorSession.userEmail || null,
+      isAnonymous: currentVisitorSession.isAnonymous,
+      country: currentVisitorSession.country || 'Unknown',
+      countryCode: currentVisitorSession.countryCode || 'XX',
+      city: currentVisitorSession.city || null,
+      ip: currentVisitorSession.ip || null,
+      userAgent: currentVisitorSession.userAgent,
+      device: currentVisitorSession.device,
+      browser: currentVisitorSession.browser,
+      startTime: currentVisitorSession.startTime,
+      lastActivity: currentVisitorSession.lastActivity,
+      channelsWatched: currentVisitorSession.channelsWatched,
+      totalWatchTime: currentVisitorSession.totalWatchTime,
       updatedAt: Date.now()
-    }, { merge: true })
+    }
+    await setDoc(sessionRef, sessionData, { merge: true })
   } catch (error) {
     console.error('Failed to save visitor session:', error)
   }
