@@ -1,4 +1,4 @@
-export type UILanguage = 'ru' | 'en' | 'uk' | 'es' | 'it' | 'fr' | 'de' | 'ka'
+export type UILanguage = 'ru' | 'en' | 'uk' | 'es' | 'it' | 'fr' | 'de' | 'ka' | 'pl' | 'hu' | 'el'
 
 export const uiLanguages: { code: UILanguage; name: string; nativeName: string }[] = [
   { code: 'en', name: 'English', nativeName: 'English' },
@@ -9,6 +9,9 @@ export const uiLanguages: { code: UILanguage; name: string; nativeName: string }
   { code: 'de', name: 'German', nativeName: 'Deutsch' },
   { code: 'uk', name: 'Ukrainian', nativeName: 'Українська' },
   { code: 'ka', name: 'Georgian', nativeName: 'ქართული' },
+  { code: 'pl', name: 'Polish', nativeName: 'Polski' },
+  { code: 'hu', name: 'Hungarian', nativeName: 'Magyar' },
+  { code: 'el', name: 'Greek', nativeName: 'Ελληνικά' },
 ]
 
 export const translations = {
@@ -579,6 +582,222 @@ export const translations = {
     // Misc
     browseChannels: 'არხების დათვალიერება',
     openChannelGrid: 'ყველა არხის გახსნა',
+  },
+
+  pl: {
+    // Header
+    watch: 'Oglądaj',
+    program: 'Program',
+    admin: 'Admin',
+    signIn: 'Zaloguj się',
+    signUp: 'Zarejestruj się',
+    signOut: 'Wyloguj się',
+    favorites: 'Ulubione',
+    recent: 'Ostatnie',
+    adminPanel: 'Panel admina',
+    settings: 'Ustawienia',
+
+    // Channel Grid
+    allChannels: 'Wszystkie kanały',
+    searchChannels: 'Szukaj kanałów...',
+    channels: 'kanałów',
+    channelsCount: '{count} kanałów',
+    workingChannels: 'działających',
+    noChannelsFound: 'Nie znaleziono kanałów',
+
+    // Categories
+    category: 'Kategoria',
+    allCategories: 'Wszystkie',
+    news: 'Wiadomości',
+    sports: 'Sport',
+    movies: 'Filmy',
+    kids: 'Dla dzieci',
+    music: 'Muzyka',
+    entertainment: 'Rozrywka',
+    documentary: 'Dokumentalne',
+    lifestyle: 'Styl życia',
+    education: 'Edukacja',
+    travel: 'Podróże',
+    gaming: 'Gry',
+    cooking: 'Gotowanie',
+    nature: 'Natura',
+    science: 'Nauka',
+    culture: 'Kultura',
+    auto: 'Motoryzacja',
+    weather: 'Pogoda',
+    outdoor: 'Outdoor',
+    general: 'Ogólne',
+    religious: 'Religia',
+    radio: 'Radio',
+
+    // Language filter
+    language: 'Język',
+    allLanguages: 'Wszystkie języki',
+
+    // Settings
+    settingsTitle: 'Ustawienia',
+    interfaceLanguage: 'Język interfejsu',
+    theme: 'Motyw',
+    themeSystem: 'Systemowy',
+    themeLight: 'Jasny',
+    themeDark: 'Ciemny',
+    hoverPreview: 'Podgląd przy najechaniu',
+    hoverPreviewDesc: 'Pokazuj podgląd kanału przy najechaniu',
+    saveSettings: 'Zapisz',
+    close: 'Zamknij',
+
+    // Player
+    selectChannel: 'Wybierz kanał do oglądania',
+    channelOffline: 'Kanał offline',
+    loading: 'Ładowanie...',
+
+    // Misc
+    browseChannels: 'Przeglądaj kanały',
+    openChannelGrid: 'Otwórz wszystkie kanały',
+  },
+
+  hu: {
+    // Header
+    watch: 'Nézés',
+    program: 'Program',
+    admin: 'Admin',
+    signIn: 'Bejelentkezés',
+    signUp: 'Regisztráció',
+    signOut: 'Kijelentkezés',
+    favorites: 'Kedvencek',
+    recent: 'Legutóbbi',
+    adminPanel: 'Admin panel',
+    settings: 'Beállítások',
+
+    // Channel Grid
+    allChannels: 'Összes csatorna',
+    searchChannels: 'Csatornák keresése...',
+    channels: 'csatorna',
+    channelsCount: '{count} csatorna',
+    workingChannels: 'működő',
+    noChannelsFound: 'Nem található csatorna',
+
+    // Categories
+    category: 'Kategória',
+    allCategories: 'Összes',
+    news: 'Hírek',
+    sports: 'Sport',
+    movies: 'Filmek',
+    kids: 'Gyerekeknek',
+    music: 'Zene',
+    entertainment: 'Szórakozás',
+    documentary: 'Dokumentum',
+    lifestyle: 'Életmód',
+    education: 'Oktatás',
+    travel: 'Utazás',
+    gaming: 'Játék',
+    cooking: 'Főzés',
+    nature: 'Természet',
+    science: 'Tudomány',
+    culture: 'Kultúra',
+    auto: 'Autó',
+    weather: 'Időjárás',
+    outdoor: 'Szabadtéri',
+    general: 'Általános',
+    religious: 'Vallás',
+    radio: 'Rádió',
+
+    // Language filter
+    language: 'Nyelv',
+    allLanguages: 'Összes nyelv',
+
+    // Settings
+    settingsTitle: 'Beállítások',
+    interfaceLanguage: 'Felület nyelve',
+    theme: 'Téma',
+    themeSystem: 'Rendszer',
+    themeLight: 'Világos',
+    themeDark: 'Sötét',
+    hoverPreview: 'Előnézet lebegtetéskor',
+    hoverPreviewDesc: 'Csatorna előnézet megjelenítése lebegtetéskor',
+    saveSettings: 'Mentés',
+    close: 'Bezárás',
+
+    // Player
+    selectChannel: 'Válassz csatornát a nézéshez',
+    channelOffline: 'Csatorna offline',
+    loading: 'Betöltés...',
+
+    // Misc
+    browseChannels: 'Csatornák böngészése',
+    openChannelGrid: 'Összes csatorna megnyitása',
+  },
+
+  el: {
+    // Header
+    watch: 'Παρακολούθηση',
+    program: 'Πρόγραμμα',
+    admin: 'Διαχείριση',
+    signIn: 'Σύνδεση',
+    signUp: 'Εγγραφή',
+    signOut: 'Αποσύνδεση',
+    favorites: 'Αγαπημένα',
+    recent: 'Πρόσφατα',
+    adminPanel: 'Πίνακας διαχείρισης',
+    settings: 'Ρυθμίσεις',
+
+    // Channel Grid
+    allChannels: 'Όλα τα κανάλια',
+    searchChannels: 'Αναζήτηση καναλιών...',
+    channels: 'κανάλια',
+    channelsCount: '{count} κανάλια',
+    workingChannels: 'ενεργά',
+    noChannelsFound: 'Δεν βρέθηκαν κανάλια',
+
+    // Categories
+    category: 'Κατηγορία',
+    allCategories: 'Όλα',
+    news: 'Ειδήσεις',
+    sports: 'Αθλητικά',
+    movies: 'Ταινίες',
+    kids: 'Παιδικά',
+    music: 'Μουσική',
+    entertainment: 'Ψυχαγωγία',
+    documentary: 'Ντοκιμαντέρ',
+    lifestyle: 'Lifestyle',
+    education: 'Εκπαίδευση',
+    travel: 'Ταξίδια',
+    gaming: 'Gaming',
+    cooking: 'Μαγειρική',
+    nature: 'Φύση',
+    science: 'Επιστήμη',
+    culture: 'Πολιτισμός',
+    auto: 'Αυτοκίνητα',
+    weather: 'Καιρός',
+    outdoor: 'Υπαίθρια',
+    general: 'Γενικά',
+    religious: 'Θρησκεία',
+    radio: 'Ραδιόφωνο',
+
+    // Language filter
+    language: 'Γλώσσα',
+    allLanguages: 'Όλες οι γλώσσες',
+
+    // Settings
+    settingsTitle: 'Ρυθμίσεις',
+    interfaceLanguage: 'Γλώσσα διεπαφής',
+    theme: 'Θέμα',
+    themeSystem: 'Σύστημα',
+    themeLight: 'Φωτεινό',
+    themeDark: 'Σκοτεινό',
+    hoverPreview: 'Προεπισκόπηση με hover',
+    hoverPreviewDesc: 'Εμφάνιση προεπισκόπησης καναλιού με hover',
+    saveSettings: 'Αποθήκευση',
+    close: 'Κλείσιμο',
+
+    // Player
+    selectChannel: 'Επιλέξτε κανάλι για παρακολούθηση',
+    channelOffline: 'Κανάλι εκτός σύνδεσης',
+    loading: 'Φόρτωση...',
+
+    // Misc
+    browseChannels: 'Περιήγηση καναλιών',
+    openChannelGrid: 'Άνοιγμα όλων των καναλιών',
   },
 } as const
 
