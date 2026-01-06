@@ -4,7 +4,7 @@ import { useEffect, useRef, useCallback, useState } from 'react'
 import type Hls from 'hls.js'
 import { usePlayerStore, useChannelStore } from '@/stores'
 import { useSettings } from '@/contexts/SettingsContext'
-import { ChevronLeft, ChevronRight, PictureInPicture2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, PictureInPicture2, Play, Pause, Volume2, VolumeX, Maximize, SkipBack, SkipForward, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { startWatchSession, endWatchSession, markSessionError } from '@/lib/channelAnalytics'
 
@@ -39,6 +39,9 @@ export function VideoPlayer() {
   const [isPiPSupported, setIsPiPSupported] = useState(false)
   const [isDocPiPSupported, setIsDocPiPSupported] = useState(false)
   const pipWindowRef = useRef<Window | null>(null)
+  const [showControls, setShowControls] = useState(true)
+  const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const [showVolumeSlider, setShowVolumeSlider] = useState(false)
 
   const { currentChannel, markChannelOffline, markChannelOnline, getFilteredChannels, setCurrentChannel } = useChannelStore()
   const { t } = useSettings()
@@ -576,6 +579,96 @@ export function VideoPlayer() {
     setSwipeDirection(null)
   }, [currentChannel, getFilteredChannels, setCurrentChannel])
 
+  // Hide controls after inactivity
+  const resetControlsTimeout = useCallback(() => {
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current)
+    }
+    setShowControls(true)
+    controlsTimeoutRef.current = setTimeout(() => {
+      if (isPlaying) {
+        setShowControls(false)
+        setShowVolumeSlider(false)
+      }
+    }, 3000)
+  }, [isPlaying])
+
+  // Show controls on interaction
+  const handleInteraction = useCallback(() => {
+    resetControlsTimeout()
+  }, [resetControlsTimeout])
+
+  // Toggle play/pause on tap (single tap)
+  const handleVideoTap = useCallback(() => {
+    resetControlsTimeout()
+  }, [resetControlsTimeout])
+
+  // Channel navigation
+  const handlePrevChannel = useCallback(() => {
+    const filteredChannels = getFilteredChannels()
+    if (currentChannel && filteredChannels.length > 0) {
+      const currentIndex = filteredChannels.findIndex(ch => ch.id === currentChannel.id)
+      const prevIndex = currentIndex > 0 ? currentIndex - 1 : filteredChannels.length - 1
+      setCurrentChannel(filteredChannels[prevIndex])
+    }
+  }, [currentChannel, getFilteredChannels, setCurrentChannel])
+
+  const handleNextChannel = useCallback(() => {
+    const filteredChannels = getFilteredChannels()
+    if (currentChannel && filteredChannels.length > 0) {
+      const currentIndex = filteredChannels.findIndex(ch => ch.id === currentChannel.id)
+      const nextIndex = currentIndex < filteredChannels.length - 1 ? currentIndex + 1 : 0
+      setCurrentChannel(filteredChannels[nextIndex])
+    }
+  }, [currentChannel, getFilteredChannels, setCurrentChannel])
+
+  // Toggle mute
+  const handleToggleMute = useCallback(() => {
+    const video = videoRef.current
+    if (!video) return
+    const newMuted = !isMuted
+    video.muted = newMuted
+    setMuted(newMuted)
+  }, [isMuted, setMuted])
+
+  // Volume change
+  const handleVolumeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const video = videoRef.current
+    if (!video) return
+    const newVolume = parseFloat(e.target.value)
+    video.volume = newVolume
+    video.muted = newVolume === 0
+    setMuted(newVolume === 0)
+    usePlayerStore.getState().setVolume(newVolume)
+  }, [setMuted])
+
+  // Toggle play
+  const handleTogglePlay = useCallback(() => {
+    const video = videoRef.current
+    if (!video) return
+    if (isPlaying) {
+      video.pause()
+    } else {
+      video.play().catch(() => {})
+    }
+  }, [isPlaying])
+
+  // Reload stream
+  const handleReload = useCallback(() => {
+    if (currentChannel?.url) {
+      initializePlayer(currentChannel.url)
+    }
+  }, [currentChannel?.url, initializePlayer])
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current)
+      }
+    }
+  }, [])
+
   return (
     <div ref={containerRef} className="video-container group">
       {/* Video wrapper - aspect-video on mobile, flex-1 on desktop */}
@@ -585,28 +678,142 @@ export function VideoPlayer() {
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        onClick={handleVideoTap}
+        onMouseMove={handleInteraction}
       >
         <video
           ref={videoRef}
           className="absolute inset-0 w-full h-full object-contain"
           playsInline
-          controls
           autoPlay
           onPlay={handlePlay}
           onPause={handlePause}
         />
 
-        {/* PiP button - top right corner */}
-        {isPiPSupported && currentChannel && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className={`absolute top-2 right-2 z-20 h-8 w-8 bg-black/50 hover:bg-black/70 text-white opacity-0 group-hover:opacity-100 transition-opacity ${isPiPActive ? 'bg-primary/50' : ''}`}
-            onClick={togglePiP}
-            title={isPiPActive ? 'Exit Picture-in-Picture' : 'Picture-in-Picture'}
+        {/* Custom controls overlay */}
+        {currentChannel && (
+          <div
+            className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-12 pb-2 px-2 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
           >
-            <PictureInPicture2 className="h-4 w-4" />
-          </Button>
+            {/* Controls row */}
+            <div className="flex items-center gap-1">
+              {/* Prev channel */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 text-white hover:bg-white/20"
+                onClick={(e) => { e.stopPropagation(); handlePrevChannel(); }}
+              >
+                <SkipBack className="h-5 w-5" />
+              </Button>
+
+              {/* Play/Pause */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 text-white hover:bg-white/20"
+                onClick={(e) => { e.stopPropagation(); handleTogglePlay(); }}
+              >
+                {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+              </Button>
+
+              {/* Next channel */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 text-white hover:bg-white/20"
+                onClick={(e) => { e.stopPropagation(); handleNextChannel(); }}
+              >
+                <SkipForward className="h-5 w-5" />
+              </Button>
+
+              {/* Volume control */}
+              <div className="flex items-center gap-1 ml-1 relative">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 text-white hover:bg-white/20"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // On mobile, first tap shows slider, second tap toggles mute
+                    if (!showVolumeSlider && window.matchMedia('(max-width: 1023px)').matches) {
+                      setShowVolumeSlider(true);
+                    } else {
+                      handleToggleMute();
+                    }
+                  }}
+                  onMouseEnter={() => setShowVolumeSlider(true)}
+                >
+                  {isMuted || volume === 0 ? (
+                    <VolumeX className="h-5 w-5" />
+                  ) : (
+                    <Volume2 className="h-5 w-5" />
+                  )}
+                </Button>
+                {/* Volume slider - always visible on hover/touch */}
+                <div
+                  className={`flex items-center transition-all duration-200 overflow-hidden ${showVolumeSlider ? 'w-20 opacity-100' : 'w-0 opacity-0 lg:w-20 lg:opacity-100'}`}
+                  onMouseEnter={() => setShowVolumeSlider(true)}
+                  onMouseLeave={() => setShowVolumeSlider(false)}
+                >
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={isMuted ? 0 : volume}
+                    onChange={handleVolumeChange}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-full h-1 cursor-pointer accent-white bg-white/30 rounded-full appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              {/* Live indicator */}
+              <span className="live-indicator ml-2 inline-flex items-center gap-1 text-[10px] font-semibold text-red-500">
+                <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+                LIVE
+              </span>
+
+              {/* Spacer */}
+              <div className="flex-1" />
+
+              {/* Reload */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 text-white hover:bg-white/20"
+                onClick={(e) => { e.stopPropagation(); handleReload(); }}
+                title="Reload stream"
+              >
+                <RotateCcw className="h-4 w-4" />
+              </Button>
+
+              {/* PiP */}
+              {isPiPSupported && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={`h-9 w-9 text-white hover:bg-white/20 ${isPiPActive ? 'bg-primary/50' : ''}`}
+                  onClick={(e) => { e.stopPropagation(); togglePiP(); }}
+                  title={isPiPActive ? 'Exit Picture-in-Picture' : 'Picture-in-Picture'}
+                >
+                  <PictureInPicture2 className="h-4 w-4" />
+                </Button>
+              )}
+
+              {/* Fullscreen */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 text-white hover:bg-white/20"
+                onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
+                title="Fullscreen"
+              >
+                <Maximize className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         )}
 
         {/* Swipe indicators - only visible on touch devices */}
