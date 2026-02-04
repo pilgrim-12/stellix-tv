@@ -549,6 +549,87 @@ export async function getVisitorStatsSummary(): Promise<{
   }
 }
 
+// Backfill geo coordinates for sessions that don't have lat/lng
+export async function backfillGeoCoordinates(
+  onProgress?: (done: number, total: number) => void
+): Promise<{ updated: number; failed: number }> {
+  let updated = 0
+  let failed = 0
+
+  try {
+    const sessionsRef = collection(db, 'visitorSessions')
+    const snapshot = await getDocs(sessionsRef)
+
+    // Find sessions without coordinates
+    const needsUpdate = snapshot.docs.filter(d => {
+      const data = d.data()
+      return !data.latitude || !data.longitude
+    })
+
+    onProgress?.(0, needsUpdate.length)
+
+    for (const docSnapshot of needsUpdate) {
+      const data = docSnapshot.data() as VisitorSession
+
+      try {
+        let lat: number | undefined
+        let lng: number | undefined
+
+        // Try geocoding by IP first (most accurate)
+        if (data.ip && data.ip !== 'unknown') {
+          try {
+            const res = await fetch(`https://ipapi.co/${data.ip}/json/`, { signal: AbortSignal.timeout(5000) })
+            const geo = await res.json()
+            if (!geo.error && geo.latitude && geo.longitude) {
+              lat = geo.latitude
+              lng = geo.longitude
+            }
+          } catch {
+            // IP geocoding failed
+          }
+        }
+
+        // Fallback: geocode by city+country via Nominatim
+        if (!lat && data.city && data.country) {
+          try {
+            const q = encodeURIComponent(`${data.city}, ${data.country}`)
+            const res = await fetch(
+              `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`,
+              { signal: AbortSignal.timeout(5000) }
+            )
+            const results = await res.json()
+            if (results.length > 0) {
+              lat = parseFloat(results[0].lat)
+              lng = parseFloat(results[0].lon)
+            }
+          } catch {
+            // Nominatim failed
+          }
+        }
+
+        if (lat && lng) {
+          const sessionRef = doc(db, 'visitorSessions', docSnapshot.id)
+          await setDoc(sessionRef, { latitude: lat, longitude: lng }, { merge: true })
+          updated++
+        } else {
+          failed++
+        }
+      } catch {
+        failed++
+      }
+
+      onProgress?.(updated + failed, needsUpdate.length)
+
+      // Rate limit: ~1 req/sec
+      await new Promise(r => setTimeout(r, 1100))
+    }
+  } catch (error) {
+    console.error('Backfill failed:', error)
+  }
+
+  return { updated, failed }
+}
+
 // Clear all visitor data (admin function)
 export async function clearAllVisitorData(): Promise<{ sessionsDeleted: number; statsDeleted: number }> {
   let sessionsDeleted = 0

@@ -18,7 +18,7 @@ import {
   MapPin,
 } from 'lucide-react'
 import { AdminLayout } from '@/components/admin/AdminLayout'
-import { getVisitorStatsSummary, getAllSessions, clearAllVisitorData, VisitorSession } from '@/lib/visitorAnalytics'
+import { getVisitorStatsSummary, getAllSessions, clearAllVisitorData, backfillGeoCoordinates, VisitorSession } from '@/lib/visitorAnalytics'
 import { Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -68,6 +68,8 @@ function formatTimeAgo(timestamp: number): string {
 export default function VisitorsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isClearing, setIsClearing] = useState(false)
+  const [isBackfilling, setIsBackfilling] = useState(false)
+  const [backfillProgress, setBackfillProgress] = useState('')
   const [allSessions, setAllSessions] = useState<VisitorSession[]>([])
   const [summary, setSummary] = useState<{
     today: { total: number; anonymous: number; loggedIn: number }
@@ -109,6 +111,32 @@ export default function VisitorsPage() {
     }
   }
 
+  const handleBackfill = async () => {
+    const missing = allSessions.filter(s => !s.latitude || !s.longitude).length
+    if (missing === 0) {
+      alert('All sessions already have coordinates.')
+      return
+    }
+    if (!confirm(`${missing} sessions without coordinates. Backfill geo data? This may take a while.`)) {
+      return
+    }
+    setIsBackfilling(true)
+    setBackfillProgress(`0 / ${missing}`)
+    try {
+      const result = await backfillGeoCoordinates((done, total) => {
+        setBackfillProgress(`${done} / ${total}`)
+      })
+      alert(`Done! Updated: ${result.updated}, Failed: ${result.failed}`)
+      await loadData()
+    } catch (error) {
+      console.error('Backfill error:', error)
+      alert('Backfill failed. Check console.')
+    } finally {
+      setIsBackfilling(false)
+      setBackfillProgress('')
+    }
+  }
+
   useEffect(() => {
     loadData()
   }, [])
@@ -122,6 +150,24 @@ export default function VisitorsPage() {
           <Button variant="outline" size="sm" onClick={loadData} disabled={isLoading}>
             <RefreshCw className={cn('h-4 w-4 mr-2', isLoading && 'animate-spin')} />
             Refresh
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleBackfill}
+            disabled={isBackfilling || isLoading}
+          >
+            {isBackfilling ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                {backfillProgress}
+              </>
+            ) : (
+              <>
+                <MapPin className="h-4 w-4 mr-2" />
+                Backfill Geo
+              </>
+            )}
           </Button>
           <Button
             variant="destructive"
