@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -17,9 +18,18 @@ import {
   MapPin,
 } from 'lucide-react'
 import { AdminLayout } from '@/components/admin/AdminLayout'
-import { getVisitorStatsSummary, getRecentSessions, clearAllVisitorData, VisitorSession } from '@/lib/visitorAnalytics'
+import { getVisitorStatsSummary, getAllSessions, clearAllVisitorData, VisitorSession } from '@/lib/visitorAnalytics'
 import { Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+
+const VisitorMap = dynamic(() => import('@/components/admin/VisitorMap'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[500px] rounded-lg border border-border flex items-center justify-center bg-muted/10">
+      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+    </div>
+  )
+})
 
 // Country flag emoji from country code
 function getCountryFlag(countryCode: string): string {
@@ -58,6 +68,7 @@ function formatTimeAgo(timestamp: number): string {
 export default function VisitorsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isClearing, setIsClearing] = useState(false)
+  const [allSessions, setAllSessions] = useState<VisitorSession[]>([])
   const [summary, setSummary] = useState<{
     today: { total: number; anonymous: number; loggedIn: number }
     week: { total: number; anonymous: number; loggedIn: number }
@@ -68,8 +79,12 @@ export default function VisitorsPage() {
   const loadData = async () => {
     setIsLoading(true)
     try {
-      const data = await getVisitorStatsSummary()
+      const [data, sessions] = await Promise.all([
+        getVisitorStatsSummary(),
+        getAllSessions()
+      ])
       setSummary(data)
+      setAllSessions(sessions)
     } catch (error) {
       console.error('Error loading visitor stats:', error)
     } finally {
@@ -239,6 +254,21 @@ export default function VisitorsPage() {
               </CardContent>
             </Card>
 
+            {/* Visitor Map */}
+            {allSessions.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Globe className="h-4 w-4" />
+                    Visitor Map
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <VisitorMap sessions={allSessions} />
+                </CardContent>
+              </Card>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Top Countries */}
               <Card>
@@ -281,13 +311,13 @@ export default function VisitorsPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {summary.recentSessions.length === 0 ? (
+                  {allSessions.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-4">
                       No sessions yet
                     </p>
                   ) : (
-                    <div className="space-y-2 max-h-[400px] overflow-auto">
-                      {summary.recentSessions.map((session) => (
+                    <div className="space-y-2 max-h-[600px] overflow-auto">
+                      {allSessions.map((session) => (
                         <div
                           key={session.sessionId}
                           className="p-3 rounded-lg border border-border/40 hover:bg-muted/30 transition-colors"

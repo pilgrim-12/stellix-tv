@@ -12,6 +12,8 @@ export interface VisitorSession {
   countryCode: string
   city?: string
   ip?: string              // Hashed or partial for privacy
+  latitude?: number
+  longitude?: number
   userAgent: string
   device: 'desktop' | 'mobile' | 'tablet'
   browser: string
@@ -40,6 +42,8 @@ interface GeoInfo {
   countryCode: string
   city?: string
   ip?: string
+  latitude?: number
+  longitude?: number
 }
 
 // Cache geo info to avoid repeated API calls
@@ -69,7 +73,9 @@ async function getGeoInfo(): Promise<GeoInfo> {
                 ip: data.ip,
                 country: geoData.country_name || data.country || 'Unknown',
                 countryCode: geoData.country_code || data.countryCode || 'XX',
-                city: geoData.city || data.city
+                city: geoData.city || data.city,
+                latitude: geoData.latitude ?? data.latitude ?? undefined,
+                longitude: geoData.longitude ?? data.longitude ?? undefined
               }
               return cachedGeoInfo
             }
@@ -81,7 +87,9 @@ async function getGeoInfo(): Promise<GeoInfo> {
           ip: data.ip,
           country: data.country || 'Unknown',
           countryCode: data.countryCode || 'XX',
-          city: data.city
+          city: data.city,
+          latitude: data.latitude ?? undefined,
+          longitude: data.longitude ?? undefined
         }
         return cachedGeoInfo
       }
@@ -100,18 +108,23 @@ async function getGeoInfo(): Promise<GeoInfo> {
           country: data.country_name || 'Unknown',
           countryCode: data.country_code || 'XX',
           city: data.city,
-          ip: data.ip
+          ip: data.ip,
+          latitude: data.latitude,
+          longitude: data.longitude
         }
       },
       // ipinfo.io - HTTPS, free 50k/month
       async () => {
         const res = await fetch('https://ipinfo.io/json', { signal: AbortSignal.timeout(5000) })
         const data = await res.json()
+        const [lat, lng] = (data.loc || '').split(',').map(Number)
         return {
           country: data.country || 'Unknown',
           countryCode: data.country || 'XX',
           city: data.city,
-          ip: data.ip
+          ip: data.ip,
+          latitude: lat || undefined,
+          longitude: lng || undefined
         }
       },
       // freeipapi.com - HTTPS, free
@@ -122,7 +135,9 @@ async function getGeoInfo(): Promise<GeoInfo> {
           country: data.countryName || 'Unknown',
           countryCode: data.countryCode || 'XX',
           city: data.cityName,
-          ip: data.ipAddress
+          ip: data.ipAddress,
+          latitude: data.latitude,
+          longitude: data.longitude
         }
       }
     ]
@@ -249,6 +264,8 @@ export async function startVisitorSession(userId?: string, userEmail?: string): 
     countryCode: geoInfo.countryCode,
     city: geoInfo.city,
     ip: geoInfo.ip,
+    latitude: geoInfo.latitude,
+    longitude: geoInfo.longitude,
     userAgent,
     device: detectDevice(userAgent),
     browser: detectBrowser(userAgent),
@@ -319,6 +336,8 @@ async function saveVisitorSession(): Promise<void> {
       countryCode: currentVisitorSession.countryCode || 'XX',
       city: currentVisitorSession.city || null,
       ip: currentVisitorSession.ip || null,
+      latitude: currentVisitorSession.latitude || null,
+      longitude: currentVisitorSession.longitude || null,
       userAgent: currentVisitorSession.userAgent,
       device: currentVisitorSession.device,
       browser: currentVisitorSession.browser,
@@ -401,6 +420,19 @@ export async function getRecentSessions(limitCount: number = 100): Promise<Visit
   }
 }
 
+// Get ALL visitor sessions (for map view)
+export async function getAllSessions(): Promise<VisitorSession[]> {
+  try {
+    const sessionsRef = collection(db, 'visitorSessions')
+    const snapshot = await getDocs(sessionsRef)
+    const sessions = snapshot.docs.map(doc => doc.data() as VisitorSession)
+    return sessions.sort((a, b) => (b.startTime || 0) - (a.startTime || 0))
+  } catch (error) {
+    console.error('Failed to get all sessions:', error)
+    return []
+  }
+}
+
 // Get daily stats for date range
 export async function getDailyStats(days: number = 30): Promise<DailyVisitorStats[]> {
   try {
@@ -468,7 +500,7 @@ export async function getVisitorStatsSummary(): Promise<{
 }> {
   try {
     const dailyStats = await getDailyStats(7)
-    const recentSessions = await getRecentSessions(20)
+    const recentSessions = await getRecentSessions(200)
 
     const today = new Date().toISOString().split('T')[0]
     const todayStats = dailyStats.find(s => s.date === today)

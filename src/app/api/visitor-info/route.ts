@@ -13,11 +13,15 @@ export async function GET(request: NextRequest) {
   const country = request.headers.get('x-vercel-ip-country') || null
   const countryName = request.headers.get('x-vercel-ip-country-region') || country || null
   const city = request.headers.get('x-vercel-ip-city') || null
+  const latitude = request.headers.get('x-vercel-ip-latitude') || null
+  const longitude = request.headers.get('x-vercel-ip-longitude') || null
 
   return NextResponse.json({
     ip,
     country: countryName,
     countryCode: country,
-    city: city ? decodeURIComponent(city) : null
+    city: city ? decodeURIComponent(city) : null,
+    latitude: latitude ? parseFloat(latitude) : null,
+    longitude: longitude ? parseFloat(longitude) : null
   })
 }
