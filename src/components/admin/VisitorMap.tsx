@@ -92,9 +92,9 @@ export default function VisitorMap({ sessions }: VisitorMapProps) {
     async function geocodeSessions() {
       setIsGeocoding(true)
       const results: GeocodedSession[] = []
-      const needsGeocoding: VisitorSession[] = []
 
-      // First pass: sessions that already have coords
+      // Step 1: sessions that already have coords — show immediately
+      const needsGeocoding: VisitorSession[] = []
       for (const s of sessions) {
         if (s.latitude && s.longitude) {
           results.push({ ...s, _lat: s.latitude, _lng: s.longitude })
@@ -103,31 +103,57 @@ export default function VisitorMap({ sessions }: VisitorMapProps) {
         }
       }
 
-      // Show sessions with coords immediately
+      // Step 2: group remaining by unique city+country to minimize API calls
+      const locationGroups = new Map<string, VisitorSession[]>()
+      const countryOnlySessions: VisitorSession[] = []
+
+      for (const s of needsGeocoding) {
+        if (s.city && s.country) {
+          const key = `${s.city},${s.country}`
+          const group = locationGroups.get(key)
+          if (group) {
+            group.push(s)
+          } else {
+            locationGroups.set(key, [s])
+          }
+        } else if (s.countryCode) {
+          countryOnlySessions.push(s)
+        }
+      }
+
+      // Step 3: place country-only sessions at country center instantly (no API)
+      for (const s of countryOnlySessions) {
+        const center = countryCenters[s.countryCode.toUpperCase()]
+        if (center) {
+          const offset = () => (Math.random() - 0.5) * 1.5
+          results.push({ ...s, _lat: center.lat + offset(), _lng: center.lng + offset() })
+        }
+      }
+
+      // Show all instant results
       if (!cancelled) {
         setGeocodedSessions([...results])
         setGeocodeProgress({ done: results.length, total: sessions.length })
       }
 
-      // Geocode remaining sessions with city info
-      for (const s of needsGeocoding) {
+      // Step 4: geocode unique locations only (not each session)
+      for (const [key, groupSessions] of locationGroups) {
         if (cancelled) break
 
-        let coords: { lat: number; lng: number } | null = null
-
-        if (s.city && s.country) {
-          coords = await geocodeCity(s.city, s.country)
-        }
+        const [city, country] = key.split(',')
+        let coords = await geocodeCity(city, country)
 
         // Fallback to country center
-        if (!coords && s.countryCode) {
-          coords = countryCenters[s.countryCode.toUpperCase()] || null
+        if (!coords) {
+          const cc = groupSessions[0].countryCode?.toUpperCase()
+          if (cc) coords = countryCenters[cc] || null
         }
 
         if (coords) {
-          // Add small random offset to prevent exact overlap
-          const offset = () => (Math.random() - 0.5) * 0.5
-          results.push({ ...s, _lat: coords.lat + offset(), _lng: coords.lng + offset() })
+          for (const s of groupSessions) {
+            const offset = () => (Math.random() - 0.5) * 0.3
+            results.push({ ...s, _lat: coords.lat + offset(), _lng: coords.lng + offset() })
+          }
         }
 
         if (!cancelled) {
@@ -135,8 +161,8 @@ export default function VisitorMap({ sessions }: VisitorMapProps) {
           setGeocodeProgress({ done: results.length, total: sessions.length })
         }
 
-        // Rate limit Nominatim requests (1 req/sec policy)
-        if (s.city && s.country && !geocodeCache.has(`${s.city},${s.country}`)) {
+        // Rate limit only for actual Nominatim API calls (cached hits are instant)
+        if (!geocodeCache.has(key)) {
           await new Promise(r => setTimeout(r, 1100))
         }
       }
