@@ -158,15 +158,14 @@ export function formatWatchTime(seconds: number): string {
   return `${hours}h ${minutes}m`
 }
 
-// Handle page unload - save current session
-if (typeof window !== 'undefined') {
+// Handle page unload - save current session (guard prevents duplicate registration during HMR)
+let _beforeUnloadRegistered = false
+if (typeof window !== 'undefined' && !_beforeUnloadRegistered) {
+  _beforeUnloadRegistered = true
   window.addEventListener('beforeunload', () => {
     if (currentSession) {
-      // Use sendBeacon for reliable delivery on page unload
       const watchTime = Math.floor((Date.now() - currentSession.startTime) / 1000)
       if (watchTime >= 2) {
-        // Note: sendBeacon doesn't work with Firestore directly
-        // Stats will be saved on next session start or channel change
         endWatchSession(false)
       }
     }

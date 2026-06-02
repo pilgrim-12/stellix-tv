@@ -42,8 +42,11 @@ export function VideoPlayer() {
   const [showControls, setShowControls] = useState(true)
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const [showVolumeSlider, setShowVolumeSlider] = useState(false)
+  const safariListenerRef = useRef<(() => void) | null>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   const { currentChannel, markChannelOffline, markChannelOnline, getFilteredChannels, setCurrentChannel } = useChannelStore()
+  const currentChannelRef = useRef(currentChannel)
   const { t } = useSettings()
   const {
     isPlaying,
@@ -53,20 +56,39 @@ export function VideoPlayer() {
     error,
     setPlaying,
     setMuted,
+    setVolume,
     setLoading,
     setError,
     setFullscreen,
   } = usePlayerStore()
+
+  // Keep currentChannelRef in sync
+  useEffect(() => {
+    currentChannelRef.current = currentChannel
+  }, [currentChannel])
 
   // Initialize HLS
   const initializePlayer = useCallback(async (url: string) => {
     const video = videoRef.current
     if (!video) return
 
-    // Cleanup previous instance
+    // Abort any previous initialization in progress
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+    const abortController = new AbortController()
+    abortControllerRef.current = abortController
+
+    // Cleanup previous HLS instance
     if (hlsRef.current) {
       hlsRef.current.destroy()
       hlsRef.current = null
+    }
+
+    // Cleanup previous Safari listener
+    if (safariListenerRef.current) {
+      video.removeEventListener('loadedmetadata', safariListenerRef.current)
+      safariListenerRef.current = null
     }
 
     setLoading(true)
@@ -74,6 +96,9 @@ export function VideoPlayer() {
 
     // Load HLS.js dynamically
     const Hls = await loadHls()
+
+    // Check if this initialization was aborted while awaiting HLS import
+    if (abortController.signal.aborted) return
 
     if (Hls.isSupported()) {
       const hls = new Hls({
@@ -86,18 +111,24 @@ export function VideoPlayer() {
       hls.attachMedia(video)
 
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        if (abortController.signal.aborted) return
         setLoading(false)
-        if (currentChannel) markChannelOnline(currentChannel.id)
+        const channel = currentChannelRef.current
+        if (channel) markChannelOnline(channel.id)
         // Try to autoplay - browsers may block this without user interaction
         video.play().then(() => {
+          if (abortController.signal.aborted) return
           setPlaying(true)
         }).catch(() => {
-          // Autoplay blocked - try muted autoplay as fallback (user will need to unmute manually)
+          if (abortController.signal.aborted) return
+          // Autoplay blocked - try muted autoplay as fallback
           video.muted = true
           setMuted(true)
           video.play().then(() => {
+            if (abortController.signal.aborted) return
             setPlaying(true)
           }).catch(() => {
+            if (abortController.signal.aborted) return
             setPlaying(false)
           })
         })
@@ -105,37 +136,49 @@ export function VideoPlayer() {
 
       // Clear error when stream recovers (fragment loaded successfully)
       hls.on(Hls.Events.FRAG_LOADED, () => {
+        if (abortController.signal.aborted) return
         setError(null)
       })
 
       let retryCount = 0
-      const maxRetries = 2
+      const maxRetries = 4
+      const getRetryDelay = (attempt: number) => Math.min(1000 * Math.pow(2, attempt), 8000)
 
       hls.on(Hls.Events.ERROR, (_, data) => {
+        if (abortController.signal.aborted) return
         if (data.fatal) {
           retryCount++
-          // Mark analytics session as having error
           markSessionError()
+
           if (retryCount <= maxRetries) {
+            const delay = getRetryDelay(retryCount - 1)
             switch (data.type) {
               case Hls.ErrorTypes.NETWORK_ERROR:
-                setError('Network error - trying to recover...')
-                hls.startLoad()
+                setError(`Network error - retrying in ${Math.ceil(delay / 1000)}s...`)
+                setTimeout(() => {
+                  if (abortController.signal.aborted) return
+                  hls.startLoad()
+                }, delay)
                 break
               case Hls.ErrorTypes.MEDIA_ERROR:
-                setError('Media error - trying to recover...')
-                hls.recoverMediaError()
+                setError(`Media error - retrying in ${Math.ceil(delay / 1000)}s...`)
+                setTimeout(() => {
+                  if (abortController.signal.aborted) return
+                  hls.recoverMediaError()
+                }, delay)
                 break
               default:
                 setError('Channel offline')
-                if (currentChannel) markChannelOffline(currentChannel.id)
+                const channel = currentChannelRef.current
+                if (channel) markChannelOffline(channel.id)
                 hls.destroy()
                 break
             }
           } else {
             setError('Channel offline')
             setLoading(false)
-            if (currentChannel) markChannelOffline(currentChannel.id)
+            const channel = currentChannelRef.current
+            if (channel) markChannelOffline(channel.id)
             hls.destroy()
           }
         }
@@ -145,22 +188,31 @@ export function VideoPlayer() {
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       // Safari native HLS support
       video.src = url
-      video.addEventListener('loadedmetadata', () => {
+      const onLoadedMetadata = () => {
+        if (abortController.signal.aborted) return
         setLoading(false)
         video.play().then(() => {
+          if (abortController.signal.aborted) return
           setPlaying(true)
         }).catch(() => {
+          if (abortController.signal.aborted) return
           video.muted = true
           setMuted(true)
           video.play().then(() => {
+            if (abortController.signal.aborted) return
             setPlaying(true)
-          }).catch(() => setPlaying(false))
+          }).catch(() => {
+            if (abortController.signal.aborted) return
+            setPlaying(false)
+          })
         })
-      })
+      }
+      safariListenerRef.current = onLoadedMetadata
+      video.addEventListener('loadedmetadata', onLoadedMetadata)
     } else {
       setError('HLS is not supported in this browser')
     }
-  }, [setLoading, setError, setPlaying, setMuted, currentChannel, markChannelOffline, markChannelOnline])
+  }, [setLoading, setError, setPlaying, setMuted, markChannelOffline, markChannelOnline])
 
   // Load channel when changed
   useEffect(() => {
@@ -173,9 +225,24 @@ export function VideoPlayer() {
     return () => {
       // End analytics tracking when channel changes or component unmounts
       endWatchSession(false)
+      // Abort any in-flight initialization
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+        abortControllerRef.current = null
+      }
       if (hlsRef.current) {
         hlsRef.current.destroy()
         hlsRef.current = null
+      }
+      // Remove Safari listener if active
+      if (safariListenerRef.current && videoRef.current) {
+        videoRef.current.removeEventListener('loadedmetadata', safariListenerRef.current)
+        safariListenerRef.current = null
+      }
+      // Close PiP window if open
+      if (pipWindowRef.current && !pipWindowRef.current.closed) {
+        pipWindowRef.current.close()
+        pipWindowRef.current = null
       }
     }
   }, [currentChannel?.url, currentChannel?.id, currentChannel?.name, initializePlayer])
@@ -270,6 +337,14 @@ export function VideoPlayer() {
       }
     }
   }, [currentChannel, setPlaying])
+
+  // Update PiP channel info when channel changes
+  useEffect(() => {
+    if (pipWindowRef.current && !pipWindowRef.current.closed && currentChannel) {
+      const info = pipWindowRef.current.document.querySelector('.channel-info')
+      if (info) info.textContent = currentChannel.name
+    }
+  }, [currentChannel])
 
   // Toggle Picture-in-Picture (with Document PiP for volume control)
   const togglePiP = useCallback(async () => {
@@ -373,7 +448,7 @@ export function VideoPlayer() {
 
         // Create PiP content
         pipDoc.body.innerHTML = `
-          <div class="channel-info">${currentChannel?.name || 'Stellix TV'}</div>
+          <div class="channel-info">${currentChannelRef.current?.name || 'Stellix TV'}</div>
           <div class="video-wrapper">
             <div class="controls">
               <button class="btn" id="muteBtn">
@@ -433,16 +508,16 @@ export function VideoPlayer() {
           video.volume = val
           video.muted = val === 0
           setMuted(val === 0)
-          usePlayerStore.getState().setVolume(val)
+          setVolume(val)
           updateMuteIcon()
         })
 
-        // Refresh button - reload the stream
+        // Refresh button - reload the stream (use ref to avoid stale closure)
         const refreshBtn = pipDoc.getElementById('refreshBtn') as HTMLButtonElement
         refreshBtn?.addEventListener('click', () => {
-          if (currentChannel?.url) {
-            // Re-initialize the player with the same URL
-            initializePlayer(currentChannel.url)
+          const channel = currentChannelRef.current
+          if (channel?.url) {
+            initializePlayer(channel.url)
           }
         })
 
@@ -464,7 +539,7 @@ export function VideoPlayer() {
 
         // Handle window close - return video to main page
         pipWindow.addEventListener('pagehide', () => {
-          video.setAttribute('controls', '') // Restore native controls
+          video.removeAttribute('controls') // Keep native controls hidden, custom overlay handles UI
           const mainWrapper = containerRef.current?.querySelector('.relative')
           if (mainWrapper && video.parentElement !== mainWrapper) {
             mainWrapper.insertBefore(video, mainWrapper.firstChild)
@@ -479,7 +554,7 @@ export function VideoPlayer() {
     } catch (error) {
       console.error('PiP error:', error)
     }
-  }, [isDocPiPSupported, currentChannel, setMuted, initializePlayer])
+  }, [isDocPiPSupported, setMuted, setVolume, initializePlayer])
 
   // Video event handlers
   const handlePlay = () => setPlaying(true)
@@ -639,8 +714,8 @@ export function VideoPlayer() {
     video.volume = newVolume
     video.muted = newVolume === 0
     setMuted(newVolume === 0)
-    usePlayerStore.getState().setVolume(newVolume)
-  }, [setMuted])
+    setVolume(newVolume)
+  }, [setMuted, setVolume])
 
   // Toggle play
   const handleTogglePlay = useCallback(() => {

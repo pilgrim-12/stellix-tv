@@ -668,13 +668,13 @@ export async function clearAllVisitorData(): Promise<{ sessionsDeleted: number; 
   }
 }
 
-// End session on page unload
-if (typeof window !== 'undefined') {
+// End session on page unload (guard prevents duplicate registration during HMR)
+let _visitorBeforeUnloadRegistered = false
+if (typeof window !== 'undefined' && !_visitorBeforeUnloadRegistered) {
+  _visitorBeforeUnloadRegistered = true
   window.addEventListener('beforeunload', () => {
     if (currentVisitorSession) {
       currentVisitorSession.lastActivity = Date.now()
-      // Note: async operations may not complete on beforeunload
-      // Consider using sendBeacon in the future
       saveVisitorSession()
     }
   })
