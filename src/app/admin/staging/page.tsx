@@ -102,7 +102,7 @@ export default function StagingPage() {
   // Action states
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null)
   const [isMerging, setIsMerging] = useState(false)
-  const [mergeResult, setMergeResult] = useState<{ merged: number; skipped: number } | null>(null)
+  const [mergeResult, setMergeResult] = useState<{ merged: number; updated: number; skipped: number } | null>(null)
   const [deletingPlaylistId, setDeletingPlaylistId] = useState<string | null>(null)
 
   // Load playlists list
@@ -240,17 +240,20 @@ export default function StagingPage() {
   const handleImportFromUrl = async () => {
     if (!playlistUrl.trim()) return
 
-    // Check if playlist with this URL already exists
-    const normalizedUrl = playlistUrl.trim().toLowerCase()
-    const existingPlaylist = playlists.find(p => p.url?.toLowerCase() === normalizedUrl)
-    if (existingPlaylist) {
-      setImportError(`Playlist with this URL already exists: "${existingPlaylist.name}"`)
-      return
-    }
-
     setIsImporting(true)
     setImportError(null)
     setImportSuccess(null)
+
+    // If playlist with this URL already exists, delete old staging to allow re-import
+    const normalizedUrl = playlistUrl.trim().toLowerCase()
+    const existingPlaylist = playlists.find(p => p.url?.toLowerCase() === normalizedUrl)
+    if (existingPlaylist) {
+      try {
+        await deleteStagingPlaylist(existingPlaylist.id)
+      } catch {
+        // Continue even if delete fails
+      }
+    }
 
     try {
       const content = await fetchM3UPlaylist(playlistUrl.trim())
@@ -357,7 +360,7 @@ export default function StagingPage() {
 
     try {
       const result = await mergeStagingToCurated(currentPlaylist.id)
-      setMergeResult({ merged: result.merged, skipped: result.skipped })
+      setMergeResult({ merged: result.merged, updated: result.updated, skipped: result.skipped })
       await loadPlaylist(currentPlaylist.id)
       await loadPlaylists()
     } catch (error) {
@@ -484,7 +487,7 @@ export default function StagingPage() {
                   </div>
                   {mergeResult && (
                     <p className="text-xs text-green-500">
-                      Merged: {mergeResult.merged}, skipped: {mergeResult.skipped}
+                      New: {mergeResult.merged}, updated: {mergeResult.updated}, skipped: {mergeResult.skipped}
                     </p>
                   )}
                 </CardHeader>

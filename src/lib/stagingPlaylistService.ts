@@ -353,7 +353,7 @@ export async function bulkUpdateStagingStatus(
  */
 export async function mergeStagingToCurated(
   playlistId: string
-): Promise<{ merged: number; skipped: number; duplicateUrls: string[] }> {
+): Promise<{ merged: number; updated: number; skipped: number; duplicateUrls: string[] }> {
   console.log('[StagingPlaylists] Starting merge for playlist:', playlistId)
 
   try {
@@ -368,21 +368,27 @@ export async function mergeStagingToCurated(
     console.log('[StagingPlaylists] Working channels to merge:', workingChannels.length)
 
     if (workingChannels.length === 0) {
-      return { merged: 0, skipped: 0, duplicateUrls: [] }
+      return { merged: 0, updated: 0, skipped: 0, duplicateUrls: [] }
     }
 
     // Load curated channels
     const curatedChannels = await getAllCuratedChannelsRaw()
-    const curatedUrls = new Set(curatedChannels.map((ch) => ch.url?.trim().toLowerCase()))
+    // Build a map for fast lookup by URL
+    const curatedByUrl = new Map<string, number>()
+    curatedChannels.forEach((ch, index) => {
+      if (ch.url) curatedByUrl.set(ch.url.trim().toLowerCase(), index)
+    })
 
     const result = {
       merged: 0,
+      updated: 0,
       skipped: 0,
       duplicateUrls: [] as string[],
     }
 
     const channelsToAdd: CuratedChannel[] = []
     const mergedIds: string[] = []
+    let curatedModified = false
 
     for (const stagingCh of workingChannels) {
       const url = stagingCh.url?.trim()
@@ -391,17 +397,41 @@ export async function mergeStagingToCurated(
         continue
       }
 
-      // Check for duplicate in curated
-      if (curatedUrls.has(url.toLowerCase())) {
-        result.skipped++
+      const existingIndex = curatedByUrl.get(url.toLowerCase())
+
+      if (existingIndex !== undefined) {
+        // Channel exists — update its data from the new playlist
+        const existing = curatedChannels[existingIndex]
+        const hasChanges =
+          existing.name !== stagingCh.name ||
+          existing.logo !== stagingCh.logo ||
+          existing.group !== stagingCh.group ||
+          existing.language !== stagingCh.language ||
+          existing.country !== stagingCh.country
+
+        if (hasChanges) {
+          curatedChannels[existingIndex] = {
+            ...existing,
+            name: stagingCh.name,
+            logo: stagingCh.logo,
+            group: stagingCh.group,
+            language: stagingCh.language,
+            country: stagingCh.country,
+            updatedAt: new Date().toISOString(),
+            status: 'active',
+          }
+          curatedModified = true
+          result.updated++
+        } else {
+          result.skipped++
+        }
         result.duplicateUrls.push(url)
-        // Still mark as merged since it exists in curated
         mergedIds.push(stagingCh.id)
         continue
       }
 
-      // Add to curated
-      curatedUrls.add(url.toLowerCase())
+      // New channel — add to curated
+      curatedByUrl.set(url.toLowerCase(), curatedChannels.length + channelsToAdd.length)
 
       const curatedChannel: CuratedChannel = {
         id: `curated-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
@@ -411,11 +441,11 @@ export async function mergeStagingToCurated(
         group: stagingCh.group,
         language: stagingCh.language,
         country: stagingCh.country,
-        status: 'active', // Merged channels are active
+        status: 'active',
         enabled: true,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        playlistId, // Track source
+        playlistId,
       }
 
       channelsToAdd.push(curatedChannel)
@@ -423,11 +453,11 @@ export async function mergeStagingToCurated(
       result.merged++
     }
 
-    // Save to curated if any new channels
-    if (channelsToAdd.length > 0) {
+    // Save to curated if there are new or updated channels
+    if (channelsToAdd.length > 0 || curatedModified) {
       const allCurated = [...curatedChannels, ...channelsToAdd]
       await saveCuratedChannels(allCurated)
-      console.log('[StagingPlaylists] Added', channelsToAdd.length, 'channels to curated')
+      console.log('[StagingPlaylists] Added', channelsToAdd.length, 'new, updated', result.updated, 'channels')
     }
 
     // Update staging playlist - mark channels as merged
