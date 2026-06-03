@@ -768,7 +768,7 @@ export function VideoPlayer() {
         {/* Custom controls overlay */}
         {currentChannel && (
           <div
-            className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-12 pb-2 px-2 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-12 pb-3 px-3 sm:pb-2 sm:px-2 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
           >
             {/* Controls row */}
             <div className="flex items-center gap-1">
@@ -776,7 +776,7 @@ export function VideoPlayer() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9 text-white hover:bg-white/20"
+                className="h-10 w-10 sm:h-9 sm:w-9 text-white hover:bg-white/20"
                 onClick={(e) => { e.stopPropagation(); handlePrevChannel(); }}
               >
                 <SkipBack className="h-5 w-5" />
@@ -786,7 +786,7 @@ export function VideoPlayer() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9 text-white hover:bg-white/20"
+                className="h-10 w-10 sm:h-9 sm:w-9 text-white hover:bg-white/20"
                 onClick={(e) => { e.stopPropagation(); handleTogglePlay(); }}
               >
                 {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
@@ -796,7 +796,7 @@ export function VideoPlayer() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9 text-white hover:bg-white/20"
+                className="h-10 w-10 sm:h-9 sm:w-9 text-white hover:bg-white/20"
                 onClick={(e) => { e.stopPropagation(); handleNextChannel(); }}
               >
                 <SkipForward className="h-5 w-5" />
@@ -807,7 +807,7 @@ export function VideoPlayer() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 text-white hover:bg-white/20"
+                  className="h-10 w-10 sm:h-9 sm:w-9 text-white hover:bg-white/20"
                   onClick={(e) => {
                     e.stopPropagation();
                     // On mobile, first tap shows slider, second tap toggles mute
@@ -827,7 +827,7 @@ export function VideoPlayer() {
                 </Button>
                 {/* Volume slider - always visible on hover/touch */}
                 <div
-                  className={`flex items-center transition-all duration-200 overflow-hidden ${showVolumeSlider ? 'w-20 opacity-100' : 'w-0 opacity-0 lg:w-20 lg:opacity-100'}`}
+                  className={`flex items-center transition-all duration-200 overflow-hidden ${showVolumeSlider ? 'w-24 sm:w-20 opacity-100' : 'w-0 opacity-0 lg:w-20 lg:opacity-100'}`}
                   onMouseEnter={() => setShowVolumeSlider(true)}
                   onMouseLeave={() => setShowVolumeSlider(false)}
                 >
@@ -857,7 +857,7 @@ export function VideoPlayer() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9 text-white hover:bg-white/20"
+                className="h-10 w-10 sm:h-9 sm:w-9 text-white hover:bg-white/20"
                 onClick={(e) => { e.stopPropagation(); handleReload(); }}
                 title="Reload stream"
               >
@@ -869,7 +869,7 @@ export function VideoPlayer() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className={`h-9 w-9 text-white hover:bg-white/20 ${isPiPActive ? 'bg-primary/50' : ''}`}
+                  className={`h-10 w-10 sm:h-9 sm:w-9 text-white hover:bg-white/20 ${isPiPActive ? 'bg-primary/50' : ''}`}
                   onClick={(e) => { e.stopPropagation(); togglePiP(); }}
                   title={isPiPActive ? 'Exit Picture-in-Picture' : 'Picture-in-Picture'}
                 >
@@ -881,7 +881,7 @@ export function VideoPlayer() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9 text-white hover:bg-white/20"
+                className="h-10 w-10 sm:h-9 sm:w-9 text-white hover:bg-white/20"
                 onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
                 title="Fullscreen"
               >

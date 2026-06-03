@@ -35,7 +35,7 @@ function Carousel({ children, className }: CarouselProps) {
   const scroll = (direction: 'left' | 'right') => {
     const el = containerRef.current
     if (!el) return
-    const scrollAmount = 150
+    const scrollAmount = 120
     el.scrollBy({
       left: direction === 'left' ? -scrollAmount : scrollAmount,
       behavior: 'smooth',
@@ -49,7 +49,7 @@ function Carousel({ children, className }: CarouselProps) {
         <Button
           variant="ghost"
           size="icon"
-          className="absolute left-0 z-10 h-6 w-6 bg-background/80 hover:bg-background"
+          className="absolute left-0 z-10 h-7 w-7 sm:h-6 sm:w-6 bg-background/80 hover:bg-background"
           onClick={() => scroll('left')}
         >
           <ChevronLeft className="h-4 w-4" />
@@ -67,7 +67,7 @@ function Carousel({ children, className }: CarouselProps) {
         <Button
           variant="ghost"
           size="icon"
-          className="absolute right-0 z-10 h-6 w-6 bg-background/80 hover:bg-background"
+          className="absolute right-0 z-10 h-7 w-7 sm:h-6 sm:w-6 bg-background/80 hover:bg-background"
           onClick={() => scroll('right')}
         >
           <ChevronRight className="h-4 w-4" />
@@ -100,7 +100,7 @@ export function CategoryFilter() {
               variant={selectedCategory === category.id ? 'default' : 'ghost'}
               size="sm"
               className={cn(
-                'h-6 text-[11px] px-2 whitespace-nowrap shrink-0 gap-1',
+                'h-7 text-xs sm:h-6 sm:text-[11px] px-2 whitespace-nowrap shrink-0 gap-1',
                 selectedCategory === category.id && 'bg-primary text-primary-foreground'
               )}
               onClick={() => setCategory(category.id as ChannelCategory)}
@@ -247,7 +247,7 @@ export function LanguageFilter() {
           type="button"
           variant="ghost"
           size="icon"
-          className="h-6 w-6 shrink-0"
+          className="h-7 w-7 sm:h-6 sm:w-6 shrink-0"
           onClick={() => scroll('left')}
         >
           <ChevronLeft className="h-4 w-4" />
@@ -264,7 +264,7 @@ export function LanguageFilter() {
           <Button
             variant={selectedLanguage === 'all' ? 'default' : 'outline'}
             size="sm"
-            className="h-6 text-[11px] px-2 shrink-0"
+            className="h-7 text-xs sm:h-6 sm:text-[11px] px-2 shrink-0"
             onClick={() => setLanguage('all')}
           >
             {t('allCategories')}
@@ -274,7 +274,7 @@ export function LanguageFilter() {
               key={lang}
               variant={selectedLanguage === lang ? 'default' : 'outline'}
               size="sm"
-              className="h-6 text-[11px] px-2 shrink-0"
+              className="h-7 text-xs sm:h-6 sm:text-[11px] px-2 shrink-0"
               onClick={() => setLanguage(lang)}
             >
               {languageNames[lang] || lang.toUpperCase()}
@@ -285,7 +285,7 @@ export function LanguageFilter() {
           type="button"
           variant="ghost"
           size="icon"
-          className="h-6 w-6 shrink-0"
+          className="h-7 w-7 sm:h-6 sm:w-6 shrink-0"
           onClick={() => scroll('right')}
         >
           <ChevronRight className="h-4 w-4" />

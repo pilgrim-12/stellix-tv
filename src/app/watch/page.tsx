@@ -8,7 +8,7 @@ import { useChannelStore } from '@/stores'
 import { useSettings } from '@/contexts/SettingsContext'
 import { sampleChannels } from '@/data/channels'
 import { getCurrentProgram, getUpcomingPrograms } from '@/data/programs'
-import { Keyboard, Share2, Check } from 'lucide-react'
+import { Keyboard, Share2, Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
 
@@ -30,7 +30,7 @@ const localeMap: Record<string, string> = {
 }
 
 function WatchContent() {
-  const { currentChannel, channels, setCurrentChannel } = useChannelStore()
+  const { currentChannel, channels, setCurrentChannel, getFilteredChannels } = useChannelStore()
   const { uiLanguage } = useSettings()
   const [currentTime, setCurrentTime] = useState(new Date())
   const [shareSuccess, setShareSuccess] = useState(false)
@@ -220,11 +220,50 @@ function WatchContent() {
         <CategoryFilter />
       </div>
 
+      {/* Compact channel bar - only visible in mobile landscape */}
+      {currentChannel && (
+        <div className="hidden mobile-landscape:flex items-center gap-2 px-2 py-1 bg-background/95 border-b border-border/40 shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground"
+            onClick={() => {
+              const filtered = getFilteredChannels()
+              if (filtered.length > 0) {
+                const idx = filtered.findIndex(ch => ch.id === currentChannel.id)
+                const prev = idx > 0 ? idx - 1 : filtered.length - 1
+                setCurrentChannel(filtered[prev])
+              }
+            }}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <div className="flex-1 min-w-0 text-center">
+            <span className="text-xs font-medium truncate block">{currentChannel.name}</span>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground"
+            onClick={() => {
+              const filtered = getFilteredChannels()
+              if (filtered.length > 0) {
+                const idx = filtered.findIndex(ch => ch.id === currentChannel.id)
+                const next = idx < filtered.length - 1 ? idx + 1 : 0
+                setCurrentChannel(filtered[next])
+              }
+            }}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
       <div className="flex-1 overflow-hidden">
         {/* Main content - Grid on md+, flex-col on mobile */}
         <div className="h-full flex flex-col md:grid md:grid-cols-[1fr_16rem] lg:grid-cols-[1fr_18rem] xl:grid-cols-[1fr_20rem] overflow-hidden">
           {/* Player section */}
-          <div className="shrink-0 md:min-h-0 flex flex-col overflow-hidden">
+          <div className="shrink-0 md:min-h-0 flex flex-col overflow-hidden max-h-[45vh] sm:max-h-[50vh] md:max-h-none">
             <div className="flex flex-col p-2 mobile-landscape:p-1 gap-2 mobile-landscape:gap-0 lg:flex-1 lg:min-h-0">
               <VideoPlayer />
               {currentChannel && (

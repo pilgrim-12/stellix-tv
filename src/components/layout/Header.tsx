@@ -40,7 +40,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-12 items-center px-4 gap-4">
+      <div className="flex h-11 sm:h-12 items-center px-2 sm:px-4 gap-2 sm:gap-4">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
           <img

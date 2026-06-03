@@ -176,7 +176,7 @@ export const ChannelCard = memo(function ChannelCard({ channel }: ChannelCardPro
           <button
             className={cn(
               'shrink-0 rounded-full p-1.5 transition-colors',
-              'opacity-0 group-hover:opacity-100',
+              'sm:opacity-0 sm:group-hover:opacity-100',
               isFavorite && 'opacity-100',
               isFavorite ? 'text-yellow-500' : 'text-muted-foreground/50 hover:text-yellow-500'
             )}
