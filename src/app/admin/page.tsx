@@ -24,6 +24,7 @@ import {
   GripVertical,
   Save,
   Languages,
+  Plus,
 } from 'lucide-react'
 import {
   getAllCuratedChannelsRaw,
@@ -34,6 +35,7 @@ import {
   getPlaylistSources,
   updateChannelOrder,
   migrateLanguages,
+  addToCurated,
   CuratedChannel,
   PlaylistSource,
 } from '@/lib/curatedChannelService'
@@ -250,6 +252,12 @@ export default function AdminPage() {
   const [isMigrating, setIsMigrating] = useState(false)
   const [migrationResult, setMigrationResult] = useState<{ updated: number; unchanged: number } | null>(null)
 
+  // Add channel form state
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [addUrl, setAddUrl] = useState('')
+  const [addName, setAddName] = useState('')
+  const [isAdding, setIsAdding] = useState(false)
+
   // Drag and drop state
   const [hasOrderChanged, setHasOrderChanged] = useState(false)
   const [isSavingOrder, setIsSavingOrder] = useState(false)
@@ -382,6 +390,40 @@ export default function AdminPage() {
       console.error('Error deleting channel:', error)
     } finally {
       setDeletingChannelId(null)
+    }
+  }
+
+  // Add single channel
+  const handleAddChannel = async () => {
+    const url = addUrl.trim()
+    if (!url) return
+
+    setIsAdding(true)
+    try {
+      const name = addName.trim() || url.split('/').filter(Boolean).pop() || 'New Channel'
+      const newChannel: CuratedChannel = {
+        id: `manual-${Date.now()}`,
+        name,
+        url,
+        logo: null,
+        group: 'entertainment',
+        language: 'ru',
+        country: null,
+        status: 'active',
+        enabled: true,
+        isCustom: true,
+        createdAt: new Date().toISOString(),
+      }
+      await addToCurated(newChannel)
+      setChannels((prev) => [...prev, newChannel])
+      setAddUrl('')
+      setAddName('')
+      setShowAddForm(false)
+    } catch (error) {
+      console.error('Error adding channel:', error)
+      alert('Error adding channel')
+    } finally {
+      setIsAdding(false)
     }
   }
 
@@ -945,6 +987,15 @@ export default function AdminPage() {
                     </span>
                   )}
                   <Button
+                    variant="default"
+                    size="sm"
+                    className="h-6 text-xs gap-1"
+                    onClick={() => setShowAddForm(!showAddForm)}
+                  >
+                    <Plus className="h-3 w-3" />
+                    Add
+                  </Button>
+                  <Button
                     variant="outline"
                     size="sm"
                     className="h-6 text-xs gap-1"
@@ -1041,6 +1092,36 @@ export default function AdminPage() {
                   ))}
                 </select>
               </div>
+              {/* Add Channel Form */}
+              {showAddForm && (
+                <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-md">
+                  <Input
+                    type="url"
+                    placeholder="Stream URL (m3u8 or mp4)"
+                    className="h-7 text-xs flex-1"
+                    value={addUrl}
+                    onChange={(e) => setAddUrl(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddChannel()}
+                  />
+                  <Input
+                    type="text"
+                    placeholder="Name (optional)"
+                    className="h-7 text-xs w-[180px]"
+                    value={addName}
+                    onChange={(e) => setAddName(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddChannel()}
+                  />
+                  <Button
+                    size="sm"
+                    className="h-7 text-xs gap-1"
+                    onClick={handleAddChannel}
+                    disabled={isAdding || !addUrl.trim()}
+                  >
+                    {isAdding ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+                    Add
+                  </Button>
+                </div>
+              )}
             </CardHeader>
             <CardContent className="p-0">
               {isLoading ? (

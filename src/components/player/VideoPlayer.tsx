@@ -175,11 +175,23 @@ export function VideoPlayer() {
                 break
             }
           } else {
-            setError('Channel offline')
-            setLoading(false)
-            const channel = currentChannelRef.current
-            if (channel) markChannelOffline(channel.id)
+            // Retries exhausted — try native playback as last resort (bypasses CORS)
             hls.destroy()
+            hlsRef.current = null
+            setLoading(true)
+            video.src = url
+            video.play().then(() => {
+              if (abortController.signal.aborted) return
+              setLoading(false)
+              setError(null)
+              setPlaying(true)
+            }).catch(() => {
+              if (abortController.signal.aborted) return
+              setError('Channel offline')
+              setLoading(false)
+              const channel = currentChannelRef.current
+              if (channel) markChannelOffline(channel.id)
+            })
           }
         }
       })

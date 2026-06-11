@@ -92,7 +92,7 @@ export default function StagingPage() {
 
   // Player state
   const [selectedChannel, setSelectedChannel] = useState<StagingChannel | null>(null)
-  const [playerError, setPlayerError] = useState(false)
+  const [playerError, setPlayerError] = useState<string | null>(null)
 
   // Edit state
   const [editingName, setEditingName] = useState(false)
@@ -146,27 +146,48 @@ export default function StagingPage() {
     setSelectedChannel(channel)
     setEditingName(false)
     setEditName(channel.name)
-    setPlayerError(false)
+    setPlayerError(null)
 
-    if (videoRef.current) {
-      if (channel.url.includes('.m3u8')) {
-        const Hls = (await import('hls.js')).default
-        if (Hls.isSupported()) {
-          const hls = new Hls()
-          hlsRef.current = hls
-          hls.loadSource(channel.url)
-          hls.attachMedia(videoRef.current)
-          hls.on(Hls.Events.ERROR, (_, data) => {
-            if (data.fatal) {
-              setPlayerError(true)
+    const video = videoRef.current
+    if (!video) return
+
+    if (channel.url.includes('.m3u8')) {
+      const Hls = (await import('hls.js')).default
+      if (Hls.isSupported()) {
+        const hls = new Hls({
+          enableWorker: true,
+          xhrSetup: (xhr) => {
+            xhr.withCredentials = false
+          },
+        })
+        hlsRef.current = hls
+        hls.loadSource(channel.url)
+        hls.attachMedia(video)
+        hls.on(Hls.Events.ERROR, (_, data) => {
+          if (data.fatal) {
+            const detail = data.details || 'unknown'
+            const reason = data.reason || data.error?.message || ''
+            // On network error, try native playback as fallback (bypasses CORS)
+            if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+              hls.destroy()
+              hlsRef.current = null
+              video.src = channel.url
+              video.play().catch(() => {
+                setPlayerError(`Network: ${detail}${reason ? ' — ' + reason : ''}`)
+              })
+            } else {
+              setPlayerError(`${data.type}: ${detail}${reason ? ' — ' + reason : ''}`)
             }
-          })
-        } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
-          videoRef.current.src = channel.url
-        }
+          }
+        })
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = channel.url
       } else {
-        videoRef.current.src = channel.url
+        // Last resort: try direct src
+        video.src = channel.url
       }
+    } else {
+      video.src = channel.url
     }
   }
 
@@ -501,12 +522,13 @@ export default function StagingPage() {
                           controls
                           autoPlay
                           playsInline
-                          onCanPlay={() => setPlayerError(false)}
+                          onCanPlay={() => setPlayerError(null)}
                         />
                         {playerError && (
-                          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-red-500">
+                          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-red-500 p-4">
                             <XCircle className="h-8 w-8 mb-2" />
-                            <p className="text-sm">Playback error</p>
+                            <p className="text-sm font-medium">Playback error</p>
+                            <p className="text-xs text-red-400 mt-1 text-center max-w-xs break-all">{playerError}</p>
                           </div>
                         )}
                       </>
