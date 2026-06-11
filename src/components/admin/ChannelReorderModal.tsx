@@ -1,14 +1,7 @@
 'use client'
 
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { CuratedChannel } from '@/lib/curatedChannelService'
 import { ChannelStatus, languageNames } from '@/types'
@@ -25,8 +18,7 @@ import { cn } from '@/lib/utils'
 import {
   DndContext,
   closestCenter,
-  MouseSensor,
-  TouchSensor,
+  PointerSensor,
   useSensor,
   useSensors,
   DragEndEvent,
@@ -172,6 +164,7 @@ export function ChannelReorderModal({
   const [activeId, setActiveId] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [lastSelectedId, setLastSelectedId] = useState<string | null>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
 
   // Reset state when modal opens with new channels
   useEffect(() => {
@@ -184,6 +177,16 @@ export function ChannelReorderModal({
     }
   }, [isOpen, initialChannels])
 
+  // Close on Escape
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isSaving) onClose()
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, isSaving, onClose])
+
   // Filter channels by search (but still show all for drag purposes)
   const displayChannels = useMemo(() => {
     if (!searchQuery) return channels
@@ -194,17 +197,11 @@ export function ChannelReorderModal({
     )
   }, [channels, searchQuery])
 
-  // Sensors for drag — MouseSensor avoids Radix Dialog pointer-event conflicts
+  // Sensors for drag
   const sensors = useSensors(
-    useSensor(MouseSensor, {
+    useSensor(PointerSensor, {
       activationConstraint: {
         distance: 5,
-      },
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 150,
-        tolerance: 5,
       },
     })
   )
@@ -321,27 +318,38 @@ export function ChannelReorderModal({
   const activeChannel = activeId ? channels.find(ch => ch.id === activeId) : null
   const selectedCount = selectedIds.size
 
+  if (!isOpen) return null
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent
-        className="max-w-[95vw] w-[95vw] h-[90vh] p-0 gap-0 flex flex-col"
-        onPointerDownOutside={(e) => e.preventDefault()}
-        onInteractOutside={(e) => e.preventDefault()}
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-50 bg-black/50"
+        onClick={() => !isSaving && onClose()}
+      />
+      {/* Panel */}
+      <div
+        ref={panelRef}
+        className="fixed inset-[2.5vh_2.5vw] z-50 flex flex-col rounded-lg border bg-background shadow-lg"
       >
-        <DialogHeader className="px-4 py-3 border-b shrink-0">
-          <DialogTitle className="flex items-center gap-2">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
+          <div className="flex items-center gap-2">
             <GripVertical className="h-5 w-5" />
-            Сортировка каналов
-            <span className="text-sm font-normal text-muted-foreground">
+            <h2 className="text-lg font-semibold">Сортировка каналов</h2>
+            <span className="text-sm text-muted-foreground">
               ({channels.length} каналов)
             </span>
             {hasChanges && (
-              <span className="text-sm font-normal text-orange-500">
+              <span className="text-sm text-orange-500">
                 • Есть изменения
               </span>
             )}
-          </DialogTitle>
-        </DialogHeader>
+          </div>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose} disabled={isSaving}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
 
         {/* Search + Selection info */}
         <div className="px-4 py-2 border-b shrink-0">
@@ -418,35 +426,34 @@ export function ChannelReorderModal({
           </DndContext>
         </div>
 
-        <DialogFooter className="px-4 py-3 border-t shrink-0">
-          <div className="flex items-center justify-between w-full">
-            <p className="text-sm text-muted-foreground">
-              {searchQuery && `Показано ${displayChannels.length} из ${channels.length}`}
-            </p>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={onClose} disabled={isSaving}>
-                Отмена
-              </Button>
-              <Button
-                onClick={handleSave}
-                disabled={isSaving || !hasChanges}
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Сохраняю...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    Сохранить порядок
-                  </>
-                )}
-              </Button>
-            </div>
+        {/* Footer */}
+        <div className="flex items-center justify-between px-4 py-3 border-t shrink-0">
+          <p className="text-sm text-muted-foreground">
+            {searchQuery && `Показано ${displayChannels.length} из ${channels.length}`}
+          </p>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onClose} disabled={isSaving}>
+              Отмена
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={isSaving || !hasChanges}
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Сохраняю...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Сохранить порядок
+                </>
+              )}
+            </Button>
           </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </div>
+    </>
   )
 }
