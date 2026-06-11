@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Settings, Globe, Check, Sun, Moon, Monitor, Eye } from 'lucide-react'
+import { Settings, Globe, Check, Sun, Moon, Flame, Monitor, Eye } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { useSettings, Theme } from '@/contexts/SettingsContext'
 import { uiLanguages, UILanguage } from '@/lib/i18n'
@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils'
 const themeOptions: { value: Theme; icon: typeof Sun; label: string }[] = [
   { value: 'light', icon: Sun, label: 'Light' },
   { value: 'dark', icon: Moon, label: 'Dark' },
+  { value: 'warm', icon: Flame, label: 'Warm' },
   { value: 'system', icon: Monitor, label: 'System' },
 ]
 
@@ -53,7 +54,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               <Sun className="h-4 w-4" />
               {t('theme')}
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-4 gap-2">
               {themeOptions.map((option) => {
                 const Icon = option.icon
                 return (

@@ -3,14 +3,14 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { UILanguage, translations, TranslationKey, t as translate, getCategoryName as getCatName } from '@/lib/i18n'
 
-export type Theme = 'dark' | 'light' | 'system'
+export type Theme = 'dark' | 'light' | 'warm' | 'system'
 
 interface SettingsContextType {
   uiLanguage: UILanguage
   setUILanguage: (lang: UILanguage) => void
   theme: Theme
   setTheme: (theme: Theme) => void
-  resolvedTheme: 'dark' | 'light'
+  resolvedTheme: 'dark' | 'light' | 'warm'
   hoverPreview: boolean
   setHoverPreview: (enabled: boolean) => void
   t: (key: TranslationKey, params?: Record<string, string | number>) => string
@@ -32,7 +32,7 @@ function getSystemTheme(): 'dark' | 'light' {
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [uiLanguage, setUILanguageState] = useState<UILanguage>('ru')
   const [theme, setThemeState] = useState<Theme>('dark')
-  const [resolvedTheme, setResolvedTheme] = useState<'dark' | 'light'>('dark')
+  const [resolvedTheme, setResolvedTheme] = useState<'dark' | 'light' | 'warm'>('dark')
   const [hoverPreview, setHoverPreviewState] = useState(true)
   const [mounted, setMounted] = useState(false)
 
@@ -41,10 +41,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const resolved = newTheme === 'system' ? getSystemTheme() : newTheme
     setResolvedTheme(resolved)
 
-    if (resolved === 'dark') {
-      document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.classList.remove('dark')
+    document.documentElement.classList.remove('dark', 'warm')
+    if (resolved === 'dark' || resolved === 'warm') {
+      document.documentElement.classList.add(resolved)
     }
   }
 
@@ -63,7 +62,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
     // Load saved theme
     const savedTheme = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null
-    if (savedTheme && ['dark', 'light', 'system'].includes(savedTheme)) {
+    if (savedTheme && ['dark', 'light', 'warm', 'system'].includes(savedTheme)) {
       setThemeState(savedTheme)
       applyTheme(savedTheme)
     } else {
