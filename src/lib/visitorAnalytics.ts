@@ -575,7 +575,25 @@ export async function backfillGeoCoordinates(
         let lat: number | undefined
         let lng: number | undefined
 
-        // Try geocoding by IP first (most accurate)
+        // Helper: Nominatim geocode
+        const nominatim = async (query: string): Promise<{ lat: number; lng: number } | null> => {
+          try {
+            const res = await fetch(
+              `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`,
+              {
+                signal: AbortSignal.timeout(5000),
+                headers: { 'User-Agent': 'StellixTV/1.0' },
+              }
+            )
+            const results = await res.json()
+            if (results.length > 0) {
+              return { lat: parseFloat(results[0].lat), lng: parseFloat(results[0].lon) }
+            }
+          } catch { /* timeout or network error */ }
+          return null
+        }
+
+        // 1) Try geocoding by IP (most accurate)
         if (data.ip && data.ip !== 'unknown') {
           try {
             const res = await fetch(`https://ipapi.co/${data.ip}/json/`, { signal: AbortSignal.timeout(5000) })
@@ -584,27 +602,25 @@ export async function backfillGeoCoordinates(
               lat = geo.latitude
               lng = geo.longitude
             }
-          } catch {
-            // IP geocoding failed
-          }
+          } catch { /* IP geocoding failed */ }
         }
 
-        // Fallback: geocode by city+country via Nominatim
+        // 2) Fallback: city + country
         if (!lat && data.city && data.country) {
-          try {
-            const q = encodeURIComponent(`${data.city}, ${data.country}`)
-            const res = await fetch(
-              `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`,
-              { signal: AbortSignal.timeout(5000) }
-            )
-            const results = await res.json()
-            if (results.length > 0) {
-              lat = parseFloat(results[0].lat)
-              lng = parseFloat(results[0].lon)
-            }
-          } catch {
-            // Nominatim failed
-          }
+          const r = await nominatim(`${data.city}, ${data.country}`)
+          if (r) { lat = r.lat; lng = r.lng }
+        }
+
+        // 3) Fallback: city only
+        if (!lat && data.city && !data.country) {
+          const r = await nominatim(data.city)
+          if (r) { lat = r.lat; lng = r.lng }
+        }
+
+        // 4) Fallback: country only (centroid)
+        if (!lat && data.country) {
+          const r = await nominatim(data.country)
+          if (r) { lat = r.lat; lng = r.lng }
         }
 
         if (lat && lng) {
