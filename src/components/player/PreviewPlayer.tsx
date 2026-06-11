@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { XCircle, Loader2 } from 'lucide-react'
+import { XCircle } from 'lucide-react'
 import { formatHlsError } from '@/lib/utils'
 
 interface PreviewPlayerProps {
@@ -18,7 +18,6 @@ export function PreviewPlayer({ url, className = '', placeholder = 'Select a cha
   const videoRef = useRef<HTMLVideoElement>(null)
   const hlsRef = useRef<{ destroy: () => void } | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [retrying, setRetrying] = useState(false)
 
   const cleanup = useCallback(() => {
     if (hlsRef.current) {
@@ -30,11 +29,11 @@ export function PreviewPlayer({ url, className = '', placeholder = 'Select a cha
   useEffect(() => {
     cleanup()
     setError(null)
-    setRetrying(false)
 
     if (!url || !videoRef.current) return
 
     const video = videoRef.current
+    let proxyTimeout: ReturnType<typeof setTimeout> | null = null
 
     const loadStream = async () => {
       if (!url.includes('.m3u8')) {
@@ -45,16 +44,16 @@ export function PreviewPlayer({ url, className = '', placeholder = 'Select a cha
       const Hls = (await import('hls.js')).default
 
       if (!Hls.isSupported()) {
-        if (video.canPlayType('application/vnd.apple.mpegurl')) {
-          video.src = url
-        } else {
-          video.src = url
-        }
+        video.src = url
         return
       }
 
       const hls = new Hls({
         enableWorker: true,
+        manifestLoadingMaxRetry: 1,
+        levelLoadingMaxRetry: 1,
+        fragLoadingMaxRetry: 1,
+        manifestLoadingTimeOut: 8000,
         xhrSetup: (xhr) => { xhr.withCredentials = false },
       })
       hlsRef.current = hls
@@ -69,43 +68,61 @@ export function PreviewPlayer({ url, className = '', placeholder = 'Select a cha
         const detail = data.details || 'unknown'
         const httpCode = data.response?.code
         const reason = data.reason || data.error?.message || ''
-        const msg = formatHlsError(detail, httpCode, reason)
 
         if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
           // Retry through server proxy to bypass CORS
           hls.destroy()
           hlsRef.current = null
-          setRetrying(true)
           const proxyUrl = `/api/stream-proxy?url=${encodeURIComponent(url)}`
-          const hls2 = new Hls({ enableWorker: true })
+          const hls2 = new Hls({
+            enableWorker: true,
+            manifestLoadingMaxRetry: 1,
+            levelLoadingMaxRetry: 1,
+            fragLoadingMaxRetry: 1,
+            manifestLoadingTimeOut: 10000,
+          })
           hlsRef.current = hls2
           hls2.loadSource(proxyUrl)
           hls2.attachMedia(video)
-          hls2.on(Hls.Events.MANIFEST_PARSED, () => {
-            setRetrying(false)
-            setError(null)
-          })
-          hls2.on(Hls.Events.ERROR, (_, d2) => {
-            if (d2.fatal) {
-              const proxyDetail = d2.details || 'unknown'
-              const proxyCode = d2.response?.code
-              const proxyReason = d2.reason || d2.error?.message || ''
-              const proxyMsg = formatHlsError(proxyDetail, proxyCode, proxyReason)
+
+          // Timeout — if proxy doesn't load in 12s, give up
+          proxyTimeout = setTimeout(() => {
+            if (hlsRef.current === hls2) {
               hls2.destroy()
               hlsRef.current = null
-              setRetrying(false)
-              setError(`Поток недоступен: ${proxyMsg}`)
+              setError('Таймаут — сервер не отвечает')
+            }
+          }, 12000)
+
+          hls2.on(Hls.Events.MANIFEST_PARSED, () => {
+            if (proxyTimeout) clearTimeout(proxyTimeout)
+            setError(null)
+          })
+
+          hls2.on(Hls.Events.ERROR, (_, d2) => {
+            if (d2.fatal) {
+              if (proxyTimeout) clearTimeout(proxyTimeout)
+              const proxyCode = d2.response?.code
+              const proxyDetail = d2.details || 'unknown'
+              const proxyReason = d2.reason || d2.error?.message || ''
+              hls2.destroy()
+              hlsRef.current = null
+              // Show proxy error directly — short message
+              setError(formatHlsError(proxyDetail, proxyCode, proxyReason))
             }
           })
         } else {
-          setError(msg)
+          setError(formatHlsError(detail, httpCode, reason))
         }
       })
     }
 
     loadStream()
 
-    return cleanup
+    return () => {
+      if (proxyTimeout) clearTimeout(proxyTimeout)
+      cleanup()
+    }
   }, [url, cleanup])
 
   return (
@@ -120,16 +137,10 @@ export function PreviewPlayer({ url, className = '', placeholder = 'Select a cha
             playsInline
             onCanPlay={() => setError(null)}
           />
-          {retrying && !error && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-white p-4">
-              <Loader2 className="h-8 w-8 mb-2 animate-spin text-blue-400" />
-              <p className="text-sm text-muted-foreground">Прокси...</p>
-            </div>
-          )}
           {error && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 text-white p-4">
-              <XCircle className="h-10 w-10 mb-3 text-red-500" />
-              <p className="text-base font-semibold text-center leading-snug max-w-sm">{error}</p>
+              <XCircle className="h-8 w-8 mb-2 text-red-500" />
+              <p className="text-sm font-medium text-center max-w-xs">{error}</p>
             </div>
           )}
         </>
