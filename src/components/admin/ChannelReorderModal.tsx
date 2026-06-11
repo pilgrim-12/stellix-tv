@@ -25,7 +25,8 @@ import { cn } from '@/lib/utils'
 import {
   DndContext,
   closestCenter,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragEndEvent,
@@ -100,7 +101,7 @@ function SortableCard({
       {...listeners}
       onClick={handleClick}
       className={cn(
-        'flex flex-col items-center p-2 rounded-lg border-2 cursor-grab active:cursor-grabbing select-none relative',
+        'flex flex-col items-center p-2 rounded-lg border-2 cursor-grab active:cursor-grabbing select-none touch-none relative',
         'bg-background hover:bg-muted/50',
         statusColors[channel.status || 'pending'],
         isDragging && 'opacity-50 shadow-xl',
@@ -193,11 +194,17 @@ export function ChannelReorderModal({
     )
   }, [channels, searchQuery])
 
-  // Sensors for drag
+  // Sensors for drag — MouseSensor avoids Radix Dialog pointer-event conflicts
   const sensors = useSensors(
-    useSensor(PointerSensor, {
+    useSensor(MouseSensor, {
       activationConstraint: {
         distance: 5,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 150,
+        tolerance: 5,
       },
     })
   )
@@ -316,7 +323,11 @@ export function ChannelReorderModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-[95vw] w-[95vw] h-[90vh] p-0 gap-0 flex flex-col">
+      <DialogContent
+        className="max-w-[95vw] w-[95vw] h-[90vh] p-0 gap-0 flex flex-col"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader className="px-4 py-3 border-b shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <GripVertical className="h-5 w-5" />
