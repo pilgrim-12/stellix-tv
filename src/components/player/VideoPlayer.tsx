@@ -175,22 +175,37 @@ export function VideoPlayer() {
                 break
             }
           } else {
-            // Retries exhausted — try native playback as last resort (bypasses CORS)
+            // Retries exhausted — try through server proxy to bypass CORS
             hls.destroy()
             hlsRef.current = null
             setLoading(true)
-            video.src = url
-            video.play().then(() => {
+            const proxyUrl = `/api/stream-proxy?url=${encodeURIComponent(url)}`
+            const Hls2 = HlsModule!
+            const hls2 = new Hls2({ enableWorker: true })
+            hlsRef.current = hls2
+            hls2.loadSource(proxyUrl)
+            hls2.attachMedia(video)
+            hls2.on(Hls2.Events.MANIFEST_PARSED, () => {
               if (abortController.signal.aborted) return
               setLoading(false)
               setError(null)
-              setPlaying(true)
-            }).catch(() => {
+              const ch = currentChannelRef.current
+              if (ch) markChannelOnline(ch.id)
+              video.play().then(() => {
+                if (abortController.signal.aborted) return
+                setPlaying(true)
+              }).catch(() => {})
+            })
+            hls2.on(Hls2.Events.ERROR, (_, d2) => {
               if (abortController.signal.aborted) return
-              setError('Channel offline')
-              setLoading(false)
-              const channel = currentChannelRef.current
-              if (channel) markChannelOffline(channel.id)
+              if (d2.fatal) {
+                hls2.destroy()
+                hlsRef.current = null
+                setError('Канал недоступен')
+                setLoading(false)
+                const ch = currentChannelRef.current
+                if (ch) markChannelOffline(ch.id)
+              }
             })
           }
         }

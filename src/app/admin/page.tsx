@@ -357,9 +357,18 @@ export default function AdminPage() {
             if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
               hls.destroy()
               hlsRef.current = null
-              video.src = channel.url
-              video.play().catch(() => {
-                setPlayerError(msg)
+              // Retry through server proxy to bypass CORS
+              const proxyUrl = `/api/stream-proxy?url=${encodeURIComponent(channel.url)}`
+              const hls2 = new Hls({ enableWorker: true })
+              hlsRef.current = hls2
+              hls2.loadSource(proxyUrl)
+              hls2.attachMedia(video)
+              hls2.on(Hls.Events.ERROR, (_, d2) => {
+                if (d2.fatal) {
+                  hls2.destroy()
+                  hlsRef.current = null
+                  setPlayerError(msg)
+                }
               })
             } else {
               setPlayerError(msg)
