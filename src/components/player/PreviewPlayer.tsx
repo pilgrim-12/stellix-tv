@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { XCircle } from 'lucide-react'
+import { XCircle, Loader2 } from 'lucide-react'
 import { formatHlsError } from '@/lib/utils'
 
 interface PreviewPlayerProps {
@@ -18,6 +18,7 @@ export function PreviewPlayer({ url, className = '', placeholder = 'Select a cha
   const videoRef = useRef<HTMLVideoElement>(null)
   const hlsRef = useRef<{ destroy: () => void } | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [retrying, setRetrying] = useState(false)
 
   const cleanup = useCallback(() => {
     if (hlsRef.current) {
@@ -29,6 +30,7 @@ export function PreviewPlayer({ url, className = '', placeholder = 'Select a cha
   useEffect(() => {
     cleanup()
     setError(null)
+    setRetrying(false)
 
     if (!url || !videoRef.current) return
 
@@ -73,16 +75,26 @@ export function PreviewPlayer({ url, className = '', placeholder = 'Select a cha
           // Retry through server proxy to bypass CORS
           hls.destroy()
           hlsRef.current = null
+          setRetrying(true)
           const proxyUrl = `/api/stream-proxy?url=${encodeURIComponent(url)}`
           const hls2 = new Hls({ enableWorker: true })
           hlsRef.current = hls2
           hls2.loadSource(proxyUrl)
           hls2.attachMedia(video)
+          hls2.on(Hls.Events.MANIFEST_PARSED, () => {
+            setRetrying(false)
+            setError(null)
+          })
           hls2.on(Hls.Events.ERROR, (_, d2) => {
             if (d2.fatal) {
+              const proxyDetail = d2.details || 'unknown'
+              const proxyCode = d2.response?.code
+              const proxyReason = d2.reason || d2.error?.message || ''
+              const proxyMsg = formatHlsError(proxyDetail, proxyCode, proxyReason)
               hls2.destroy()
               hlsRef.current = null
-              setError(msg)
+              setRetrying(false)
+              setError(`Поток недоступен: ${proxyMsg}`)
             }
           })
         } else {
@@ -108,6 +120,12 @@ export function PreviewPlayer({ url, className = '', placeholder = 'Select a cha
             playsInline
             onCanPlay={() => setError(null)}
           />
+          {retrying && !error && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-white p-4">
+              <Loader2 className="h-8 w-8 mb-2 animate-spin text-blue-400" />
+              <p className="text-sm text-muted-foreground">Прокси...</p>
+            </div>
+          )}
           {error && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 text-white p-4">
               <XCircle className="h-10 w-10 mb-3 text-red-500" />

@@ -55,7 +55,15 @@ export async function GET(request: NextRequest) {
       // Read and rewrite m3u8 playlist
       const text = await response.text()
       const baseUrl = url.substring(0, url.lastIndexOf('/') + 1)
+      const origin = parsed.origin
       const proxyBase = '/api/stream-proxy?url='
+
+      // Resolve relative/absolute paths to full URLs
+      const resolve = (ref: string) => {
+        if (ref.startsWith('http://') || ref.startsWith('https://')) return ref
+        if (ref.startsWith('/')) return origin + ref
+        return baseUrl + ref
+      }
 
       const rewritten = text.split('\n').map(line => {
         const trimmed = line.trim()
@@ -63,15 +71,13 @@ export async function GET(request: NextRequest) {
         if (trimmed.startsWith('#')) {
           // Rewrite URI="..." in tags like #EXT-X-KEY, #EXT-X-MAP
           return trimmed.replace(/URI="([^"]+)"/g, (_, uri) => {
-            const abs = uri.startsWith('http') ? uri : baseUrl + uri
-            return `URI="${proxyBase}${encodeURIComponent(abs)}"`
+            return `URI="${proxyBase}${encodeURIComponent(resolve(uri))}"`
           })
         }
         // Skip empty lines
         if (!trimmed) return line
         // This is a URL line — make absolute and proxy it
-        const abs = trimmed.startsWith('http') ? trimmed : baseUrl + trimmed
-        return proxyBase + encodeURIComponent(abs)
+        return proxyBase + encodeURIComponent(resolve(trimmed))
       }).join('\n')
 
       return new NextResponse(rewritten, {
