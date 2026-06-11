@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Settings, Star, LogOut, Loader2, Calendar, Tv, Shield, Scale } from 'lucide-react'
+import { Settings, Star, LogOut, Loader2, Calendar, Tv, Shield, Scale, Sun, Moon, Flame, Monitor } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -20,7 +20,7 @@ import { SettingsModal } from '@/components/settings/SettingsModal'
 export function Header() {
   const router = useRouter()
   const { user, loading, logout, isAdmin } = useAuthContext()
-  const { t } = useSettings()
+  const { t, theme, setTheme } = useSettings()
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   const handleLogout = async () => {
@@ -79,6 +79,23 @@ export function Header() {
 
         {/* Actions */}
         <div className="flex items-center gap-2">
+          {/* Theme toggle */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => {
+              const order = ['dark', 'light', 'warm', 'system'] as const
+              const idx = order.indexOf(theme as (typeof order)[number])
+              setTheme(order[(idx + 1) % order.length])
+            }}
+            title={theme === 'dark' ? 'Dark' : theme === 'light' ? 'Light' : theme === 'warm' ? 'Warm' : 'System'}
+          >
+            {theme === 'light' ? <Sun className="h-4 w-4" /> :
+             theme === 'warm' ? <Flame className="h-4 w-4 text-amber-500" /> :
+             theme === 'system' ? <Monitor className="h-4 w-4" /> :
+             <Moon className="h-4 w-4" />}
+          </Button>
 
           {loading ? (
             <Button variant="ghost" size="icon" disabled>

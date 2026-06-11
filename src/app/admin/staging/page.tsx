@@ -40,7 +40,8 @@ import {
 } from '@/lib/stagingPlaylistService'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { AdminLayout } from '@/components/admin/AdminLayout'
-import { cn, formatHlsError } from '@/lib/utils'
+import { cn } from '@/lib/utils'
+import { PreviewPlayer } from '@/components/player'
 import { languageNames, languageOrder, categoryNames, categoryOrder } from '@/types'
 
 const statusColors: Record<StagingChannelStatus, string> = {
@@ -60,8 +61,6 @@ const statusNames: Record<StagingChannelStatus, string> = {
 export default function StagingPage() {
   const { user } = useAuthContext()
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const hlsRef = useRef<{ destroy: () => void } | null>(null)
 
   // Playlists list
   const [playlists, setPlaylists] = useState<
@@ -92,7 +91,6 @@ export default function StagingPage() {
 
   // Player state
   const [selectedChannel, setSelectedChannel] = useState<StagingChannel | null>(null)
-  const [playerError, setPlayerError] = useState<string | null>(null)
 
   // Edit state
   const [editingName, setEditingName] = useState(false)
@@ -136,69 +134,11 @@ export default function StagingPage() {
     loadPlaylists()
   }, [])
 
-  // Play channel in preview
-  const playChannel = async (channel: StagingChannel) => {
-    if (hlsRef.current) {
-      hlsRef.current.destroy()
-      hlsRef.current = null
-    }
-
+  // Select channel for preview
+  const selectChannel = (channel: StagingChannel) => {
     setSelectedChannel(channel)
     setEditingName(false)
     setEditName(channel.name)
-    setPlayerError(null)
-
-    const video = videoRef.current
-    if (!video) return
-
-    if (channel.url.includes('.m3u8')) {
-      const Hls = (await import('hls.js')).default
-      if (Hls.isSupported()) {
-        const hls = new Hls({
-          enableWorker: true,
-          xhrSetup: (xhr) => {
-            xhr.withCredentials = false
-          },
-        })
-        hlsRef.current = hls
-        hls.loadSource(channel.url)
-        hls.attachMedia(video)
-        hls.on(Hls.Events.ERROR, (_, data) => {
-          if (data.fatal) {
-            const detail = data.details || 'unknown'
-            const httpCode = data.response?.code
-            const reason = data.reason || data.error?.message || ''
-            const msg = formatHlsError(detail, httpCode, reason)
-            // On network error, retry through server proxy to bypass CORS
-            if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-              hls.destroy()
-              hlsRef.current = null
-              const proxyUrl = `/api/stream-proxy?url=${encodeURIComponent(channel.url)}`
-              const hls2 = new Hls({ enableWorker: true })
-              hlsRef.current = hls2
-              hls2.loadSource(proxyUrl)
-              hls2.attachMedia(video)
-              hls2.on(Hls.Events.ERROR, (_, d2) => {
-                if (d2.fatal) {
-                  hls2.destroy()
-                  hlsRef.current = null
-                  setPlayerError(msg)
-                }
-              })
-            } else {
-              setPlayerError(msg)
-            }
-          }
-        })
-      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = channel.url
-      } else {
-        // Last resort: try direct src
-        video.src = channel.url
-      }
-    } else {
-      video.src = channel.url
-    }
   }
 
   // Update channel status
@@ -523,30 +463,7 @@ export default function StagingPage() {
                   )}
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <div className="aspect-video bg-black rounded-lg overflow-hidden relative">
-                    {selectedChannel ? (
-                      <>
-                        <video
-                          ref={videoRef}
-                          className="w-full h-full"
-                          controls
-                          autoPlay
-                          playsInline
-                          onCanPlay={() => setPlayerError(null)}
-                        />
-                        {playerError && (
-                          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 text-white p-4">
-                            <XCircle className="h-10 w-10 mb-3 text-red-500" />
-                            <p className="text-base font-semibold text-center leading-snug max-w-sm">{playerError}</p>
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                        <p className="text-sm">Select a channel</p>
-                      </div>
-                    )}
-                  </div>
+                  <PreviewPlayer url={selectedChannel?.url ?? null} placeholder="Select a channel" />
 
                   {selectedChannel && (
                     <div className="mt-3 space-y-3">
@@ -799,7 +716,7 @@ export default function StagingPage() {
                           'flex items-center gap-3 px-4 py-2 cursor-pointer transition-colors hover:bg-muted/50',
                           selectedChannel?.id === channel.id && 'bg-primary/10'
                         )}
-                        onClick={() => playChannel(channel)}
+                        onClick={() => selectChannel(channel)}
                       >
                         {/* Logo */}
                         <div className="w-9 h-9 rounded bg-muted flex items-center justify-center overflow-hidden shrink-0">

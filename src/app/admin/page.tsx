@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -63,7 +63,8 @@ import { getTotalUsersCount } from '@/lib/userService'
 import { getStatsSummary, resetStats } from '@/lib/firebaseQuotaTracker'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { AdminLayout } from '@/components/admin/AdminLayout'
-import { cn, formatHlsError } from '@/lib/utils'
+import { cn } from '@/lib/utils'
+import { PreviewPlayer } from '@/components/player'
 import { languageNames, languageOrder, categoryNames, categoryOrder, ChannelStatus } from '@/types'
 
 const statusColors: Record<ChannelStatus, string> = {
@@ -208,9 +209,6 @@ function SortableChannelItem({
 
 export default function AdminPage() {
   const { user } = useAuthContext()
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const hlsRef = useRef<{ destroy: () => void } | null>(null)
-
   // Data state - now using curated_channels
   const [channels, setChannels] = useState<CuratedChannel[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -233,8 +231,6 @@ export default function AdminPage() {
 
   // Player state
   const [selectedChannel, setSelectedChannel] = useState<CuratedChannel | null>(null)
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [playerError, setPlayerError] = useState<string | null>(null)
 
   // Stats - calculated from channels
   const [usersCount, setUsersCount] = useState<number | null>(null)
@@ -317,73 +313,6 @@ export default function AdminPage() {
     const interval = setInterval(updateQuotaStats, 5000) // Update every 5 seconds
     return () => clearInterval(interval)
   }, [])
-
-  // Play channel in preview
-  const playChannel = async (channel: CuratedChannel) => {
-    // Cleanup previous HLS instance
-    if (hlsRef.current) {
-      hlsRef.current.destroy()
-      hlsRef.current = null
-    }
-
-    setSelectedChannel(channel)
-    setPlayerError(null)
-    setIsPlaying(true)
-
-    const video = videoRef.current
-    if (!video) return
-
-    if (channel.url.includes('.m3u8')) {
-      const Hls = (await import('hls.js')).default
-      if (Hls.isSupported()) {
-        const hls = new Hls({
-          enableWorker: true,
-          xhrSetup: (xhr) => {
-            xhr.withCredentials = false
-          },
-        })
-        hlsRef.current = hls
-        hls.loadSource(channel.url)
-        hls.attachMedia(video)
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          setPlayerError(null)
-        })
-        hls.on(Hls.Events.ERROR, (_, data) => {
-          if (data.fatal) {
-            const detail = data.details || 'unknown'
-            const httpCode = data.response?.code
-            const reason = data.reason || data.error?.message || ''
-            const msg = formatHlsError(detail, httpCode, reason)
-            if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-              hls.destroy()
-              hlsRef.current = null
-              // Retry through server proxy to bypass CORS
-              const proxyUrl = `/api/stream-proxy?url=${encodeURIComponent(channel.url)}`
-              const hls2 = new Hls({ enableWorker: true })
-              hlsRef.current = hls2
-              hls2.loadSource(proxyUrl)
-              hls2.attachMedia(video)
-              hls2.on(Hls.Events.ERROR, (_, d2) => {
-                if (d2.fatal) {
-                  hls2.destroy()
-                  hlsRef.current = null
-                  setPlayerError(msg)
-                }
-              })
-            } else {
-              setPlayerError(msg)
-            }
-          }
-        })
-      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = channel.url
-      } else {
-        video.src = channel.url
-      }
-    } else {
-      video.src = channel.url
-    }
-  }
 
   // Update channel status
   const handleSetStatus = async (channelId: string, status: ChannelStatus) => {
@@ -783,31 +712,10 @@ export default function AdminPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="aspect-video bg-black rounded-lg overflow-hidden relative">
-                  {selectedChannel ? (
-                    <>
-                      <video
-                        ref={videoRef}
-                        className="w-full h-full"
-                        controls
-                        autoPlay
-                        playsInline
-                        onCanPlay={() => setPlayerError(null)}
-                        onPlaying={() => setPlayerError(null)}
-                      />
-                      {playerError && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 text-white p-4">
-                          <XCircle className="h-10 w-10 mb-3 text-red-500" />
-                          <p className="text-base font-semibold text-center leading-snug max-w-sm">{playerError}</p>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                      <p className="text-sm">Select a channel to preview</p>
-                    </div>
-                  )}
-                </div>
+                <PreviewPlayer
+                  url={selectedChannel?.url ?? null}
+                  placeholder="Select a channel to preview"
+                />
 
                 {selectedChannel && (
                   <div className="mt-3 space-y-2">
@@ -1183,7 +1091,7 @@ export default function AdminPage() {
                           key={channel.id}
                           channel={channel}
                           isSelected={selectedChannel?.id === channel.id}
-                          onClick={() => playChannel(channel)}
+                          onClick={() => setSelectedChannel(channel)}
                           onSetStatus={(status) => handleSetStatus(channel.id, status)}
                           updatingStatusId={updatingStatusId}
                           isDragDisabled={isFilterActive}
