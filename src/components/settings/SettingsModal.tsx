@@ -29,47 +29,64 @@ interface SettingsModalProps {
 export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const { uiLanguage, setUILanguage, theme, setTheme, hoverPreview, setHoverPreview, t } = useSettings()
 
-  const handleLanguageSelect = (lang: UILanguage) => {
-    setUILanguage(lang)
-  }
-
-  const handleThemeSelect = (newTheme: Theme) => {
-    setTheme(newTheme)
-  }
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <Settings className="h-4 w-4" />
             {t('settingsTitle')}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className="space-y-4 pt-1">
           {/* Theme */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <Sun className="h-4 w-4" />
-              {t('theme')}
-            </div>
-            <div className="grid grid-cols-4 gap-2">
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('theme')}</p>
+            <div className="grid grid-cols-4 gap-1.5">
               {themeOptions.map((option) => {
                 const Icon = option.icon
+                const active = theme === option.value
                 return (
                   <button
                     key={option.value}
-                    onClick={() => handleThemeSelect(option.value)}
+                    onClick={() => setTheme(option.value)}
                     className={cn(
-                      'flex flex-col items-center gap-2 px-3 py-3 rounded-lg border transition-all',
-                      theme === option.value
+                      'flex flex-col items-center gap-1 px-2 py-2 rounded-md border text-xs transition-all',
+                      active
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border hover:border-primary/50 hover:bg-muted/50 text-muted-foreground'
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span className="font-medium">{option.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Interface Language */}
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('interfaceLanguage')}</p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {uiLanguages.map((lang) => {
+                const active = uiLanguage === lang.code
+                return (
+                  <button
+                    key={lang.code}
+                    onClick={() => setUILanguage(lang.code)}
+                    className={cn(
+                      'flex items-center gap-2 px-3 py-2 rounded-md border text-sm transition-all',
+                      active
                         ? 'border-primary bg-primary/10'
                         : 'border-border hover:border-primary/50 hover:bg-muted/50'
                     )}
                   >
-                    <Icon className={cn('h-5 w-5', theme === option.value ? 'text-primary' : 'text-muted-foreground')} />
-                    <span className="text-xs font-medium">{option.label}</span>
+                    {active && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
+                    <span className={cn('truncate', active ? 'font-medium text-primary' : 'text-foreground')}>
+                      {lang.nativeName}
+                    </span>
                   </button>
                 )
               })}
@@ -77,55 +94,16 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
           </div>
 
           {/* Hover Preview */}
-          <div className="flex items-center justify-between px-1">
-            <div className="flex items-center gap-2">
-              <Eye className="h-4 w-4 text-muted-foreground" />
-              <div>
-                <p className="text-sm font-medium">{t('hoverPreview')}</p>
-                <p className="text-xs text-muted-foreground">{t('hoverPreviewDesc')}</p>
-              </div>
+          <div className="flex items-center justify-between py-1">
+            <div>
+              <p className="text-sm font-medium">{t('hoverPreview')}</p>
+              <p className="text-xs text-muted-foreground">{t('hoverPreviewDesc')}</p>
             </div>
             <Switch
               checked={hoverPreview}
               onCheckedChange={setHoverPreview}
             />
           </div>
-
-          {/* Interface Language */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <Globe className="h-4 w-4" />
-              {t('interfaceLanguage')}
-            </div>
-            <div className="grid grid-cols-1 gap-2">
-              {uiLanguages.map((lang) => (
-                <button
-                  key={lang.code}
-                  onClick={() => handleLanguageSelect(lang.code)}
-                  className={cn(
-                    'flex items-center justify-between px-4 py-3 rounded-lg border transition-all',
-                    uiLanguage === lang.code
-                      ? 'border-primary bg-primary/10'
-                      : 'border-border hover:border-primary/50 hover:bg-muted/50'
-                  )}
-                >
-                  <div className="flex flex-col items-start">
-                    <span className="font-medium">{lang.nativeName}</span>
-                    <span className="text-xs text-muted-foreground">{lang.name}</span>
-                  </div>
-                  {uiLanguage === lang.code && (
-                    <Check className="h-5 w-5 text-primary" />
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex justify-end">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            {t('close')}
-          </Button>
         </div>
       </DialogContent>
     </Dialog>
