@@ -516,11 +516,13 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
       });
     }
 
-    // Sort: online first, offline last
+    // Sort: online first, then by admin-set order
     return result.sort((a, b) => {
       if (a.isOffline && !b.isOffline) return 1;
       if (!a.isOffline && b.isOffline) return -1;
-      return 0;
+      const orderA = a.order ?? Number.MAX_SAFE_INTEGER;
+      const orderB = b.order ?? Number.MAX_SAFE_INTEGER;
+      return orderA - orderB;
     });
   },
 
