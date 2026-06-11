@@ -73,11 +73,13 @@ function SortableCard({
     listeners,
     setNodeRef,
     transform,
+    transition,
     isDragging,
   } = useSortable({ id: channel.id })
 
   const style: React.CSSProperties = {
-    transform: CSS.Translate.toString(transform),
+    transform: CSS.Transform.toString(transform),
+    transition,
     zIndex: isDragging ? 1000 : undefined,
   }
 

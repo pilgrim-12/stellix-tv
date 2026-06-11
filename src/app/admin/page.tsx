@@ -48,6 +48,8 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
 } from '@dnd-kit/core'
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers'
 import {
@@ -103,12 +105,15 @@ function SortableChannelItem({
     attributes,
     listeners,
     setNodeRef,
+    setActivatorNodeRef,
     transform,
+    transition,
     isDragging,
   } = useSortable({ id: channel.id, disabled: isDragDisabled })
 
   const style: React.CSSProperties = {
-    transform: CSS.Translate.toString(transform),
+    transform: CSS.Transform.toString(transform),
+    transition,
     zIndex: isDragging ? 1000 : undefined,
     position: 'relative' as const,
   }
@@ -117,19 +122,20 @@ function SortableChannelItem({
     <div
       ref={setNodeRef}
       style={style}
+      {...attributes}
       className={cn(
         'flex items-center gap-3 px-4 py-2 cursor-pointer hover:bg-muted/50 border-b bg-background',
         isSelected && 'bg-primary/10',
-        isDragging && 'bg-muted shadow-lg opacity-90'
+        isDragging && 'opacity-40'
       )}
       onClick={onClick}
     >
       {/* Drag handle */}
       {!isDragDisabled && (
         <div
-          {...attributes}
+          ref={setActivatorNodeRef}
           {...listeners}
-          className="cursor-grab active:cursor-grabbing touch-none"
+          className="cursor-grab active:cursor-grabbing touch-none p-1 -m-1 rounded hover:bg-muted"
           onClick={(e) => e.stopPropagation()}
         >
           <GripVertical className="h-4 w-4 text-muted-foreground" />
@@ -258,6 +264,7 @@ export default function AdminPage() {
   const [hasOrderChanged, setHasOrderChanged] = useState(false)
   const [isSavingOrder, setIsSavingOrder] = useState(false)
   const [showReorderModal, setShowReorderModal] = useState(false)
+  const [draggingChannelId, setDraggingChannelId] = useState<string | null>(null)
 
   // DnD sensors - minimal activation constraints for instant response
   const sensors = useSensors(
@@ -477,9 +484,15 @@ export default function AdminPage() {
     }
   }
 
+  // Handle drag start
+  const handleDragStart = (event: DragStartEvent) => {
+    setDraggingChannelId(event.active.id as string)
+  }
+
   // Handle drag end for reordering
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
+    setDraggingChannelId(null)
 
     if (over && active.id !== over.id) {
       setChannels((items) => {
@@ -1078,6 +1091,7 @@ export default function AdminPage() {
                 <DndContext
                   sensors={sensors}
                   collisionDetection={closestCenter}
+                  onDragStart={handleDragStart}
                   onDragEnd={handleDragEnd}
                   modifiers={[restrictToVerticalAxis]}
                 >
@@ -1099,6 +1113,30 @@ export default function AdminPage() {
                       ))}
                     </div>
                   </SortableContext>
+                  <DragOverlay>
+                    {draggingChannelId ? (() => {
+                      const ch = channels.find(c => c.id === draggingChannelId)
+                      if (!ch) return null
+                      return (
+                        <div className="flex items-center gap-3 px-4 py-2 border-b bg-background shadow-xl rounded-lg border border-primary/30">
+                          <GripVertical className="h-4 w-4 text-primary" />
+                          <div className="w-10 h-10 rounded bg-muted flex items-center justify-center overflow-hidden shrink-0">
+                            {ch.logo ? (
+                              <img src={ch.logo} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <Tv className="h-5 w-5 text-muted-foreground" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">{ch.name}</p>
+                          </div>
+                          <span className={cn('text-[10px] px-2 py-0.5 rounded font-medium shrink-0', statusColors[ch.status || 'pending'])}>
+                            {statusNames[ch.status || 'pending']}
+                          </span>
+                        </div>
+                      )
+                    })() : null}
+                  </DragOverlay>
                 </DndContext>
               )}
             </CardContent>
