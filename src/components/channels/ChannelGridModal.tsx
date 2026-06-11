@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useChannelStore } from '@/stores'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { useSettings } from '@/contexts/SettingsContext'
@@ -23,6 +23,7 @@ import {
   ChevronDown,
   ChevronUp,
   LayoutGrid,
+  GripVertical,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { languageNames, languageOrder } from '@/types'
@@ -56,12 +57,16 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
     getCategoryCounts,
     showOnlyFavorites,
     setShowOnlyFavorites,
+    favoriteOrder,
+    setFavoriteOrder,
   } = useChannelStore()
 
   const [searchQuery, setSearchQuery] = useState('')
   const [showCategories, setShowCategories] = useState(false)
   const [showLanguages, setShowLanguages] = useState(false)
   const [showCountries, setShowCountries] = useState(false)
+  const [dragSourceId, setDragSourceId] = useState<string | null>(null)
+  const [dragOverId, setDragOverId] = useState<string | null>(null)
 
   const availableLanguages = getAvailableLanguages()
   const availableCountries = getAvailableCountries()
@@ -85,7 +90,7 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
 
   // Filter channels
   const filteredChannels = useMemo(() => {
-    return channels.filter((channel) => {
+    const result = channels.filter((channel) => {
       // Search
       if (searchQuery && !channel.name.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false
@@ -112,12 +117,65 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
       }
       return true
     })
-  }, [channels, searchQuery, selectedCategory, selectedLanguage, showOnlyFavorites, favorites])
+
+    // Sort by user's favorite order when showing favorites
+    if (showOnlyFavorites && favoriteOrder.length > 0) {
+      const orderMap = new Map(favoriteOrder.map((id, idx) => [id, idx]))
+      result.sort((a, b) => {
+        const posA = orderMap.get(a.id) ?? Number.MAX_SAFE_INTEGER
+        const posB = orderMap.get(b.id) ?? Number.MAX_SAFE_INTEGER
+        return posA - posB
+      })
+    }
+
+    return result
+  }, [channels, searchQuery, selectedCategory, selectedLanguage, showOnlyFavorites, favorites, favoriteOrder])
 
   // Stats - count working channels from total channels (not just filtered)
   const totalCount = filteredChannels.length
   const onlineCount = filteredChannels.filter(ch => !ch.isOffline).length
   const totalWorkingChannels = channels.filter(ch => !ch.isOffline).length
+
+  // Drag handlers for favorites reordering
+  const canDrag = showOnlyFavorites
+
+  const handleDragStart = useCallback((channelId: string, e: React.DragEvent) => {
+    setDragSourceId(channelId)
+    e.dataTransfer.effectAllowed = 'move'
+    const img = new Image()
+    img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+    e.dataTransfer.setDragImage(img, 0, 0)
+  }, [])
+
+  const handleDragOver = useCallback((channelId: string, e: React.DragEvent) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setDragOverId(channelId)
+  }, [])
+
+  const handleDrop = useCallback((targetId: string) => {
+    if (!dragSourceId || dragSourceId === targetId) {
+      setDragSourceId(null)
+      setDragOverId(null)
+      return
+    }
+    const currentOrder = filteredChannels.map(ch => ch.id)
+    const sourceIdx = currentOrder.indexOf(dragSourceId)
+    const targetIdx = currentOrder.indexOf(targetId)
+    if (sourceIdx === -1 || targetIdx === -1) return
+
+    const newOrder = [...currentOrder]
+    newOrder.splice(sourceIdx, 1)
+    newOrder.splice(targetIdx, 0, dragSourceId)
+    setFavoriteOrder(newOrder)
+    setDragSourceId(null)
+    setDragOverId(null)
+  }, [dragSourceId, filteredChannels, setFavoriteOrder])
+
+  const handleDragEnd = useCallback(() => {
+    setDragSourceId(null)
+    setDragOverId(null)
+  }, [])
 
   const handleSelectChannel = (channel: Channel) => {
     setCurrentChannel(channel, user?.uid)
@@ -302,17 +360,33 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
               {filteredChannels.map((channel) => {
                 const isActive = currentChannel?.id === channel.id
                 const isFavorite = favorites.includes(channel.id)
+                const isDragging = dragSourceId === channel.id
+                const isDragOver = dragOverId === channel.id && dragSourceId !== channel.id
 
                 return (
                   <div
                     key={channel.id}
+                    draggable={canDrag}
+                    onDragStart={canDrag ? (e) => handleDragStart(channel.id, e) : undefined}
+                    onDragOver={canDrag ? (e) => handleDragOver(channel.id, e) : undefined}
+                    onDrop={canDrag ? () => handleDrop(channel.id) : undefined}
+                    onDragEnd={canDrag ? handleDragEnd : undefined}
                     className={cn(
                       'group relative cursor-pointer rounded-lg p-2 transition-all',
                       'hover:bg-muted/50',
-                      isActive && 'bg-primary/15 ring-2 ring-primary'
+                      isActive && 'bg-primary/15 ring-2 ring-primary',
+                      isDragging && 'opacity-40',
+                      isDragOver && 'ring-2 ring-primary scale-105'
                     )}
                     onClick={() => handleSelectChannel(channel)}
                   >
+                    {/* Drag handle */}
+                    {canDrag && (
+                      <div className="absolute top-0.5 left-0.5 text-muted-foreground/30 hover:text-muted-foreground cursor-grab active:cursor-grabbing z-10">
+                        <GripVertical className="h-3 w-3" />
+                      </div>
+                    )}
+
                     {/* Logo */}
                     <div className="w-12 h-12 mx-auto rounded bg-muted overflow-hidden mb-1 flex items-center justify-center">
                       {channel.logo ? (
@@ -320,6 +394,7 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
                           src={channel.logo}
                           alt={channel.name}
                           className="h-full w-full object-cover"
+                          draggable={false}
                           onError={(e) => {
                             e.currentTarget.style.display = 'none'
                             e.currentTarget.nextElementSibling?.classList.remove('hidden')

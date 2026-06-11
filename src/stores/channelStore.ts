@@ -28,6 +28,7 @@ interface ChannelState {
   selectedCountry: string; // 'all' or country name
   searchQuery: string;
   favorites: string[];
+  favoriteOrder: string[]; // user-set order of favorite channels
   watchHistory: WatchHistoryItem[];
   showOnlyFavorites: boolean;
   isLoading: boolean;
@@ -50,6 +51,8 @@ interface ChannelState {
   setCountry: (country: string) => void;
   setSearchQuery: (query: string) => void;
   toggleFavorite: (channelId: string, userId?: string) => void;
+  setFavoriteOrder: (order: string[]) => void;
+  loadFavoriteOrder: () => void;
   setShowOnlyFavorites: (show: boolean, userId?: string) => void;
   loadFavoritesFromFirebase: (userId: string) => Promise<void>;
   loadUserSettings: (userId: string) => Promise<void>;
@@ -85,6 +88,7 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
   selectedCountry: 'all',
   searchQuery: '',
   favorites: [],
+  favoriteOrder: [],
   watchHistory: [],
   showOnlyFavorites: false,
   isLoading: false,
@@ -266,16 +270,23 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
   setSearchQuery: (query) => set({ searchQuery: query }),
 
   toggleFavorite: (channelId, userId) => {
-    const { favorites } = get();
+    const { favorites, favoriteOrder } = get();
     const isFavorite = favorites.includes(channelId);
     const newFavorites = isFavorite
       ? favorites.filter((id) => id !== channelId)
       : [...favorites, channelId];
-    set({ favorites: newFavorites });
 
-    // Save to localStorage as backup
+    // Remove from favoriteOrder when unfavoriting
+    const newFavoriteOrder = isFavorite
+      ? favoriteOrder.filter((id) => id !== channelId)
+      : [...favoriteOrder, channelId];
+
+    set({ favorites: newFavorites, favoriteOrder: newFavoriteOrder });
+
+    // Save to localStorage
     if (typeof window !== 'undefined') {
       localStorage.setItem('stellix-favorites', JSON.stringify(newFavorites));
+      localStorage.setItem('stellix-favorite-order', JSON.stringify(newFavoriteOrder));
     }
 
     // Sync with Firebase if user is logged in
@@ -285,6 +296,28 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
       } else {
         addFavorite(userId, channelId);
       }
+    }
+  },
+
+  setFavoriteOrder: (order) => {
+    set({ favoriteOrder: order });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('stellix-favorite-order', JSON.stringify(order));
+    }
+  },
+
+  loadFavoriteOrder: () => {
+    if (typeof window === 'undefined') return;
+    try {
+      const saved = localStorage.getItem('stellix-favorite-order');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          set({ favoriteOrder: parsed });
+        }
+      }
+    } catch {
+      // Invalid JSON, ignore
     }
   },
 
@@ -463,7 +496,7 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
   },
 
   getFilteredChannels: () => {
-    const { channels, selectedCategory, selectedLanguage, selectedCountry, searchQuery, offlineChannels, disabledChannels, showOnlyFavorites, favorites } = get();
+    const { channels, selectedCategory, selectedLanguage, selectedCountry, searchQuery, offlineChannels, disabledChannels, showOnlyFavorites, favorites, favoriteOrder } = get();
 
     // First, deduplicate by URL (keep only first occurrence or primary)
     // Store both channel and its index for O(1) replacement
@@ -516,7 +549,17 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
       });
     }
 
-    // Sort: online first, then by admin-set order
+    // Sort favorites by user-set order, others by admin order
+    if (showOnlyFavorites && favoriteOrder.length > 0) {
+      const orderMap = new Map(favoriteOrder.map((id, idx) => [id, idx]));
+      return result.sort((a, b) => {
+        const posA = orderMap.get(a.id) ?? Number.MAX_SAFE_INTEGER;
+        const posB = orderMap.get(b.id) ?? Number.MAX_SAFE_INTEGER;
+        return posA - posB;
+      });
+    }
+
+    // Default: online first, then by admin-set order
     return result.sort((a, b) => {
       if (a.isOffline && !b.isOffline) return 1;
       if (!a.isOffline && b.isOffline) return -1;

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef, CSSProperties, ReactElement } from 'react'
+import { useEffect, useState, useRef, useCallback, CSSProperties, ReactElement } from 'react'
 import { List, ListImperativeAPI } from 'react-window'
 import { useChannelStore } from '@/stores'
 import { useAuthContext } from '@/contexts/AuthContext'
@@ -9,7 +9,7 @@ import { sampleChannels } from '@/data/channels'
 import { ChannelCard } from './ChannelCard'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Search, Tv, CheckCircle2, XCircle, Loader2, Star, History } from 'lucide-react'
+import { Search, Tv, CheckCircle2, XCircle, Loader2, Star, History, GripVertical } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Channel } from '@/types'
 
@@ -57,12 +57,17 @@ export function ChannelList() {
   const watchHistory = useChannelStore((state) => state.watchHistory)
   const getRecentChannels = useChannelStore((state) => state.getRecentChannels)
 
+  const setFavoriteOrder = useChannelStore((state) => state.setFavoriteOrder)
+  const loadFavoriteOrder = useChannelStore((state) => state.loadFavoriteOrder)
+
   const { user } = useAuthContext()
   const { t } = useSettings()
 
   const [initialized, setInitialized] = useState(false)
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery)
   const [showRecentChannels, setShowRecentChannels] = useState(false)
+  const [dragSourceId, setDragSourceId] = useState<string | null>(null)
+  const [dragOverId, setDragOverId] = useState<string | null>(null)
   const listRef = useRef<ListImperativeAPI>(null)
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -92,6 +97,7 @@ export function ChannelList() {
       loadCustomPlaylists()
       loadSavedFilters()
       loadWatchHistory()
+      loadFavoriteOrder()
 
       // Check URL params for lang/category (from landing page links)
       if (typeof window !== 'undefined') {
@@ -171,6 +177,45 @@ export function ChannelList() {
   // Get channels based on current mode
   const recentChannels = getRecentChannels()
   const filteredChannels = showRecentChannels ? recentChannels : getFilteredChannels()
+
+  // Drag handlers for favorites reordering
+  const handleFavDragStart = useCallback((channelId: string, e: React.DragEvent) => {
+    setDragSourceId(channelId)
+    e.dataTransfer.effectAllowed = 'move'
+    const img = new Image()
+    img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+    e.dataTransfer.setDragImage(img, 0, 0)
+  }, [])
+
+  const handleFavDragOver = useCallback((channelId: string, e: React.DragEvent) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setDragOverId(channelId)
+  }, [])
+
+  const handleFavDrop = useCallback((targetId: string) => {
+    if (!dragSourceId || dragSourceId === targetId) {
+      setDragSourceId(null)
+      setDragOverId(null)
+      return
+    }
+    const currentOrder = filteredChannels.map(ch => ch.id)
+    const sourceIdx = currentOrder.indexOf(dragSourceId)
+    const targetIdx = currentOrder.indexOf(targetId)
+    if (sourceIdx === -1 || targetIdx === -1) return
+
+    const newOrder = [...currentOrder]
+    newOrder.splice(sourceIdx, 1)
+    newOrder.splice(targetIdx, 0, dragSourceId)
+    setFavoriteOrder(newOrder)
+    setDragSourceId(null)
+    setDragOverId(null)
+  }, [dragSourceId, filteredChannels, setFavoriteOrder])
+
+  const handleFavDragEnd = useCallback(() => {
+    setDragSourceId(null)
+    setDragOverId(null)
+  }, [])
 
   // Scroll to current channel when it changes
   useEffect(() => {
@@ -274,15 +319,43 @@ export function ChannelList() {
         ) : (
           <>
             {filteredChannels.length > 0 ? (
-              <List<ChannelRowProps>
-                listRef={listRef}
-                rowCount={filteredChannels.length}
-                rowHeight={ITEM_HEIGHT}
-                rowComponent={RowComponent}
-                rowProps={{ channels: filteredChannels }}
-                className="scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent"
-                style={{ padding: '6px' }}
-              />
+              showOnlyFavorites ? (
+                /* Plain scrollable list with drag-and-drop for favorites */
+                <div className="h-full overflow-auto p-1.5 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
+                  {filteredChannels.map((channel) => (
+                    <div
+                      key={channel.id}
+                      draggable
+                      onDragStart={(e) => handleFavDragStart(channel.id, e)}
+                      onDragOver={(e) => handleFavDragOver(channel.id, e)}
+                      onDrop={() => handleFavDrop(channel.id)}
+                      onDragEnd={handleFavDragEnd}
+                      className={cn(
+                        'relative flex items-center transition-all duration-150',
+                        dragSourceId === channel.id && 'opacity-40',
+                        dragOverId === channel.id && dragSourceId !== channel.id && 'border-t-2 border-primary'
+                      )}
+                    >
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 z-10 cursor-grab active:cursor-grabbing px-0.5 text-muted-foreground/40 hover:text-muted-foreground">
+                        <GripVertical className="h-3.5 w-3.5" />
+                      </div>
+                      <div className="flex-1 pl-4">
+                        <ChannelCard channel={channel} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <List<ChannelRowProps>
+                  listRef={listRef}
+                  rowCount={filteredChannels.length}
+                  rowHeight={ITEM_HEIGHT}
+                  rowComponent={RowComponent}
+                  rowProps={{ channels: filteredChannels }}
+                  className="scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent"
+                  style={{ padding: '6px' }}
+                />
+              )
             ) : (
               <div className="flex items-center justify-center h-32">
                 <p className="text-sm text-muted-foreground">{t('noChannelsFound')}</p>
