@@ -234,7 +234,7 @@ export default function AdminPage() {
   // Player state
   const [selectedChannel, setSelectedChannel] = useState<CuratedChannel | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
-  const [playerError, setPlayerError] = useState(false)
+  const [playerError, setPlayerError] = useState<string | null>(null)
 
   // Stats - calculated from channels
   const [usersCount, setUsersCount] = useState<number | null>(null)
@@ -327,32 +327,50 @@ export default function AdminPage() {
     }
 
     setSelectedChannel(channel)
-    setPlayerError(false)
+    setPlayerError(null)
     setIsPlaying(true)
 
-    if (videoRef.current) {
-      // Try HLS.js for m3u8
-      if (channel.url.includes('.m3u8')) {
-        const Hls = (await import('hls.js')).default
-        if (Hls.isSupported()) {
-          const hls = new Hls()
-          hlsRef.current = hls
-          hls.loadSource(channel.url)
-          hls.attachMedia(videoRef.current)
-          hls.on(Hls.Events.MANIFEST_PARSED, () => {
-            setPlayerError(false)
-          })
-          hls.on(Hls.Events.ERROR, (_, data) => {
-            if (data.fatal) {
-              setPlayerError(true)
+    const video = videoRef.current
+    if (!video) return
+
+    if (channel.url.includes('.m3u8')) {
+      const Hls = (await import('hls.js')).default
+      if (Hls.isSupported()) {
+        const hls = new Hls({
+          enableWorker: true,
+          xhrSetup: (xhr) => {
+            xhr.withCredentials = false
+          },
+        })
+        hlsRef.current = hls
+        hls.loadSource(channel.url)
+        hls.attachMedia(video)
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          setPlayerError(null)
+        })
+        hls.on(Hls.Events.ERROR, (_, data) => {
+          if (data.fatal) {
+            const detail = data.details || 'unknown'
+            const reason = data.reason || data.error?.message || ''
+            if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+              hls.destroy()
+              hlsRef.current = null
+              video.src = channel.url
+              video.play().catch(() => {
+                setPlayerError(`Network: ${detail}${reason ? ' — ' + reason : ''}`)
+              })
+            } else {
+              setPlayerError(`${data.type}: ${detail}${reason ? ' — ' + reason : ''}`)
             }
-          })
-        } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
-          videoRef.current.src = channel.url
-        }
+          }
+        })
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = channel.url
       } else {
-        videoRef.current.src = channel.url
+        video.src = channel.url
       }
+    } else {
+      video.src = channel.url
     }
   }
 
@@ -763,13 +781,14 @@ export default function AdminPage() {
                         controls
                         autoPlay
                         playsInline
-                        onCanPlay={() => setPlayerError(false)}
-                        onPlaying={() => setPlayerError(false)}
+                        onCanPlay={() => setPlayerError(null)}
+                        onPlaying={() => setPlayerError(null)}
                       />
                       {playerError && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-red-500">
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-red-500 p-4">
                           <XCircle className="h-8 w-8 mb-2" />
-                          <p className="text-sm">Playback error</p>
+                          <p className="text-sm font-medium">Playback error</p>
+                          <p className="text-xs text-red-400 mt-1 text-center max-w-xs break-all">{playerError}</p>
                         </div>
                       )}
                     </>
