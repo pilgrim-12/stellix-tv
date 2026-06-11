@@ -105,6 +105,10 @@ export function VideoPlayer() {
         enableWorker: true,
         lowLatencyMode: true,
         backBufferLength: 90,
+        manifestLoadingMaxRetry: 1,
+        levelLoadingMaxRetry: 1,
+        fragLoadingMaxRetry: 2,
+        manifestLoadingTimeOut: 8000,
       })
 
       hls.loadSource(url)
@@ -140,74 +144,82 @@ export function VideoPlayer() {
         setError(null)
       })
 
-      let retryCount = 0
-      const maxRetries = 4
-      const getRetryDelay = (attempt: number) => Math.min(1000 * Math.pow(2, attempt), 8000)
+      let mediaRetries = 0
 
       hls.on(Hls.Events.ERROR, (_, data) => {
         if (abortController.signal.aborted) return
-        if (data.fatal) {
-          retryCount++
-          markSessionError()
+        if (!data.fatal) return
 
-          if (retryCount <= maxRetries) {
-            const delay = getRetryDelay(retryCount - 1)
-            switch (data.type) {
-              case Hls.ErrorTypes.NETWORK_ERROR:
-                setError(`Network error - retrying in ${Math.ceil(delay / 1000)}s...`)
-                setTimeout(() => {
-                  if (abortController.signal.aborted) return
-                  hls.startLoad()
-                }, delay)
-                break
-              case Hls.ErrorTypes.MEDIA_ERROR:
-                setError(`Media error - retrying in ${Math.ceil(delay / 1000)}s...`)
-                setTimeout(() => {
-                  if (abortController.signal.aborted) return
-                  hls.recoverMediaError()
-                }, delay)
-                break
-              default:
-                setError('Channel offline')
-                const channel = currentChannelRef.current
-                if (channel) markChannelOffline(channel.id)
-                hls.destroy()
-                break
-            }
-          } else {
-            // Retries exhausted — try through server proxy to bypass CORS
-            hls.destroy()
-            hlsRef.current = null
-            setLoading(true)
-            const proxyUrl = `/api/stream-proxy?url=${encodeURIComponent(url)}`
-            const Hls2 = HlsModule!
-            const hls2 = new Hls2({ enableWorker: true })
-            hlsRef.current = hls2
-            hls2.loadSource(proxyUrl)
-            hls2.attachMedia(video)
-            hls2.on(Hls2.Events.MANIFEST_PARSED, () => {
-              if (abortController.signal.aborted) return
+        markSessionError()
+
+        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+          // CORS/network — immediately try proxy, no point retrying same URL
+          hls.destroy()
+          hlsRef.current = null
+          setLoading(true)
+          setError(null)
+          const proxyUrl = `/api/stream-proxy?url=${encodeURIComponent(url)}`
+          const Hls2 = HlsModule!
+          const hls2 = new Hls2({
+            enableWorker: true,
+            manifestLoadingMaxRetry: 1,
+            levelLoadingMaxRetry: 1,
+            fragLoadingMaxRetry: 1,
+            manifestLoadingTimeOut: 10000,
+          })
+          hlsRef.current = hls2
+          hls2.loadSource(proxyUrl)
+          hls2.attachMedia(video)
+
+          // Timeout for proxy
+          const proxyTimeout = setTimeout(() => {
+            if (abortController.signal.aborted) return
+            if (hlsRef.current === hls2) {
+              hls2.destroy()
+              hlsRef.current = null
+              setError('Канал недоступен')
               setLoading(false)
-              setError(null)
               const ch = currentChannelRef.current
-              if (ch) markChannelOnline(ch.id)
-              video.play().then(() => {
-                if (abortController.signal.aborted) return
-                setPlaying(true)
-              }).catch(() => {})
-            })
-            hls2.on(Hls2.Events.ERROR, (_, d2) => {
+              if (ch) markChannelOffline(ch.id)
+            }
+          }, 12000)
+
+          hls2.on(Hls2.Events.MANIFEST_PARSED, () => {
+            clearTimeout(proxyTimeout)
+            if (abortController.signal.aborted) return
+            setLoading(false)
+            setError(null)
+            const ch = currentChannelRef.current
+            if (ch) markChannelOnline(ch.id)
+            video.play().then(() => {
               if (abortController.signal.aborted) return
-              if (d2.fatal) {
-                hls2.destroy()
-                hlsRef.current = null
-                setError('Канал недоступен')
-                setLoading(false)
-                const ch = currentChannelRef.current
-                if (ch) markChannelOffline(ch.id)
-              }
-            })
-          }
+              setPlaying(true)
+            }).catch(() => {})
+          })
+          hls2.on(Hls2.Events.ERROR, (_, d2) => {
+            if (abortController.signal.aborted) return
+            if (d2.fatal) {
+              clearTimeout(proxyTimeout)
+              hls2.destroy()
+              hlsRef.current = null
+              setError('Канал недоступен')
+              setLoading(false)
+              const ch = currentChannelRef.current
+              if (ch) markChannelOffline(ch.id)
+            }
+          })
+        } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR && mediaRetries < 2) {
+          mediaRetries++
+          setTimeout(() => {
+            if (abortController.signal.aborted) return
+            hls.recoverMediaError()
+          }, 1000)
+        } else {
+          setError('Канал недоступен')
+          const channel = currentChannelRef.current
+          if (channel) markChannelOffline(channel.id)
+          hls.destroy()
+          hlsRef.current = null
         }
       })
 
