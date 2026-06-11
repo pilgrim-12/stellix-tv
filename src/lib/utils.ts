@@ -17,23 +17,33 @@ export function formatDuration(seconds: number): string {
 }
 
 /**
- * Convert HLS.js error data into a human-readable message
+ * Convert HLS.js error data into a human-readable message.
+ * httpCode: response status (0 = CORS/unreachable, 403, 404, etc.)
  */
-export function formatHlsError(detail: string, reason?: string): string {
+export function formatHlsError(detail: string, httpCode?: number, reason?: string): string {
+  // Network load errors — differentiate by HTTP code
+  if (detail === 'manifestLoadError' || detail === 'levelLoadError' || detail === 'fragLoadError') {
+    const target = detail.startsWith('manifest') ? 'плейлист' : detail.startsWith('level') ? 'качество' : 'фрагмент'
+    if (httpCode === 0 || httpCode === undefined) return `CORS — сервер блокирует запросы из браузера (${target})`
+    if (httpCode === 403) return `Доступ запрещён (403) — сервер отклонил запрос`
+    if (httpCode === 404) return `Поток не найден (404) — URL не существует`
+    if (httpCode === 410) return `Поток удалён (410)`
+    if (httpCode === 451) return `Поток заблокирован в вашем регионе (451)`
+    if (httpCode >= 500) return `Ошибка сервера (${httpCode}) — попробуйте позже`
+    return `Ошибка загрузки (${httpCode})`
+  }
+
   const map: Record<string, string> = {
-    manifestLoadError: 'Не удалось загрузить поток (сервер не ответил или CORS)',
-    manifestLoadTimeOut: 'Таймаут загрузки потока — сервер не отвечает',
-    manifestParsingError: 'Битый плейлист — сервер вернул невалидный ответ',
-    levelLoadError: 'Не удалось загрузить качество потока',
-    levelLoadTimeOut: 'Таймаут загрузки качества потока',
-    fragLoadError: 'Не удалось загрузить фрагмент видео',
-    fragLoadTimeOut: 'Таймаут загрузки фрагмента видео',
+    manifestLoadTimeOut: 'Таймаут — сервер не отвечает',
+    manifestParsingError: 'Битый плейлист — невалидный формат',
+    levelLoadTimeOut: 'Таймаут загрузки качества',
+    fragLoadTimeOut: 'Таймаут загрузки видео',
     fragParsingError: 'Битый фрагмент видео',
-    bufferAppendError: 'Ошибка буфера — видеоформат не поддерживается',
-    bufferStalledError: 'Буфер остановился — поток слишком медленный',
+    bufferAppendError: 'Формат видео не поддерживается',
+    bufferStalledError: 'Буфер — поток слишком медленный',
     bufferFullError: 'Переполнение буфера',
-    keyLoadError: 'Не удалось загрузить ключ шифрования (DRM)',
-    keyLoadTimeOut: 'Таймаут загрузки ключа шифрования',
+    keyLoadError: 'Не удалось загрузить ключ DRM',
+    keyLoadTimeOut: 'Таймаут ключа DRM',
   }
   return map[detail] || reason || detail
 }

@@ -166,8 +166,9 @@ export default function StagingPage() {
         hls.on(Hls.Events.ERROR, (_, data) => {
           if (data.fatal) {
             const detail = data.details || 'unknown'
+            const httpCode = data.response?.code
             const reason = data.reason || data.error?.message || ''
-            const msg = formatHlsError(detail, reason)
+            const msg = formatHlsError(detail, httpCode, reason)
             // On network error, try native playback as fallback (bypasses CORS)
             if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
               hls.destroy()
@@ -526,10 +527,9 @@ export default function StagingPage() {
                           onCanPlay={() => setPlayerError(null)}
                         />
                         {playerError && (
-                          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-red-500 p-4">
-                            <XCircle className="h-8 w-8 mb-2" />
-                            <p className="text-sm font-medium">Playback error</p>
-                            <p className="text-xs text-red-400 mt-1 text-center max-w-xs break-all">{playerError}</p>
+                          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 text-white p-4">
+                            <XCircle className="h-10 w-10 mb-3 text-red-500" />
+                            <p className="text-base font-semibold text-center leading-snug max-w-sm">{playerError}</p>
                           </div>
                         )}
                       </>
