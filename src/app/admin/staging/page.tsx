@@ -40,7 +40,7 @@ import {
 } from '@/lib/stagingPlaylistService'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { AdminLayout } from '@/components/admin/AdminLayout'
-import { cn } from '@/lib/utils'
+import { cn, formatHlsError } from '@/lib/utils'
 import { languageNames, languageOrder, categoryNames, categoryOrder } from '@/types'
 
 const statusColors: Record<StagingChannelStatus, string> = {
@@ -167,16 +167,17 @@ export default function StagingPage() {
           if (data.fatal) {
             const detail = data.details || 'unknown'
             const reason = data.reason || data.error?.message || ''
+            const msg = formatHlsError(detail, reason)
             // On network error, try native playback as fallback (bypasses CORS)
             if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
               hls.destroy()
               hlsRef.current = null
               video.src = channel.url
               video.play().catch(() => {
-                setPlayerError(`Network: ${detail}${reason ? ' — ' + reason : ''}`)
+                setPlayerError(msg)
               })
             } else {
-              setPlayerError(`${data.type}: ${detail}${reason ? ' — ' + reason : ''}`)
+              setPlayerError(msg)
             }
           }
         })
