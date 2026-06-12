@@ -97,7 +97,6 @@ export function ChannelList() {
       loadCustomPlaylists()
       loadSavedFilters()
       loadWatchHistory()
-      loadFavoriteOrder()
 
       // Check URL params for lang/category (from landing page links)
       if (typeof window !== 'undefined') {
@@ -142,16 +141,16 @@ export function ChannelList() {
         if (savedFavorites) {
           try {
             const parsed = JSON.parse(savedFavorites)
-            const currentFavorites = useChannelStore.getState().favorites
-            parsed.forEach((id: string) => {
-              if (!currentFavorites.includes(id)) {
-                useChannelStore.getState().toggleFavorite(id)
-              }
-            })
+            if (Array.isArray(parsed)) {
+              useChannelStore.setState({ favorites: parsed })
+            }
           } catch {
             // Invalid JSON, ignore
           }
         }
+
+        // Load favorite order AFTER favorites are loaded (to avoid corruption)
+        loadFavoriteOrder()
 
         // Load showOnlyFavorites setting
         const savedShowFavorites = localStorage.getItem('stellix-show-only-favorites')
