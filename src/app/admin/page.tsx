@@ -63,6 +63,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { ChannelReorderModal } from '@/components/admin/ChannelReorderModal'
 import { getTotalUsersCount } from '@/lib/userService'
 import { getStatsSummary, resetStats } from '@/lib/firebaseQuotaTracker'
+import { getAppSettings, updateAppSettings, type AppSettings } from '@/lib/appSettingsService'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { AdminLayout } from '@/components/admin/AdminLayout'
 import { cn } from '@/lib/utils'
@@ -260,6 +261,10 @@ export default function AdminPage() {
   const [addName, setAddName] = useState('')
   const [isAdding, setIsAdding] = useState(false)
 
+  // App settings state
+  const [appSettings, setAppSettings] = useState<AppSettings | null>(null)
+  const [savingSettings, setSavingSettings] = useState(false)
+
   // Drag and drop state
   const [hasOrderChanged, setHasOrderChanged] = useState(false)
   const [isSavingOrder, setIsSavingOrder] = useState(false)
@@ -288,15 +293,17 @@ export default function AdminPage() {
   const loadData = async () => {
     setIsLoading(true)
     try {
-      const [channelsData, usersData, metadataData, sourcesData] = await Promise.all([
+      const [channelsData, usersData, metadataData, sourcesData, settingsData] = await Promise.all([
         getAllCuratedChannelsRaw(),
         getTotalUsersCount(),
         getCuratedMetadata(),
         getPlaylistSources(),
+        getAppSettings(),
       ])
       setChannels(channelsData)
       setUsersCount(usersData)
       setMetadata(metadataData)
+      setAppSettings(settingsData)
       setPlaylistSources(sourcesData.sort((a, b) =>
         new Date(b.importedAt).getTime() - new Date(a.importedAt).getTime()
       ))
@@ -712,6 +719,57 @@ export default function AdminPage() {
             {migrationResult.updated} channels updated, {migrationResult.unchanged} unchanged
           </div>
         )}
+        {/* Site Settings */}
+        {appSettings && (
+          <div className="mb-4 p-4 border rounded-lg bg-card">
+            <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+              <Database className="h-4 w-4" />
+              Site Settings
+            </h4>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Proxy video segments</p>
+                <p className="text-xs text-muted-foreground">
+                  Pipe .ts/.m4s through Vercel serverless. Burns bandwidth fast.
+                  OFF = 302 redirect to source (recommended).
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {savingSettings && <Loader2 className="h-3 w-3 animate-spin" />}
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={appSettings.proxySegments}
+                  className={cn(
+                    'peer inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent shadow-sm transition-colors',
+                    appSettings.proxySegments ? 'bg-red-500' : 'bg-input'
+                  )}
+                  onClick={async () => {
+                    const newValue = !appSettings.proxySegments
+                    setSavingSettings(true)
+                    try {
+                      await updateAppSettings({ proxySegments: newValue })
+                      setAppSettings({ ...appSettings, proxySegments: newValue })
+                    } catch (error) {
+                      console.error('Failed to update settings:', error)
+                    } finally {
+                      setSavingSettings(false)
+                    }
+                  }}
+                  disabled={savingSettings}
+                >
+                  <span
+                    className={cn(
+                      'pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg transition-transform',
+                      appSettings.proxySegments ? 'translate-x-4' : 'translate-x-0'
+                    )}
+                  />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Main content: Player + Channels */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left column - Player + Playlists */}
