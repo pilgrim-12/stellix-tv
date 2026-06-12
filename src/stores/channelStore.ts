@@ -32,6 +32,7 @@ interface ChannelState {
   watchHistory: WatchHistoryItem[];
   showOnlyFavorites: boolean;
   isLoading: boolean;
+  isRefreshing: boolean;
   error: string | null;
   offlineChannels: Set<string>;
   disabledChannels: Set<string>; // admin-disabled channels
@@ -79,6 +80,42 @@ interface ChannelState {
   getAllChannelsWithStatus: () => Channel[];
 }
 
+// --- localStorage channel cache (stale-while-revalidate) ---
+const CHANNEL_CACHE_KEY = 'stellix-channel-cache'
+const CHANNEL_CACHE_TS_KEY = 'stellix-channel-cache-ts'
+const CHANNEL_CACHE_MAX_AGE = 24 * 60 * 60 * 1000 // 24 hours
+
+function loadChannelsFromCache(): Channel[] | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const ts = localStorage.getItem(CHANNEL_CACHE_TS_KEY)
+    if (!ts || Date.now() - parseInt(ts, 10) > CHANNEL_CACHE_MAX_AGE) return null
+    const raw = localStorage.getItem(CHANNEL_CACHE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Channel[]
+    if (!Array.isArray(parsed) || parsed.length === 0) return null
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+function saveChannelsToCache(channels: Channel[]): void {
+  if (typeof window === 'undefined') return
+  try {
+    const minimal = channels.map(ch => ({
+      id: ch.id, name: ch.name, logo: ch.logo, url: ch.url,
+      group: ch.group, country: ch.country, language: ch.language,
+      labels: ch.labels, order: ch.order, status: ch.status,
+      enabled: ch.enabled, isPrimary: ch.isPrimary, isOffline: false,
+    }))
+    localStorage.setItem(CHANNEL_CACHE_KEY, JSON.stringify(minimal))
+    localStorage.setItem(CHANNEL_CACHE_TS_KEY, String(Date.now()))
+  } catch {
+    // localStorage full — silently ignore
+  }
+}
+
 export const useChannelStore = create<ChannelState>((set, get) => ({
   channels: [],
   customPlaylists: [],
@@ -92,6 +129,7 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
   watchHistory: [],
   showOnlyFavorites: false,
   isLoading: false,
+  isRefreshing: false,
   error: null,
   offlineChannels: new Set(),
   disabledChannels: new Set(),
@@ -100,26 +138,41 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
 
   loadChannelsFromFirebase: async () => {
     try {
-      set({ isLoading: true, error: null });
+      // Step 1: Try showing cached channels instantly
+      const cached = loadChannelsFromCache();
+      if (cached && cached.length > 0) {
+        set({ channels: cached, isLoading: false, isRefreshing: true, error: null });
+        console.log('[ChannelStore] Loaded', cached.length, 'channels from cache');
+      } else {
+        set({ isLoading: true, error: null });
+      }
 
-      // Load from curated_channels (1 read, optimized structure)
+      // Step 2: Always fetch fresh data from Firebase
       console.log('[ChannelStore] Loading from curated_channels');
       const firebaseChannels = await getActiveCuratedChannels();
 
       if (firebaseChannels.length > 0) {
-        // Merge Firebase data with offline status
         const channels = firebaseChannels.map((ch) => ({
           ...ch,
           isOffline: ch.isOffline || false,
         }));
-        set({ channels, isLoading: false });
-      } else {
+        set({ channels, isLoading: false, isRefreshing: false });
+        saveChannelsToCache(channels);
+      } else if (!cached || cached.length === 0) {
         console.warn('[ChannelStore] No channels found in curated_channels');
-        set({ isLoading: false });
+        set({ isLoading: false, isRefreshing: false });
+      } else {
+        set({ isRefreshing: false });
       }
     } catch (error) {
       console.error('Error loading channels from Firebase:', error);
-      set({ error: 'Failed to load channels', isLoading: false });
+      const { channels: currentChannels } = get();
+      if (currentChannels.length === 0) {
+        set({ error: 'Failed to load channels', isLoading: false, isRefreshing: false });
+      } else {
+        // Cache is showing, just stop refreshing
+        set({ isLoading: false, isRefreshing: false });
+      }
     }
   },
 

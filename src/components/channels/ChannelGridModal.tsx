@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useRef, useEffect, CSSProperties, ReactElement } from 'react'
 import { useChannelStore } from '@/stores'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { useSettings } from '@/contexts/SettingsContext'
@@ -25,10 +25,92 @@ import {
   LayoutGrid,
   GripVertical,
 } from 'lucide-react'
+import { Grid } from 'react-window'
 import { cn } from '@/lib/utils'
 import { languageNames, languageOrder } from '@/types'
 import type { Channel, ChannelCategory } from '@/types'
 import { channelCategories } from '@/data/channels'
+
+// Column count based on container width (matches Tailwind breakpoints)
+function getColumnCount(width: number): number {
+  if (width >= 1536) return 16
+  if (width >= 1280) return 14
+  if (width >= 1024) return 12
+  if (width >= 768) return 10
+  if (width >= 640) return 8
+  return 6
+}
+
+const GRID_ROW_HEIGHT = 110
+
+// Cell props for virtualized grid
+interface GridCellProps {
+  channels: Channel[]
+  columnCount: number
+  currentChannelId: string | undefined
+  favorites: string[]
+  onSelect: (channel: Channel) => void
+}
+
+function GridCellComponent(props: {
+  ariaAttributes: { "aria-colindex": number; role: "gridcell" }
+  columnIndex: number
+  rowIndex: number
+  style: CSSProperties
+} & GridCellProps): ReactElement {
+  const { rowIndex, columnIndex, style, channels, columnCount, currentChannelId, favorites, onSelect } = props
+  const index = rowIndex * columnCount + columnIndex
+  if (index >= channels.length) return <div style={style} />
+
+  const channel = channels[index]
+  const isActive = currentChannelId === channel.id
+  const isFavorite = favorites.includes(channel.id)
+
+  return (
+    <div style={style}>
+      <div
+        className={cn(
+          'group relative cursor-pointer rounded-lg p-2 transition-all h-full',
+          'hover:bg-muted/50',
+          isActive && 'bg-primary/15 ring-2 ring-primary'
+        )}
+        onClick={() => onSelect(channel)}
+      >
+        <div className="w-12 h-12 mx-auto rounded bg-muted overflow-hidden mb-1 flex items-center justify-center">
+          {channel.logo ? (
+            <img
+              src={channel.logo}
+              alt={channel.name}
+              className="h-full w-full object-cover"
+              loading="lazy"
+              decoding="async"
+              draggable={false}
+              onError={(e) => {
+                e.currentTarget.style.display = 'none'
+                e.currentTarget.nextElementSibling?.classList.remove('hidden')
+              }}
+            />
+          ) : null}
+          <Tv className={cn('h-6 w-6 text-muted-foreground', channel.logo && 'hidden')} />
+        </div>
+        <p className="text-[10px] font-medium text-center line-clamp-2 leading-tight w-full">
+          {channel.name}
+        </p>
+        {channel.country && (
+          <p className="text-[8px] text-center text-sky-400 truncate w-full">
+            {channel.country}
+          </p>
+        )}
+        {isFavorite && (
+          <Star className="absolute top-0.5 right-0.5 h-3 w-3 text-yellow-500 fill-current" />
+        )}
+        {isActive && (
+          <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-primary" />
+        )}
+      </div>
+    </div>
+  )
+}
 
 interface ChannelGridModalProps {
   open: boolean
@@ -67,6 +149,23 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
   const [showCountries, setShowCountries] = useState(false)
   const [dragSourceId, setDragSourceId] = useState<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
+  const gridContainerRef = useRef<HTMLDivElement>(null)
+  const [gridDimensions, setGridDimensions] = useState({ width: 0, height: 0 })
+
+  useEffect(() => {
+    if (!open || !gridContainerRef.current) return
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0]
+      if (entry) {
+        setGridDimensions({
+          width: entry.contentRect.width,
+          height: entry.contentRect.height,
+        })
+      }
+    })
+    observer.observe(gridContainerRef.current)
+    return () => observer.disconnect()
+  }, [open])
 
   const availableLanguages = getAvailableLanguages()
   const availableCountries = getAvailableCountries()
@@ -350,89 +449,94 @@ export function ChannelGridModal({ open, onOpenChange }: ChannelGridModalProps) 
         </div>
 
         {/* Channel grid */}
-        <div className="flex-1 overflow-auto p-4">
+        <div className="flex-1 overflow-hidden" ref={gridContainerRef}>
           {filteredChannels.length === 0 ? (
             <div className="flex items-center justify-center h-full text-muted-foreground">
               {t('noChannelsFound')}
             </div>
-          ) : (
-            <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 xl:grid-cols-14 2xl:grid-cols-16 gap-2">
-              {filteredChannels.map((channel) => {
-                const isActive = currentChannel?.id === channel.id
-                const isFavorite = favorites.includes(channel.id)
-                const isDragging = dragSourceId === channel.id
-                const isDragOver = dragOverId === channel.id && dragSourceId !== channel.id
+          ) : canDrag ? (
+            /* Non-virtualized grid for favorites (drag-and-drop needs real DOM) */
+            <div className="h-full overflow-auto p-4">
+              <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 xl:grid-cols-14 2xl:grid-cols-16 gap-2">
+                {filteredChannels.map((channel) => {
+                  const isActive = currentChannel?.id === channel.id
+                  const isFavorite = favorites.includes(channel.id)
+                  const isDragging = dragSourceId === channel.id
+                  const isDragOver = dragOverId === channel.id && dragSourceId !== channel.id
 
-                return (
-                  <div
-                    key={channel.id}
-                    draggable={canDrag}
-                    onDragStart={canDrag ? (e) => handleDragStart(channel.id, e) : undefined}
-                    onDragOver={canDrag ? (e) => handleDragOver(channel.id, e) : undefined}
-                    onDrop={canDrag ? () => handleDrop(channel.id) : undefined}
-                    onDragEnd={canDrag ? handleDragEnd : undefined}
-                    className={cn(
-                      'group relative cursor-pointer rounded-lg p-2 transition-all',
-                      'hover:bg-muted/50',
-                      isActive && 'bg-primary/15 ring-2 ring-primary',
-                      isDragging && 'opacity-40',
-                      isDragOver && 'ring-2 ring-primary scale-105'
-                    )}
-                    onClick={() => handleSelectChannel(channel)}
-                  >
-                    {/* Drag handle */}
-                    {canDrag && (
+                  return (
+                    <div
+                      key={channel.id}
+                      draggable
+                      onDragStart={(e) => handleDragStart(channel.id, e)}
+                      onDragOver={(e) => handleDragOver(channel.id, e)}
+                      onDrop={() => handleDrop(channel.id)}
+                      onDragEnd={handleDragEnd}
+                      className={cn(
+                        'group relative cursor-pointer rounded-lg p-2 transition-all',
+                        'hover:bg-muted/50',
+                        isActive && 'bg-primary/15 ring-2 ring-primary',
+                        isDragging && 'opacity-40',
+                        isDragOver && 'ring-2 ring-primary scale-105'
+                      )}
+                      onClick={() => handleSelectChannel(channel)}
+                    >
                       <div className="absolute top-0.5 left-0.5 text-muted-foreground/30 hover:text-muted-foreground cursor-grab active:cursor-grabbing z-10">
                         <GripVertical className="h-3 w-3" />
                       </div>
-                    )}
-
-                    {/* Logo */}
-                    <div className="w-12 h-12 mx-auto rounded bg-muted overflow-hidden mb-1 flex items-center justify-center">
-                      {channel.logo ? (
-                        <img
-                          src={channel.logo}
-                          alt={channel.name}
-                          className="h-full w-full object-cover"
-                          draggable={false}
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none'
-                            e.currentTarget.nextElementSibling?.classList.remove('hidden')
-                          }}
-                        />
-                      ) : null}
-                      <Tv className={cn(
-                        'h-6 w-6 text-muted-foreground',
-                        channel.logo && 'hidden'
-                      )} />
-                    </div>
-
-                    {/* Name */}
-                    <p className="text-[10px] font-medium text-center line-clamp-2 leading-tight w-full">
-                      {channel.name}
-                    </p>
-
-                    {/* Country badge */}
-                    {channel.country && (
-                      <p className="text-[8px] text-center text-sky-400 truncate w-full">
-                        {channel.country}
+                      <div className="w-12 h-12 mx-auto rounded bg-muted overflow-hidden mb-1 flex items-center justify-center">
+                        {channel.logo ? (
+                          <img
+                            src={channel.logo}
+                            alt={channel.name}
+                            className="h-full w-full object-cover"
+                            loading="lazy"
+                            decoding="async"
+                            draggable={false}
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none'
+                              e.currentTarget.nextElementSibling?.classList.remove('hidden')
+                            }}
+                          />
+                        ) : null}
+                        <Tv className={cn('h-6 w-6 text-muted-foreground', channel.logo && 'hidden')} />
+                      </div>
+                      <p className="text-[10px] font-medium text-center line-clamp-2 leading-tight w-full">
+                        {channel.name}
                       </p>
-                    )}
-
-                    {/* Favorite star */}
-                    {isFavorite && (
-                      <Star className="absolute top-0.5 right-0.5 h-3 w-3 text-yellow-500 fill-current" />
-                    )}
-
-                    {/* Active indicator */}
-                    {isActive && (
-                      <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-primary" />
-                    )}
-                  </div>
-                )
-              })}
+                      {channel.country && (
+                        <p className="text-[8px] text-center text-sky-400 truncate w-full">{channel.country}</p>
+                      )}
+                      {isFavorite && (
+                        <Star className="absolute top-0.5 right-0.5 h-3 w-3 text-yellow-500 fill-current" />
+                      )}
+                      {isActive && (
+                        <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-primary" />
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-          )}
+          ) : gridDimensions.width > 0 ? (
+            /* Virtualized grid for all channels */
+            <Grid<GridCellProps>
+              cellComponent={GridCellComponent}
+              cellProps={{
+                channels: filteredChannels,
+                columnCount: getColumnCount(gridDimensions.width),
+                currentChannelId: currentChannel?.id,
+                favorites,
+                onSelect: handleSelectChannel,
+              }}
+              columnCount={getColumnCount(gridDimensions.width)}
+              columnWidth={Math.floor(gridDimensions.width / getColumnCount(gridDimensions.width))}
+              rowCount={Math.ceil(filteredChannels.length / getColumnCount(gridDimensions.width))}
+              rowHeight={GRID_ROW_HEIGHT}
+              className="scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent"
+              style={{ padding: '16px' }}
+            />
+          ) : null}
         </div>
       </DialogContent>
     </Dialog>

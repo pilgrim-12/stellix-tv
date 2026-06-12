@@ -10,6 +10,7 @@ import { ChannelCard } from './ChannelCard'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Search, Tv, CheckCircle2, XCircle, Loader2, Star, History, GripVertical } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { Channel } from '@/types'
 
@@ -50,6 +51,7 @@ export function ChannelList() {
   const setLanguage = useChannelStore((state) => state.setLanguage)
   const setCategory = useChannelStore((state) => state.setCategory)
   const isLoading = useChannelStore((state) => state.isLoading)
+  const isRefreshing = useChannelStore((state) => state.isRefreshing)
   const showOnlyFavorites = useChannelStore((state) => state.showOnlyFavorites)
   const setShowOnlyFavorites = useChannelStore((state) => state.setShowOnlyFavorites)
   const favorites = useChannelStore((state) => state.favorites)
@@ -238,7 +240,11 @@ export function ChannelList() {
         <div className="flex items-center justify-between text-[10px]">
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1 text-muted-foreground">
-              <Tv className="h-3 w-3" />
+              {isRefreshing ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Tv className="h-3 w-3" />
+              )}
               <span>{totalChannels}</span>
             </div>
             {/* Favorites toggle button - only for logged in users */}
@@ -312,8 +318,21 @@ export function ChannelList() {
       {/* Channels list */}
       <div className="flex-1 overflow-hidden min-h-0">
         {isLoading && !initialized ? (
-          <div className="flex items-center justify-center h-32">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <div className="p-1.5 space-y-0">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="rounded-lg p-2">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="shrink-0 h-12 w-12 rounded-md" />
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <Skeleton className="h-4 w-3/4" />
+                    <div className="flex gap-1">
+                      <Skeleton className="h-4 w-16 rounded" />
+                      <Skeleton className="h-4 w-12 rounded" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
           <>
