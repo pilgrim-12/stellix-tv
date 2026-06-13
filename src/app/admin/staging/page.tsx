@@ -238,7 +238,13 @@ export default function StagingPage() {
       const fileName = urlParts[urlParts.length - 1] || 'playlist'
       const playlistName = fileName.replace('.m3u8', '').replace('.m3u', '')
 
-      const appChannels = convertToAppChannels(m3uChannels, '')
+      // Extract country hint from URL patterns like /countries/at.m3u or /subdivisions/at-2.m3u
+      const countryFromUrl = playlistUrl.match(/\/countries\/([a-z]{2})\.m3u/i)?.[1]
+        || playlistUrl.match(/\/subdivisions\/([a-z]{2})-/i)?.[1]
+        || playlistUrl.match(/\/cities\/([a-z]{2})/i)?.[1]
+      const importHint = countryFromUrl || playlistName
+
+      const appChannels = convertToAppChannels(m3uChannels, '', importHint)
 
       const result = await createStagingPlaylist(
         playlistName,
@@ -283,7 +289,7 @@ export default function StagingPage() {
         throw new Error('File is empty or has invalid format')
       }
 
-      const appChannels = convertToAppChannels(m3uChannels, '')
+      const appChannels = convertToAppChannels(m3uChannels, '', playlistName)
 
       const result = await createStagingPlaylist(
         playlistName,

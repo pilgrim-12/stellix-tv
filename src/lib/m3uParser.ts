@@ -96,6 +96,40 @@ const countryToLanguage: Record<string, string> = {
   'AD': 'ca',
   // Chad (French)
   'TD': 'fr',
+  // Khmer
+  'KH': 'km',
+  // Lao
+  'LA': 'lo',
+  // Burmese
+  'MM': 'my',
+  // Nepali
+  'NP': 'ne',
+  // Sinhala
+  'LK': 'si',
+  // Bengali
+  'BD': 'bn',
+  // Pakistani (Urdu)
+  'PK': 'ur',
+  // Mongolian
+  'MN': 'mn',
+  // Uzbek
+  'UZ': 'uz',
+  // Turkmen
+  'TM': 'tk',
+  // Icelandic
+  'IS': 'is',
+  // Maltese
+  'MT': 'mt',
+  // Swahili
+  'KE': 'sw', 'TZ': 'sw',
+  // Somali
+  'SO': 'so',
+  // Malagasy (French)
+  'MG': 'fr',
+  // Philippine (Filipino/English)
+  'PH': 'en',
+  // Singaporean (English)
+  'SG': 'en',
 }
 
 // Patterns in channel names that indicate language
@@ -294,7 +328,10 @@ export function parseM3U(content: string): M3UChannel[] {
 /**
  * Конвертирует M3U каналы в формат нашего приложения
  */
-export function convertToAppChannels(m3uChannels: M3UChannel[], sourceId: string): Channel[] {
+export function convertToAppChannels(m3uChannels: M3UChannel[], sourceId: string, playlistHint?: string): Channel[] {
+  const hintCountry = playlistHint && /^[a-zA-Z]{2}$/.test(playlistHint) ? playlistHint.toUpperCase() : undefined
+  const hintLanguage = hintCountry ? (countryToLanguage[hintCountry] || undefined) : undefined
+
   const groupMapping: Record<string, string> = {
     'новости': 'news',
     'news': 'news',
@@ -322,16 +359,13 @@ export function convertToAppChannels(m3uChannels: M3UChannel[], sourceId: string
       groupLower.includes(key)
     )?.[1] || 'entertainment'
 
-    // Determine language with priority:
-    // 1. Explicit tvg-language from M3U
-    // 2. Language detected from channel name patterns
-    // 3. Language inferred from country code
-    // 4. Default to 'ru' as last resort
+    const channelCountry = ch.country || hintCountry || ''
     const detectedLanguage =
       ch.language ||
       detectLanguageFromName(ch.name) ||
-      getLanguageFromCountry(ch.country) ||
-      'ru'
+      getLanguageFromCountry(channelCountry) ||
+      hintLanguage ||
+      ''
 
     return {
       id: `${sourceId}-${index}`,
@@ -339,7 +373,7 @@ export function convertToAppChannels(m3uChannels: M3UChannel[], sourceId: string
       logo: ch.logo || '',
       url: ch.url,
       group: mappedGroup,
-      country: ch.country || 'XX',
+      country: channelCountry,
       language: detectedLanguage,
       labels: ['Live'],
       enabled: true,
@@ -373,12 +407,11 @@ export function recalculateChannelLanguage(channel: {
   const fromCountry = getLanguageFromCountry(channel.country)
   if (fromCountry) return fromCountry
 
-  // Keep existing if it's not the default 'ru' (meaning it was set explicitly)
-  if (channel.language && channel.language !== 'ru') {
+  if (channel.language) {
     return channel.language
   }
 
-  return 'ru'
+  return ''
 }
 
 /**
