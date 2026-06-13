@@ -1,39 +1,84 @@
 'use client'
 
-import { useEffect, useState, useRef, useCallback, CSSProperties, ReactElement } from 'react'
+import { useEffect, useState, useRef, useCallback, useMemo, CSSProperties, ReactElement } from 'react'
 import { List, ListImperativeAPI } from 'react-window'
 import { useChannelStore } from '@/stores'
+import { GroupByMode } from '@/stores/channelStore'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { useSettings } from '@/contexts/SettingsContext'
 import { sampleChannels } from '@/data/channels'
 import { ChannelCard } from './ChannelCard'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Search, Tv, CheckCircle2, XCircle, Loader2, Star, History, GripVertical } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Search, Tv, CheckCircle2, XCircle, Loader2, Star, History, GripVertical, Layers } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-import { Channel } from '@/types'
+import { Channel, languageNames } from '@/types'
 
 const ITEM_HEIGHT = 66 // p-2 (16px) + h-12 (48px) + gap (2px)
+const HEADER_HEIGHT = 32
+
+type ListItem = { type: 'header'; label: string; count: number } | { type: 'channel'; channel: Channel }
 
 // Custom row props type
-interface ChannelRowProps {
-  channels: Channel[]
+interface GroupedRowProps {
+  items: ListItem[]
 }
 
-// Row component for virtualized list
+// Row component for virtualized list (channels + group headers)
 function RowComponent(props: {
   ariaAttributes: { "aria-posinset": number; "aria-setsize": number; role: "listitem" }
   index: number
   style: CSSProperties
-} & ChannelRowProps): ReactElement {
-  const { index, style, channels } = props
-  const channel = channels[index]
+} & GroupedRowProps): ReactElement {
+  const { index, style, items } = props
+  const item = items[index]
+  if (item.type === 'header') {
+    return (
+      <div style={style} className="flex items-center gap-2 px-3 pt-1">
+        <span className="text-[11px] font-semibold text-muted-foreground truncate">{item.label}</span>
+        <span className="text-[10px] text-muted-foreground/60">{item.count}</span>
+        <div className="flex-1 border-b border-border/30" />
+      </div>
+    )
+  }
   return (
     <div style={style}>
-      <ChannelCard channel={channel} />
+      <ChannelCard channel={item.channel} />
     </div>
   )
+}
+
+function buildGroupedList(channels: Channel[], groupBy: GroupByMode): ListItem[] {
+  if (groupBy === 'none') {
+    return channels.map(ch => ({ type: 'channel', channel: ch }))
+  }
+  const groups = new Map<string, Channel[]>()
+  for (const ch of channels) {
+    const key = groupBy === 'language'
+      ? (ch.language || 'unknown')
+      : (ch.country || 'Unknown')
+    let arr = groups.get(key)
+    if (!arr) { arr = []; groups.set(key, arr) }
+    arr.push(ch)
+  }
+  const sorted = [...groups.entries()].sort((a, b) => b[1].length - a[1].length)
+  const result: ListItem[] = []
+  for (const [key, chs] of sorted) {
+    const label = groupBy === 'language'
+      ? (languageNames[key] || key)
+      : key
+    result.push({ type: 'header', label, count: chs.length })
+    for (const ch of chs) result.push({ type: 'channel', channel: ch })
+  }
+  return result
 }
 
 export function ChannelList() {
@@ -61,6 +106,8 @@ export function ChannelList() {
 
   const setFavoriteOrder = useChannelStore((state) => state.setFavoriteOrder)
   const loadFavoriteOrder = useChannelStore((state) => state.loadFavoriteOrder)
+  const groupBy = useChannelStore((state) => state.groupBy)
+  const setGroupBy = useChannelStore((state) => state.setGroupBy)
 
   const { user } = useAuthContext()
   const { t } = useSettings()
@@ -218,20 +265,42 @@ export function ChannelList() {
     setDragOverId(null)
   }, [])
 
+  // Build grouped list for virtualized rendering
+  const activeGroupBy = (showOnlyFavorites || showRecentChannels) ? 'none' as GroupByMode : groupBy
+  const groupedItems = useMemo(
+    () => buildGroupedList(filteredChannels, activeGroupBy),
+    [filteredChannels, activeGroupBy]
+  )
+
+  const getRowHeight = useCallback((index: number) => {
+    return groupedItems[index]?.type === 'header' ? HEADER_HEIGHT : ITEM_HEIGHT
+  }, [groupedItems])
+
   // Scroll to current channel when it changes
   useEffect(() => {
     if (currentChannel && listRef.current && filteredChannels.length > 0) {
-      const index = filteredChannels.findIndex(ch => ch.id === currentChannel.id)
-      if (index !== -1) {
-        listRef.current.scrollToRow({ index, align: 'smart' })
+      if (activeGroupBy === 'none') {
+        const index = filteredChannels.findIndex(ch => ch.id === currentChannel.id)
+        if (index !== -1) {
+          listRef.current.scrollToRow({ index, align: 'smart' })
+        }
+      } else {
+        const index = groupedItems.findIndex(item => item.type === 'channel' && item.channel.id === currentChannel.id)
+        if (index !== -1) {
+          listRef.current.scrollToRow({ index, align: 'smart' })
+        }
       }
     }
-  }, [currentChannel, filteredChannels, listRef])
+  }, [currentChannel, filteredChannels, groupedItems, activeGroupBy, listRef])
 
   // Статистика каналов
   const totalChannels = filteredChannels.length
   const offlineCount = filteredChannels.filter(ch => ch.isOffline).length
   const onlineCount = totalChannels - offlineCount
+
+  const groupByLabel = groupBy === 'country' ? (t('byCountry') || 'By country')
+    : groupBy === 'language' ? (t('byLanguage') || 'By language')
+    : null
 
   return (
     <div className="h-full flex flex-col">
@@ -286,18 +355,44 @@ export function ChannelList() {
               {watchHistory.length > 0 && <span>{watchHistory.length}</span>}
             </Button>
           </div>
-          {offlineCount > 0 && (
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1 text-green-500">
-                <CheckCircle2 className="h-3 w-3" />
-                <span>{onlineCount}</span>
-              </div>
-              <div className="flex items-center gap-1 text-red-500">
-                <XCircle className="h-3 w-3" />
-                <span>{offlineCount}</span>
-              </div>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {offlineCount > 0 && (
+              <>
+                <div className="flex items-center gap-1 text-green-500">
+                  <CheckCircle2 className="h-3 w-3" />
+                  <span>{onlineCount}</span>
+                </div>
+                <div className="flex items-center gap-1 text-red-500">
+                  <XCircle className="h-3 w-3" />
+                  <span>{offlineCount}</span>
+                </div>
+              </>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    'h-5 px-1.5 text-[10px] gap-1',
+                    groupBy !== 'none'
+                      ? 'text-purple-500 bg-purple-500/10'
+                      : 'text-muted-foreground hover:text-purple-500'
+                  )}
+                >
+                  <Layers className="h-3 w-3" />
+                  {groupByLabel && <span>{groupByLabel}</span>}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-[140px]">
+                <DropdownMenuRadioGroup value={groupBy} onValueChange={(v) => setGroupBy(v as GroupByMode)}>
+                  <DropdownMenuRadioItem value="none" className="text-xs">{t('noGrouping') || 'No grouping'}</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="country" className="text-xs">{t('byCountry') || 'By country'}</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="language" className="text-xs">{t('byLanguage') || 'By language'}</DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 
@@ -364,12 +459,12 @@ export function ChannelList() {
                   ))}
                 </div>
               ) : (
-                <List<ChannelRowProps>
+                <List<GroupedRowProps>
                   listRef={listRef}
-                  rowCount={filteredChannels.length}
-                  rowHeight={ITEM_HEIGHT}
+                  rowCount={groupedItems.length}
+                  rowHeight={activeGroupBy === 'none' ? ITEM_HEIGHT : getRowHeight}
                   rowComponent={RowComponent}
-                  rowProps={{ channels: filteredChannels }}
+                  rowProps={{ items: groupedItems }}
                   className="scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent"
                   style={{ padding: '6px' }}
                 />

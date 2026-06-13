@@ -19,6 +19,8 @@ interface WatchHistoryItem {
   watchedAt: number;
 }
 
+export type GroupByMode = 'none' | 'country' | 'language';
+
 interface ChannelState {
   channels: Channel[];
   customPlaylists: CustomPlaylist[];
@@ -31,6 +33,7 @@ interface ChannelState {
   favoriteOrder: string[]; // user-set order of favorite channels
   watchHistory: WatchHistoryItem[];
   showOnlyFavorites: boolean;
+  groupBy: GroupByMode;
   isLoading: boolean;
   isRefreshing: boolean;
   error: string | null;
@@ -65,6 +68,7 @@ interface ChannelState {
   setChannelStatus: (channelId: string, isOnline: boolean) => void;
   toggleChannelEnabled: (channelId: string) => void;
   loadDisabledChannels: () => void;
+  setGroupBy: (mode: GroupByMode) => void;
   loadSavedFilters: () => void;
   loadWatchHistory: () => void;
   addToWatchHistory: (channel: Channel) => void;
@@ -128,6 +132,7 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
   favoriteOrder: [],
   watchHistory: [],
   showOnlyFavorites: false,
+  groupBy: 'none',
   isLoading: false,
   isRefreshing: false,
   error: null,
@@ -480,6 +485,13 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
     }
   },
 
+  setGroupBy: (mode) => {
+    set({ groupBy: mode });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('stellix-group-by', mode);
+    }
+  },
+
   loadSavedFilters: () => {
     if (typeof window !== 'undefined') {
       const savedCategory = localStorage.getItem('stellix-selected-category');
@@ -487,6 +499,7 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
       // We still load it here as a fallback before geo-detection completes
       const savedLanguage = localStorage.getItem('stellix-selected-language');
       const savedCountry = localStorage.getItem('stellix-selected-country');
+      const savedGroupBy = localStorage.getItem('stellix-group-by');
 
       const updates: Partial<ChannelState> = {};
       if (savedCategory) {
@@ -497,6 +510,9 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
       }
       if (savedCountry) {
         updates.selectedCountry = savedCountry;
+      }
+      if (savedGroupBy && (savedGroupBy === 'none' || savedGroupBy === 'country' || savedGroupBy === 'language')) {
+        updates.groupBy = savedGroupBy;
       }
       if (Object.keys(updates).length > 0) {
         set(updates);
@@ -612,10 +628,8 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
       });
     }
 
-    // Default: online first, then by admin-set order
+    // Sort by admin-set order only (offline channels stay in place)
     return result.sort((a, b) => {
-      if (a.isOffline && !b.isOffline) return 1;
-      if (!a.isOffline && b.isOffline) return -1;
       const orderA = a.order ?? Number.MAX_SAFE_INTEGER;
       const orderB = b.order ?? Number.MAX_SAFE_INTEGER;
       return orderA - orderB;

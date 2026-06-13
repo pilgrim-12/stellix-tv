@@ -35,6 +35,9 @@ export const translations = {
     channelsCount: '{count} каналов',
     workingChannels: 'рабочих',
     noChannelsFound: 'Каналы не найдены',
+    noGrouping: 'Без группировки',
+    byCountry: 'По странам',
+    byLanguage: 'По языкам',
 
     // Categories
     category: 'Категория',
@@ -107,6 +110,9 @@ export const translations = {
     channelsCount: '{count} channels',
     workingChannels: 'working',
     noChannelsFound: 'No channels found',
+    noGrouping: 'No grouping',
+    byCountry: 'By country',
+    byLanguage: 'By language',
 
     // Categories
     category: 'Category',
@@ -179,6 +185,9 @@ export const translations = {
     channelsCount: '{count} каналів',
     workingChannels: 'робочих',
     noChannelsFound: 'Канали не знайдено',
+    noGrouping: 'Без групування',
+    byCountry: 'За країнами',
+    byLanguage: 'За мовами',
 
     // Categories
     category: 'Категорія',
@@ -251,6 +260,9 @@ export const translations = {
     channelsCount: '{count} canales',
     workingChannels: 'activos',
     noChannelsFound: 'No se encontraron canales',
+    noGrouping: 'Sin agrupación',
+    byCountry: 'Por país',
+    byLanguage: 'Por idioma',
 
     // Categories
     category: 'Categoría',
@@ -323,6 +335,9 @@ export const translations = {
     channelsCount: '{count} canali',
     workingChannels: 'attivi',
     noChannelsFound: 'Nessun canale trovato',
+    noGrouping: 'Senza raggruppamento',
+    byCountry: 'Per paese',
+    byLanguage: 'Per lingua',
 
     // Categories
     category: 'Categoria',
@@ -395,6 +410,9 @@ export const translations = {
     channelsCount: '{count} chaînes',
     workingChannels: 'actives',
     noChannelsFound: 'Aucune chaîne trouvée',
+    noGrouping: 'Sans regroupement',
+    byCountry: 'Par pays',
+    byLanguage: 'Par langue',
 
     // Categories
     category: 'Catégorie',
@@ -467,6 +485,9 @@ export const translations = {
     channelsCount: '{count} Sender',
     workingChannels: 'aktiv',
     noChannelsFound: 'Keine Sender gefunden',
+    noGrouping: 'Ohne Gruppierung',
+    byCountry: 'Nach Land',
+    byLanguage: 'Nach Sprache',
 
     // Categories
     category: 'Kategorie',
@@ -539,6 +560,9 @@ export const translations = {
     channelsCount: '{count} არხი',
     workingChannels: 'აქტიური',
     noChannelsFound: 'არხები ვერ მოიძებნა',
+    noGrouping: 'დაჯგუფების გარეშე',
+    byCountry: 'ქვეყნების მიხედვით',
+    byLanguage: 'ენების მიხედვით',
 
     // Categories
     category: 'კატეგორია',
@@ -612,6 +636,9 @@ export const translations = {
     channelsCount: '{count} kanałów',
     workingChannels: 'działających',
     noChannelsFound: 'Nie znaleziono kanałów',
+    noGrouping: 'Bez grupowania',
+    byCountry: 'Według kraju',
+    byLanguage: 'Według języka',
 
     // Categories
     category: 'Kategoria',
@@ -685,6 +712,9 @@ export const translations = {
     channelsCount: '{count} csatorna',
     workingChannels: 'működő',
     noChannelsFound: 'Nem található csatorna',
+    noGrouping: 'Csoportosítás nélkül',
+    byCountry: 'Ország szerint',
+    byLanguage: 'Nyelv szerint',
 
     // Categories
     category: 'Kategória',
@@ -758,6 +788,9 @@ export const translations = {
     channelsCount: '{count} κανάλια',
     workingChannels: 'ενεργά',
     noChannelsFound: 'Δεν βρέθηκαν κανάλια',
+    noGrouping: 'Χωρίς ομαδοποίηση',
+    byCountry: 'Ανά χώρα',
+    byLanguage: 'Ανά γλώσσα',
 
     // Categories
     category: 'Κατηγορία',
