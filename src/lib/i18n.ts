@@ -38,6 +38,7 @@ export const translations = {
     noGrouping: 'Без группировки',
     byCountry: 'По странам',
     byLanguage: 'По языкам',
+    channelUnavailable: 'Канал недоступен',
 
     // Categories
     category: 'Категория',
@@ -113,6 +114,7 @@ export const translations = {
     noGrouping: 'No grouping',
     byCountry: 'By country',
     byLanguage: 'By language',
+    channelUnavailable: 'Channel unavailable',
 
     // Categories
     category: 'Category',
@@ -188,6 +190,7 @@ export const translations = {
     noGrouping: 'Без групування',
     byCountry: 'За країнами',
     byLanguage: 'За мовами',
+    channelUnavailable: 'Канал недоступний',
 
     // Categories
     category: 'Категорія',
@@ -263,6 +266,7 @@ export const translations = {
     noGrouping: 'Sin agrupación',
     byCountry: 'Por país',
     byLanguage: 'Por idioma',
+    channelUnavailable: 'Canal no disponible',
 
     // Categories
     category: 'Categoría',
@@ -338,6 +342,7 @@ export const translations = {
     noGrouping: 'Senza raggruppamento',
     byCountry: 'Per paese',
     byLanguage: 'Per lingua',
+    channelUnavailable: 'Canale non disponibile',
 
     // Categories
     category: 'Categoria',
@@ -413,6 +418,7 @@ export const translations = {
     noGrouping: 'Sans regroupement',
     byCountry: 'Par pays',
     byLanguage: 'Par langue',
+    channelUnavailable: 'Chaîne indisponible',
 
     // Categories
     category: 'Catégorie',
@@ -488,6 +494,7 @@ export const translations = {
     noGrouping: 'Ohne Gruppierung',
     byCountry: 'Nach Land',
     byLanguage: 'Nach Sprache',
+    channelUnavailable: 'Sender nicht verfügbar',
 
     // Categories
     category: 'Kategorie',
@@ -563,6 +570,7 @@ export const translations = {
     noGrouping: 'დაჯგუფების გარეშე',
     byCountry: 'ქვეყნების მიხედვით',
     byLanguage: 'ენების მიხედვით',
+    channelUnavailable: 'არხი მიუწვდომელია',
 
     // Categories
     category: 'კატეგორია',
@@ -639,6 +647,7 @@ export const translations = {
     noGrouping: 'Bez grupowania',
     byCountry: 'Według kraju',
     byLanguage: 'Według języka',
+    channelUnavailable: 'Kanał niedostępny',
 
     // Categories
     category: 'Kategoria',
@@ -715,6 +724,7 @@ export const translations = {
     noGrouping: 'Csoportosítás nélkül',
     byCountry: 'Ország szerint',
     byLanguage: 'Nyelv szerint',
+    channelUnavailable: 'A csatorna nem elérhető',
 
     // Categories
     category: 'Kategória',
@@ -791,6 +801,7 @@ export const translations = {
     noGrouping: 'Χωρίς ομαδοποίηση',
     byCountry: 'Ανά χώρα',
     byLanguage: 'Ανά γλώσσα',
+    channelUnavailable: 'Το κανάλι δεν είναι διαθέσιμο',
 
     // Categories
     category: 'Κατηγορία',

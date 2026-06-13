@@ -48,6 +48,8 @@ export function VideoPlayer() {
   const { currentChannel, markChannelOffline, markChannelOnline, getFilteredChannels, setCurrentChannel } = useChannelStore()
   const currentChannelRef = useRef(currentChannel)
   const { t } = useSettings()
+  const tRef = useRef(t)
+  tRef.current = t
   const {
     isPlaying,
     isMuted,
@@ -177,7 +179,7 @@ export function VideoPlayer() {
             if (hlsRef.current === hls2) {
               hls2.destroy()
               hlsRef.current = null
-              setError('Канал недоступен')
+              setError(tRef.current('channelUnavailable'))
               setLoading(false)
               const ch = currentChannelRef.current
               if (ch) markChannelOffline(ch.id)
@@ -202,7 +204,7 @@ export function VideoPlayer() {
               clearTimeout(proxyTimeout)
               hls2.destroy()
               hlsRef.current = null
-              setError('Канал недоступен')
+              setError(tRef.current('channelUnavailable'))
               setLoading(false)
               const ch = currentChannelRef.current
               if (ch) markChannelOffline(ch.id)
@@ -215,7 +217,7 @@ export function VideoPlayer() {
             hls.recoverMediaError()
           }, 1000)
         } else {
-          setError('Канал недоступен')
+          setError(tRef.current('channelUnavailable'))
           const channel = currentChannelRef.current
           if (channel) markChannelOffline(channel.id)
           hls.destroy()
