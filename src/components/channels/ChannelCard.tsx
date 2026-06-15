@@ -99,7 +99,7 @@ export const ChannelCard = memo(function ChannelCard({ channel }: ChannelCardPro
   return (
     <div
       className={cn(
-        'group relative cursor-pointer rounded-lg p-2 transition-all',
+        'group relative cursor-pointer rounded-lg p-2 transition-all overflow-hidden',
         'hover:bg-muted/60',
         isActive && 'bg-primary/15 ring-1 ring-primary',
         isOffline && 'opacity-40'
@@ -131,7 +131,7 @@ export const ChannelCard = memo(function ChannelCard({ channel }: ChannelCardPro
         <div className="flex-1 min-w-0">
           {/* Name row */}
           <div className="flex items-center gap-1.5 min-w-0">
-            <h3 className="text-sm font-semibold truncate min-w-0">{channel.name}</h3>
+            <h3 title={channel.name} className="text-sm font-semibold truncate min-w-0">{channel.name}</h3>
             {isActive && !isOffline && (
               <Radio className="h-3 w-3 text-red-500 shrink-0 animate-pulse" />
             )}
