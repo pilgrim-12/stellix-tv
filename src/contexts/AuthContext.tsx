@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { onAuthStateChanged, type User } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
 import {
@@ -37,8 +37,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
 
-  // Start visitor session on mount (for both anonymous and logged in users)
-  const [sessionStarted, setSessionStarted] = useState(false)
+  // Start visitor session on mount (for both anonymous and logged in users).
+  // Use a ref so toggling it doesn't re-run the auth effect (which would
+  // re-subscribe and risk double-counting / churn).
+  const sessionStartedRef = useRef(false)
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -61,11 +63,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         useChannelStore.getState().loadUserSettings(user.uid)
 
         // Update visitor session with user info (or start new session)
-        if (sessionStarted) {
+        if (sessionStartedRef.current) {
           await updateSessionWithUser(user.uid, user.email || undefined)
         } else {
           await startVisitorSession(user.uid, user.email || undefined)
-          setSessionStarted(true)
+          sessionStartedRef.current = true
         }
 
         // Get and save user IP + country
@@ -86,15 +88,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAdminLoading(false)
 
         // Start anonymous visitor session
-        if (!sessionStarted) {
+        if (!sessionStartedRef.current) {
           await startVisitorSession()
-          setSessionStarted(true)
+          sessionStartedRef.current = true
         }
       }
     })
 
     return () => unsubscribe()
-  }, [sessionStarted])
+  }, [])
 
   const login = async (email: string, password: string) => {
     try {

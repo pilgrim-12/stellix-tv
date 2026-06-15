@@ -199,7 +199,25 @@ export default function VisitorsPage() {
         ) : (
           <>
             {/* Summary Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              {/* All Time Total */}
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-full bg-indigo-500/10">
+                      <Users className="h-6 w-6 text-indigo-500" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{allSessions.length}</p>
+                      <p className="text-sm text-muted-foreground">All Time</p>
+                      <p className="text-xs text-muted-foreground/70">
+                        {new Set(allSessions.map(s => s.visitorId)).size} unique
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
               {/* Today Total */}
               <Card>
                 <CardContent className="pt-6">

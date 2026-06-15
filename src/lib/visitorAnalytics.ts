@@ -235,54 +235,68 @@ function getOrCreateSessionId(visitorId: string): { sessionId: string; isNew: bo
 export async function startVisitorSession(userId?: string, userEmail?: string): Promise<void> {
   if (typeof window === 'undefined') return
 
-  const geoInfo = await getGeoInfo()
   const userAgent = navigator.userAgent
   const visitorId = userId || getOrCreateVisitorId()
   const { sessionId, isNew } = getOrCreateSessionId(visitorId)
 
-  // If resuming existing session, try to load previous data
-  let existingSession: Partial<VisitorSession> = {}
-  if (!isNew) {
-    try {
-      const sessionRef = doc(db, 'visitorSessions', sessionId)
-      const sessionDoc = await getDoc(sessionRef)
-      if (sessionDoc.exists()) {
-        existingSession = sessionDoc.data() as VisitorSession
-      }
-    } catch {
-      // Failed to load existing session, start fresh
-    }
-  }
-
+  // Build the session immediately with placeholder geo. Geo is enriched below,
+  // but we must NOT block the visitor count on slow / ad-blocked geo lookups.
   currentVisitorSession = {
     sessionId,
     visitorId,
     userId,
     userEmail,
     isAnonymous: !userId,
-    country: geoInfo.country,
-    countryCode: geoInfo.countryCode,
-    city: geoInfo.city,
-    ip: geoInfo.ip,
-    latitude: geoInfo.latitude,
-    longitude: geoInfo.longitude,
+    country: 'Unknown',
+    countryCode: 'XX',
     userAgent,
     device: detectDevice(userAgent),
     browser: detectBrowser(userAgent),
-    // Preserve original start time if resuming, otherwise use now
-    startTime: existingSession.startTime || Date.now(),
+    startTime: Date.now(),
     lastActivity: Date.now(),
-    // Preserve accumulated stats if resuming
-    channelsWatched: existingSession.channelsWatched || 0,
-    totalWatchTime: existingSession.totalWatchTime || 0
+    channelsWatched: 0,
+    totalWatchTime: 0
   }
 
-  // Save session (will merge with existing if session already exists)
-  await saveVisitorSession()
-
-  // Only update daily stats for truly new visitors (first visit of the day)
+  // Count the visitor FIRST — before any network round-trip — so that quick
+  // bounces and visitors with blocked/slow geo APIs are still recorded.
+  // (Fire-and-forget: don't await, the increment is dispatched right away.)
   if (isNew) {
-    await updateDailyStats('new_visitor')
+    void updateDailyStats('new_visitor')
+  }
+
+  // If resuming an existing session for today, restore accumulated data.
+  if (!isNew) {
+    try {
+      const sessionRef = doc(db, 'visitorSessions', sessionId)
+      const sessionDoc = await getDoc(sessionRef)
+      if (sessionDoc.exists() && currentVisitorSession?.sessionId === sessionId) {
+        const existing = sessionDoc.data() as VisitorSession
+        currentVisitorSession.startTime = existing.startTime || currentVisitorSession.startTime
+        currentVisitorSession.channelsWatched = existing.channelsWatched || 0
+        currentVisitorSession.totalWatchTime = existing.totalWatchTime || 0
+      }
+    } catch {
+      // Failed to load existing session, keep fresh values
+    }
+  }
+
+  // Enrich with geo info, then persist the full session and country breakdown.
+  const geoInfo = await getGeoInfo()
+  // Guard against a newer session having started while geo was loading.
+  if (currentVisitorSession?.sessionId === sessionId) {
+    currentVisitorSession.country = geoInfo.country
+    currentVisitorSession.countryCode = geoInfo.countryCode
+    currentVisitorSession.city = geoInfo.city
+    currentVisitorSession.ip = geoInfo.ip
+    currentVisitorSession.latitude = geoInfo.latitude
+    currentVisitorSession.longitude = geoInfo.longitude
+
+    await saveVisitorSession()
+
+    if (isNew) {
+      void recordVisitorCountry()
+    }
   }
 }
 
@@ -369,14 +383,6 @@ async function updateDailyStats(event: 'new_visitor' | 'login'): Promise<void> {
         loggedInVisitors: increment(currentVisitorSession.isAnonymous ? 0 : 1),
         updatedAt: Date.now()
       }, { merge: true })
-
-      // Update country stats
-      const countryRef = doc(db, 'dailyVisitorStats', today, 'countries', currentVisitorSession.countryCode)
-      await setDoc(countryRef, {
-        country: currentVisitorSession.country,
-        countryCode: currentVisitorSession.countryCode,
-        count: increment(1)
-      }, { merge: true })
     } else if (event === 'login') {
       // Transitioning from anonymous to logged in
       await setDoc(statsRef, {
@@ -387,6 +393,23 @@ async function updateDailyStats(event: 'new_visitor' | 'login'): Promise<void> {
     }
   } catch (error) {
     console.error('Failed to update daily stats:', error)
+  }
+}
+
+// Record the visitor's country into the daily breakdown (called after geo resolves)
+async function recordVisitorCountry(): Promise<void> {
+  if (!currentVisitorSession) return
+
+  const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD
+  try {
+    const countryRef = doc(db, 'dailyVisitorStats', today, 'countries', currentVisitorSession.countryCode)
+    await setDoc(countryRef, {
+      country: currentVisitorSession.country,
+      countryCode: currentVisitorSession.countryCode,
+      count: increment(1)
+    }, { merge: true })
+  } catch (error) {
+    console.error('Failed to update country stats:', error)
   }
 }
 
