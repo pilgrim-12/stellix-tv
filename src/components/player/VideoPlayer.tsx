@@ -28,6 +28,24 @@ const loadHls = async () => {
   return HlsModule
 }
 
+// Resilient HLS config tuned for flaky IPTV live streams.
+// Generous retries + tolerance so a single playlist/segment hiccup doesn't
+// kill playback once the buffer drains (~30-60s in). lowLatencyMode is OFF
+// on purpose: chasing the live edge causes constant stalls on unstable feeds.
+const RESILIENT_HLS_CONFIG = {
+  enableWorker: true,
+  lowLatencyMode: false,
+  backBufferLength: 90,
+  manifestLoadingMaxRetry: 3,
+  manifestLoadingTimeOut: 10000,
+  levelLoadingMaxRetry: 6,
+  levelLoadingTimeOut: 10000,
+  fragLoadingMaxRetry: 6,
+  fragLoadingTimeOut: 20000,
+  fragLoadingRetryDelay: 1000,
+  nudgeMaxRetry: 10,
+}
+
 export function VideoPlayer() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const hlsRef = useRef<Hls | null>(null)
@@ -103,24 +121,18 @@ export function VideoPlayer() {
     if (abortController.signal.aborted) return
 
     if (Hls.isSupported()) {
-      const hls = new Hls({
-        enableWorker: true,
-        lowLatencyMode: true,
-        backBufferLength: 90,
-        manifestLoadingMaxRetry: 1,
-        levelLoadingMaxRetry: 1,
-        fragLoadingMaxRetry: 2,
-        manifestLoadingTimeOut: 8000,
-      })
+      // Per-init recovery state, shared across the direct + proxy instances.
+      let hasPlayed = false          // at least one fragment loaded → stream is/was live
+      let mediaRetries = 0
+      let networkRecoveries = 0
+      let switchedToProxy = false
 
-      hls.loadSource(url)
-      hls.attachMedia(video)
-
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      const startPlayback = () => {
         if (abortController.signal.aborted) return
         setLoading(false)
-        const channel = currentChannelRef.current
-        if (channel) markChannelOnline(channel.id)
+        setError(null)
+        const ch = currentChannelRef.current
+        if (ch) markChannelOnline(ch.id)
         // Try to autoplay - browsers may block this without user interaction
         video.play().then(() => {
           if (abortController.signal.aborted) return
@@ -138,94 +150,95 @@ export function VideoPlayer() {
             setPlaying(false)
           })
         })
-      })
+      }
 
-      // Clear error when stream recovers (fragment loaded successfully)
-      hls.on(Hls.Events.FRAG_LOADED, () => {
+      const giveUp = () => {
         if (abortController.signal.aborted) return
-        setError(null)
-      })
-
-      let mediaRetries = 0
-
-      hls.on(Hls.Events.ERROR, (_, data) => {
-        if (abortController.signal.aborted) return
-        if (!data.fatal) return
-
-        markSessionError()
-
-        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-          // CORS/network — immediately try proxy, no point retrying same URL
-          hls.destroy()
-          hlsRef.current = null
-          setLoading(true)
-          setError(null)
-          const proxyUrl = `/api/stream-proxy?url=${encodeURIComponent(url)}`
-          const Hls2 = HlsModule!
-          const hls2 = new Hls2({
-            enableWorker: true,
-            manifestLoadingMaxRetry: 1,
-            levelLoadingMaxRetry: 1,
-            fragLoadingMaxRetry: 1,
-            manifestLoadingTimeOut: 10000,
-          })
-          hlsRef.current = hls2
-          hls2.loadSource(proxyUrl)
-          hls2.attachMedia(video)
-
-          // Timeout for proxy
-          const proxyTimeout = setTimeout(() => {
-            if (abortController.signal.aborted) return
-            if (hlsRef.current === hls2) {
-              hls2.destroy()
-              hlsRef.current = null
-              setError(tRef.current('channelUnavailable'))
-              setLoading(false)
-              const ch = currentChannelRef.current
-              if (ch) markChannelOffline(ch.id)
-            }
-          }, 12000)
-
-          hls2.on(Hls2.Events.MANIFEST_PARSED, () => {
-            clearTimeout(proxyTimeout)
-            if (abortController.signal.aborted) return
-            setLoading(false)
-            setError(null)
-            const ch = currentChannelRef.current
-            if (ch) markChannelOnline(ch.id)
-            video.play().then(() => {
-              if (abortController.signal.aborted) return
-              setPlaying(true)
-            }).catch(() => {})
-          })
-          hls2.on(Hls2.Events.ERROR, (_, d2) => {
-            if (abortController.signal.aborted) return
-            if (d2.fatal) {
-              clearTimeout(proxyTimeout)
-              hls2.destroy()
-              hlsRef.current = null
-              setError(tRef.current('channelUnavailable'))
-              setLoading(false)
-              const ch = currentChannelRef.current
-              if (ch) markChannelOffline(ch.id)
-            }
-          })
-        } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR && mediaRetries < 2) {
-          mediaRetries++
-          setTimeout(() => {
-            if (abortController.signal.aborted) return
-            hls.recoverMediaError()
-          }, 1000)
-        } else {
-          setError(tRef.current('channelUnavailable'))
-          const channel = currentChannelRef.current
-          if (channel) markChannelOffline(channel.id)
-          hls.destroy()
+        setError(tRef.current('channelUnavailable'))
+        setLoading(false)
+        const ch = currentChannelRef.current
+        if (ch) markChannelOffline(ch.id)
+        if (hlsRef.current) {
+          hlsRef.current.destroy()
           hlsRef.current = null
         }
-      })
+      }
 
-      hlsRef.current = hls
+      // Build a resilient HLS instance and wire up recovery-aware handlers.
+      const createInstance = (src: string): Hls => {
+        const instance = new Hls(RESILIENT_HLS_CONFIG)
+
+        instance.on(Hls.Events.MANIFEST_PARSED, startPlayback)
+
+        // A loaded fragment means the stream is healthy again — reset recovery state.
+        instance.on(Hls.Events.FRAG_LOADED, () => {
+          if (abortController.signal.aborted) return
+          hasPlayed = true
+          networkRecoveries = 0
+          setError(null)
+        })
+
+        instance.on(Hls.Events.ERROR, (_, data) => {
+          if (abortController.signal.aborted) return
+          if (!data.fatal) return // non-fatal: hls.js retries/nudges on its own
+
+          markSessionError()
+
+          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+            // Stream never started on the direct URL → almost certainly CORS.
+            // Switch to the proxy right away instead of burning retries.
+            if (!hasPlayed && !switchedToProxy) {
+              switchToProxy()
+              return
+            }
+            // Stream was playing but the feed hiccuped (failed playlist refresh
+            // or segment). Soft-recover by resuming the loader before giving up.
+            if (networkRecoveries < 5) {
+              networkRecoveries++
+              setError(null)
+              setTimeout(() => {
+                if (abortController.signal.aborted) return
+                try { instance.startLoad() } catch { /* instance gone */ }
+              }, 1000 * networkRecoveries)
+              return
+            }
+            // Recovery exhausted: fall back to proxy, or give up if already there.
+            if (!switchedToProxy) switchToProxy()
+            else giveUp()
+          } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR && mediaRetries < 3) {
+            mediaRetries++
+            setTimeout(() => {
+              if (abortController.signal.aborted) return
+              try { instance.recoverMediaError() } catch { /* instance gone */ }
+            }, 1000)
+          } else {
+            giveUp()
+          }
+        })
+
+        instance.loadSource(src)
+        instance.attachMedia(video)
+        return instance
+      }
+
+      function switchToProxy() {
+        if (switchedToProxy) { giveUp(); return }
+        switchedToProxy = true
+        if (hlsRef.current) {
+          hlsRef.current.destroy()
+          hlsRef.current = null
+        }
+        setLoading(true)
+        setError(null)
+        // Reset recovery counters for the fresh proxy instance.
+        hasPlayed = false
+        networkRecoveries = 0
+        mediaRetries = 0
+        const proxyUrl = `/api/stream-proxy?url=${encodeURIComponent(url)}`
+        hlsRef.current = createInstance(proxyUrl)
+      }
+
+      hlsRef.current = createInstance(url)
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       // Safari native HLS support
       video.src = url
