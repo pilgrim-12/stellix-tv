@@ -50,7 +50,7 @@ function RowComponent(props: {
     )
   }
   return (
-    <div style={style}>
+    <div style={style} className="px-1.5">
       <ChannelCard channel={item.channel} />
     </div>
   )
@@ -466,7 +466,7 @@ export function ChannelList() {
                   rowComponent={RowComponent}
                   rowProps={{ items: groupedItems }}
                   className="scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent"
-                  style={{ padding: '6px' }}
+                  style={{ paddingTop: '6px', paddingBottom: '6px', overflowX: 'hidden' }}
                 />
               )
             ) : (
