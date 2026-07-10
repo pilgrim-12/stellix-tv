@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAppSettings } from '@/lib/appSettingsService'
+import { recordBandwidth } from '@/lib/bandwidthService'
 
 /**
  * Proxy for HLS streams that have CORS issues.
@@ -75,7 +76,24 @@ export async function GET(request: NextRequest) {
       const contentLength = response.headers.get('content-length')
       if (contentLength) headers.set('Content-Length', contentLength)
 
-      return new NextResponse(response.body, { headers })
+      // Count real bytes streamed to the client (this is the outbound Fast Origin
+      // Transfer that Vercel bills). We can't trust Content-Length alone (chunked
+      // responses omit it), so wrap the stream and sum chunk lengths, recording
+      // the total once the stream finishes.
+      if (!response.body) {
+        return new NextResponse(null, { headers })
+      }
+      let transferred = 0
+      const counter = new TransformStream<Uint8Array, Uint8Array>({
+        transform(chunk, ctrl) {
+          transferred += chunk.byteLength
+          ctrl.enqueue(chunk)
+        },
+        flush() {
+          void recordBandwidth(transferred)
+        },
+      })
+      return new NextResponse(response.body.pipeThrough(counter), { headers })
     } catch (error) {
       clearTimeout(timeoutId)
       if (error instanceof Error && error.name === 'AbortError') {
@@ -143,6 +161,9 @@ export async function GET(request: NextRequest) {
       // Segment URL — direct to source (no proxy)
       return resolved
     }).join('\n')
+
+    // Playlists are tiny but still served from our origin — count them too.
+    void recordBandwidth(new TextEncoder().encode(rewritten).byteLength)
 
     return new NextResponse(rewritten, {
       headers: {

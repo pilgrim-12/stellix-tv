@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { recordBandwidth } from '@/lib/bandwidthService'
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,6 +29,9 @@ export async function POST(request: NextRequest) {
     }
 
     const content = await response.text()
+
+    // The playlist is returned to the client from our origin — count it.
+    void recordBandwidth(new TextEncoder().encode(content).byteLength)
 
     return NextResponse.json({ content })
   } catch (error) {

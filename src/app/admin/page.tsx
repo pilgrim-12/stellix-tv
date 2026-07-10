@@ -25,6 +25,7 @@ import {
   Save,
   Languages,
   Plus,
+  Activity,
 } from 'lucide-react'
 import {
   getAllCuratedChannelsRaw,
@@ -65,6 +66,8 @@ import { getTotalUsersCount } from '@/lib/userService'
 import { getStatsSummary, resetStats } from '@/lib/firebaseQuotaTracker'
 import { getAppSettings, updateAppSettings, type AppSettings } from '@/lib/appSettingsService'
 import { useAuthContext } from '@/contexts/AuthContext'
+import { useSettings } from '@/contexts/SettingsContext'
+import type { BandwidthStats } from '@/lib/bandwidthService'
 import { AdminLayout } from '@/components/admin/AdminLayout'
 import { cn } from '@/lib/utils'
 import { PreviewPlayer } from '@/components/player'
@@ -216,6 +219,7 @@ function SortableChannelItem({
 
 export default function AdminPage() {
   const { user } = useAuthContext()
+  const { t } = useSettings()
   // Data state - now using curated_channels
   const [channels, setChannels] = useState<CuratedChannel[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -250,6 +254,9 @@ export default function AdminPage() {
   // Firebase Quota Tracking
   const [quotaStats, setQuotaStats] = useState<ReturnType<typeof getStatsSummary> | null>(null)
   const [showQuotaStats, setShowQuotaStats] = useState(false)
+
+  // Outbound bandwidth (Vercel Fast Origin Transfer) — 30-day rolling window
+  const [bandwidth, setBandwidth] = useState<BandwidthStats | null>(null)
 
   // Language migration state
   const [isMigrating, setIsMigrating] = useState(false)
@@ -293,17 +300,21 @@ export default function AdminPage() {
   const loadData = async () => {
     setIsLoading(true)
     try {
-      const [channelsData, usersData, metadataData, sourcesData, settingsData] = await Promise.all([
+      const [channelsData, usersData, metadataData, sourcesData, settingsData, bandwidthData] = await Promise.all([
         getAllCuratedChannelsRaw(),
         getTotalUsersCount(),
         getCuratedMetadata(),
         getPlaylistSources(),
         getAppSettings(),
+        fetch('/api/admin/bandwidth')
+          .then((r) => (r.ok ? (r.json() as Promise<BandwidthStats>) : null))
+          .catch(() => null),
       ])
       setChannels(channelsData)
       setUsersCount(usersData)
       setMetadata(metadataData)
       setAppSettings(settingsData)
+      setBandwidth(bandwidthData)
       setPlaylistSources(sourcesData.sort((a, b) =>
         new Date(b.importedAt).getTime() - new Date(a.importedAt).getTime()
       ))
@@ -602,6 +613,28 @@ export default function AdminPage() {
         <span>Quota: {quotaStats?.total ?? 0}</span>
       </Button>
 
+      {/* Outbound bandwidth (Fast Origin Transfer) — 30-day window */}
+      {bandwidth && (
+        <div
+          className={cn(
+            'flex items-center gap-1 text-xs font-bold',
+            bandwidth.status === 'critical'
+              ? 'text-red-500'
+              : bandwidth.status === 'warning'
+                ? 'text-yellow-500'
+                : 'text-green-500'
+          )}
+          title="Vercel Fast Origin Transfer (last 30 days)"
+        >
+          <Activity className="h-3.5 w-3.5" />
+          <span>
+            {t('bandwidth')}: {(bandwidth.used30d / 1024 ** 3).toFixed(1)} GB /{' '}
+            {(bandwidth.limit / 1024 ** 3).toFixed(0)} GB (
+            {Math.round(bandwidth.percent * 100)}%)
+          </span>
+        </div>
+      )}
+
       {/* Migrate Languages button */}
       <Button
         variant="outline"
@@ -632,6 +665,27 @@ export default function AdminPage() {
       headerActions={headerActions}
     >
       <div className="p-4">
+        {/* Bandwidth warning banner (warning/critical) */}
+        {bandwidth && bandwidth.status !== 'ok' && (
+          <div
+            className={cn(
+              'mb-4 p-3 rounded-lg border text-sm flex items-start gap-2',
+              bandwidth.status === 'critical'
+                ? 'bg-red-500/10 border-red-500/40 text-red-500'
+                : 'bg-yellow-500/10 border-yellow-500/40 text-yellow-600'
+            )}
+          >
+            <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+            <div>
+              <span className="font-semibold">⚠ {t('bandwidthWarnTitle')}:</span>{' '}
+              {t('bandwidthWarnDetail', {
+                used: (bandwidth.used30d / 1024 ** 3).toFixed(1),
+                limit: (bandwidth.limit / 1024 ** 3).toFixed(0),
+              })}{' '}
+              {t('bandwidthWarnHint')}.
+            </div>
+          </div>
+        )}
         {/* Firebase Quota Stats Panel */}
         {showQuotaStats && quotaStats && (
           <div className="mb-4 p-4 border rounded-lg bg-card">

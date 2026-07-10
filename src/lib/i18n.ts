@@ -90,6 +90,12 @@ export const translations = {
     browseChannels: 'Обзор каналов',
     openChannelGrid: 'Открыть все каналы',
     signInToSave: 'Войдите, чтобы сохранить',
+
+    // Admin — bandwidth
+    bandwidth: 'Трафик',
+    bandwidthWarnTitle: 'Повышенный расход трафика',
+    bandwidthWarnDetail: '{used} ГБ из {limit} ГБ за 30 дней.',
+    bandwidthWarnHint: 'Проверьте, не включён ли Proxy video segments',
   },
   en: {
     // Header
@@ -166,6 +172,12 @@ export const translations = {
     browseChannels: 'Browse Channels',
     openChannelGrid: 'Open all channels',
     signInToSave: 'Sign in to save',
+
+    // Admin — bandwidth
+    bandwidth: 'Bandwidth',
+    bandwidthWarnTitle: 'Elevated bandwidth usage',
+    bandwidthWarnDetail: '{used} GB of {limit} GB over 30 days.',
+    bandwidthWarnHint: 'Check whether Proxy video segments is enabled',
   },
   uk: {
     // Header
@@ -242,6 +254,12 @@ export const translations = {
     browseChannels: 'Огляд каналів',
     openChannelGrid: 'Відкрити всі канали',
     signInToSave: 'Увійдіть, щоб зберегти',
+
+    // Admin — bandwidth
+    bandwidth: 'Трафік',
+    bandwidthWarnTitle: 'Підвищена витрата трафіку',
+    bandwidthWarnDetail: '{used} ГБ із {limit} ГБ за 30 днів.',
+    bandwidthWarnHint: 'Перевірте, чи не увімкнено Proxy video segments',
   },
   es: {
     // Header
@@ -318,6 +336,12 @@ export const translations = {
     browseChannels: 'Explorar canales',
     openChannelGrid: 'Abrir todos los canales',
     signInToSave: 'Inicia sesión para guardar',
+
+    // Admin — bandwidth
+    bandwidth: 'Tráfico',
+    bandwidthWarnTitle: 'Consumo de tráfico elevado',
+    bandwidthWarnDetail: '{used} GB de {limit} GB en 30 días.',
+    bandwidthWarnHint: 'Comprueba si Proxy video segments está activado',
   },
   it: {
     // Header
@@ -394,6 +418,12 @@ export const translations = {
     browseChannels: 'Sfoglia canali',
     openChannelGrid: 'Apri tutti i canali',
     signInToSave: 'Accedi per salvare',
+
+    // Admin — bandwidth
+    bandwidth: 'Traffico',
+    bandwidthWarnTitle: 'Consumo di traffico elevato',
+    bandwidthWarnDetail: '{used} GB su {limit} GB in 30 giorni.',
+    bandwidthWarnHint: 'Verifica se Proxy video segments è attivo',
   },
   fr: {
     // Header
@@ -470,6 +500,12 @@ export const translations = {
     browseChannels: 'Parcourir les chaînes',
     openChannelGrid: 'Ouvrir toutes les chaînes',
     signInToSave: 'Connectez-vous pour sauvegarder',
+
+    // Admin — bandwidth
+    bandwidth: 'Trafic',
+    bandwidthWarnTitle: 'Consommation de trafic élevée',
+    bandwidthWarnDetail: '{used} Go sur {limit} Go en 30 jours.',
+    bandwidthWarnHint: 'Vérifiez si Proxy video segments est activé',
   },
   de: {
     // Header
@@ -546,6 +582,12 @@ export const translations = {
     browseChannels: 'Sender durchsuchen',
     openChannelGrid: 'Alle Sender öffnen',
     signInToSave: 'Anmelden zum Speichern',
+
+    // Admin — bandwidth
+    bandwidth: 'Traffic',
+    bandwidthWarnTitle: 'Erhöhter Datenverbrauch',
+    bandwidthWarnDetail: '{used} GB von {limit} GB in 30 Tagen.',
+    bandwidthWarnHint: 'Prüfen Sie, ob Proxy video segments aktiviert ist',
   },
   ka: {
     // Header
@@ -622,6 +664,12 @@ export const translations = {
     browseChannels: 'არხების დათვალიერება',
     openChannelGrid: 'ყველა არხის გახსნა',
     signInToSave: 'შედით შესანახად',
+
+    // Admin — bandwidth
+    bandwidth: 'ტრაფიკი',
+    bandwidthWarnTitle: 'ტრაფიკის მომატებული ხარჯვა',
+    bandwidthWarnDetail: '{used} GB / {limit} GB 30 დღეში.',
+    bandwidthWarnHint: 'შეამოწმეთ, ჩართულია თუ არა Proxy video segments',
   },
 
   pl: {
@@ -699,6 +747,12 @@ export const translations = {
     browseChannels: 'Przeglądaj kanały',
     openChannelGrid: 'Otwórz wszystkie kanały',
     signInToSave: 'Zaloguj się, aby zapisać',
+
+    // Admin — bandwidth
+    bandwidth: 'Transfer',
+    bandwidthWarnTitle: 'Podwyższone zużycie transferu',
+    bandwidthWarnDetail: '{used} GB z {limit} GB w 30 dni.',
+    bandwidthWarnHint: 'Sprawdź, czy Proxy video segments jest włączony',
   },
 
   hu: {
@@ -776,6 +830,12 @@ export const translations = {
     browseChannels: 'Csatornák böngészése',
     openChannelGrid: 'Összes csatorna megnyitása',
     signInToSave: 'Jelentkezz be a mentéshez',
+
+    // Admin — bandwidth
+    bandwidth: 'Forgalom',
+    bandwidthWarnTitle: 'Megnövekedett forgalomfelhasználás',
+    bandwidthWarnDetail: '{used} GB / {limit} GB 30 nap alatt.',
+    bandwidthWarnHint: 'Ellenőrizze, hogy a Proxy video segments be van-e kapcsolva',
   },
 
   el: {
@@ -853,6 +913,12 @@ export const translations = {
     browseChannels: 'Περιήγηση καναλιών',
     openChannelGrid: 'Άνοιγμα όλων των καναλιών',
     signInToSave: 'Συνδεθείτε για αποθήκευση',
+
+    // Admin — bandwidth
+    bandwidth: 'Κίνηση',
+    bandwidthWarnTitle: 'Αυξημένη κατανάλωση κίνησης',
+    bandwidthWarnDetail: '{used} GB από {limit} GB σε 30 ημέρες.',
+    bandwidthWarnHint: 'Ελέγξτε αν είναι ενεργό το Proxy video segments',
   },
 } as const
 
