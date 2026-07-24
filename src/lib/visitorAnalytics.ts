@@ -263,6 +263,11 @@ export async function startVisitorSession(userId?: string, userEmail?: string): 
   // (Fire-and-forget: don't await, the increment is dispatched right away.)
   if (isNew) {
     void updateDailyStats('new_visitor')
+    // Persist the session document IMMEDIATELY (with placeholder geo) so that the
+    // `visitorSessions` collection — which powers the All Time / unique counts and
+    // the map — is not silently starved when the geo lookup is slow, blocked, or
+    // the visitor closes the tab before it resolves. Geo is merged in below.
+    void saveVisitorSession()
   }
 
   // If resuming an existing session for today, restore accumulated data.

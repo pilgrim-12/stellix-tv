@@ -211,7 +211,7 @@ export default function VisitorsPage() {
                       <p className="text-2xl font-bold">{allSessions.length}</p>
                       <p className="text-sm text-muted-foreground">All Time</p>
                       <p className="text-xs text-muted-foreground/70">
-                        {new Set(allSessions.map(s => s.visitorId)).size} unique
+                        {new Set(allSessions.map(s => s.ip || s.visitorId).filter(Boolean)).size} unique
                       </p>
                     </div>
                   </div>
