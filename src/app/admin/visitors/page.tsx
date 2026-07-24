@@ -22,6 +22,11 @@ import { getVisitorStatsSummary, getAllSessions, clearAllVisitorData, backfillGe
 import { Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+// Max number of session cards to render in the "Recent Visitors" list. The
+// full collection still powers the counts/map, but rendering thousands of DOM
+// nodes caused forced-reflow / slow-handler jank.
+const RECENT_LIMIT = 100
+
 const VisitorMap = dynamic(() => import('@/components/admin/VisitorMap'), {
   ssr: false,
   loading: () => (
@@ -372,6 +377,11 @@ export default function VisitorsPage() {
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Clock className="h-4 w-4" />
                     Recent Visitors
+                    {allSessions.length > RECENT_LIMIT && (
+                      <span className="text-xs font-normal text-muted-foreground">
+                        (latest {RECENT_LIMIT} of {allSessions.length})
+                      </span>
+                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -381,7 +391,7 @@ export default function VisitorsPage() {
                     </p>
                   ) : (
                     <div className="space-y-2 max-h-[600px] overflow-auto">
-                      {allSessions.map((session) => (
+                      {allSessions.slice(0, RECENT_LIMIT).map((session) => (
                         <div
                           key={session.sessionId}
                           className="p-3 rounded-lg border border-border/40 hover:bg-muted/30 transition-colors"
