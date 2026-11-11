@@ -1,10 +1,34 @@
 'use client'
 
-import { useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet'
+import L from 'leaflet'
 import { VisitorSession } from '@/lib/visitorAnalytics'
 import { Monitor, Smartphone, Tablet } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
+
+// Key-free dark basemaps. CARTO's anonymous tiles now return an
+// "API KEY REQUIRED" watermark, so Esri's Dark Gray Canvas is primary and
+// OpenStreetMap (darkened via CSS filter) is the fallback.
+const BASEMAPS = [
+  {
+    id: 'esri-dark',
+    url: 'https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    attribution: '&copy; <a href="https://www.esri.com/">Esri</a>, HERE, Garmin, &copy; OpenStreetMap contributors',
+    maxZoom: 16,
+    darken: false,
+  },
+  {
+    id: 'osm',
+    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19,
+    darken: true,
+  },
+] as const
+
+// Number of failed tiles before giving up on the current basemap
+const TILE_ERROR_THRESHOLD = 8
 
 function DeviceIcon({ device }: { device: string }) {
   switch (device) {
@@ -19,7 +43,6 @@ function FitBounds({ positions }: { positions: [number, number][] }) {
   const map = useMap()
   useEffect(() => {
     if (positions.length > 0) {
-      const L = require('leaflet')
       const bounds = L.latLngBounds(positions)
       map.fitBounds(bounds, { padding: [30, 30], maxZoom: 5 })
     }
@@ -32,6 +55,23 @@ interface VisitorMapProps {
 }
 
 export default function VisitorMap({ sessions }: VisitorMapProps) {
+  // Fall through the basemap list if a provider starts failing. A handful of
+  // tiles can legitimately 404 near the edges of the world, so only switch
+  // once the failures clearly aren't isolated.
+  const [basemapIndex, setBasemapIndex] = useState(0)
+  const tileErrors = useRef(0)
+  const basemap = BASEMAPS[Math.min(basemapIndex, BASEMAPS.length - 1)]
+
+  const handleTileError = useCallback(() => {
+    tileErrors.current += 1
+    if (tileErrors.current < TILE_ERROR_THRESHOLD) return
+    setBasemapIndex(i => {
+      if (i >= BASEMAPS.length - 1) return i
+      tileErrors.current = 0
+      return i + 1
+    })
+  }, [])
+
   // Only show sessions that have coordinates
   const mappableSessions = useMemo(() =>
     sessions.filter(s => s.latitude && s.longitude),
@@ -45,8 +85,8 @@ export default function VisitorMap({ sessions }: VisitorMapProps) {
 
   return (
     <div className="relative w-full h-[500px] rounded-lg overflow-hidden border border-border">
-      {/* Count */}
-      <div className="absolute top-3 left-3 z-[1000] bg-background/90 backdrop-blur-sm border border-border rounded-md px-3 py-1.5 text-xs font-medium">
+      {/* Count — top right so it never collides with the zoom control */}
+      <div className="absolute top-3 right-3 z-[1000] bg-background/90 backdrop-blur-sm border border-border rounded-md px-3 py-1.5 text-xs font-medium">
         {mappableSessions.length} / {sessions.length} visitors on map
       </div>
 
@@ -59,8 +99,12 @@ export default function VisitorMap({ sessions }: VisitorMapProps) {
         className="visitor-map"
       >
         <TileLayer
-          attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          key={basemap.id}
+          attribution={basemap.attribution}
+          url={basemap.url}
+          maxZoom={basemap.maxZoom}
+          className={basemap.darken ? 'visitor-map-darken' : undefined}
+          eventHandlers={{ tileerror: handleTileError }}
         />
         <FitBounds positions={positions} />
 

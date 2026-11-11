@@ -291,6 +291,15 @@
 }
 
 /* Leaflet map dark theme */
+.visitor-map {
+  background: oklch(0.18 0.005 285.823);
+}
+
+/* Darkens light basemaps (OSM fallback) to match the admin dark UI */
+.visitor-map-darken {
+  filter: grayscale(0.7) invert(1) brightness(0.92) contrast(0.9) hue-rotate(180deg);
+}
+
 .visitor-map .leaflet-control-zoom a {
   background: oklch(0.21 0.006 285.885) !important;
   color: oklch(0.985 0 0) !important;
