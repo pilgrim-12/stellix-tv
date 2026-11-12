@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -43,6 +43,7 @@ import { AdminLayout } from '@/components/admin/AdminLayout'
 import { cn } from '@/lib/utils'
 import { PreviewPlayer } from '@/components/player'
 import { languageNames, languageOrder, categoryNames, categoryOrder } from '@/types'
+import { playlistCatalog, CatalogSource, PlaylistSourceKind } from '@/data/playlistSources'
 
 const statusColors: Record<StagingChannelStatus, string> = {
   pending: 'bg-yellow-500/20 text-yellow-500',
@@ -102,6 +103,17 @@ export default function StagingPage() {
   const [isMerging, setIsMerging] = useState(false)
   const [mergeResult, setMergeResult] = useState<{ merged: number; updated: number; skipped: number } | null>(null)
   const [deletingPlaylistId, setDeletingPlaylistId] = useState<string | null>(null)
+
+  // Verified catalog grouped for the import dropdown
+  const catalogByKind = useMemo(() => {
+    const groups = new Map<PlaylistSourceKind, CatalogSource[]>()
+    playlistCatalog.forEach((source) => {
+      const list = groups.get(source.kind) || []
+      list.push(source)
+      groups.set(source.kind, list)
+    })
+    return [...groups.entries()]
+  }, [])
 
   // Load playlists list
   const loadPlaylists = async () => {
@@ -207,16 +219,17 @@ export default function StagingPage() {
     }
   }
 
-  // Import from URL
-  const handleImportFromUrl = async () => {
-    if (!playlistUrl.trim()) return
+  // Import from URL (either the input field or a catalog entry)
+  const handleImportFromUrl = async (sourceUrl?: string) => {
+    const targetUrl = (sourceUrl ?? playlistUrl).trim()
+    if (!targetUrl) return
 
     setIsImporting(true)
     setImportError(null)
     setImportSuccess(null)
 
     // If playlist with this URL already exists, delete old staging to allow re-import
-    const normalizedUrl = playlistUrl.trim().toLowerCase()
+    const normalizedUrl = targetUrl.toLowerCase()
     const existingPlaylist = playlists.find(p => p.url?.toLowerCase() === normalizedUrl)
     if (existingPlaylist) {
       try {
@@ -227,28 +240,30 @@ export default function StagingPage() {
     }
 
     try {
-      const content = await fetchM3UPlaylist(playlistUrl.trim())
+      const content = await fetchM3UPlaylist(targetUrl)
       const m3uChannels = parseM3U(content)
 
       if (m3uChannels.length === 0) {
         throw new Error('Playlist is empty or has invalid format')
       }
 
-      const urlParts = playlistUrl.split('/')
+      const catalogEntry = playlistCatalog.find((s) => s.url === targetUrl)
+      const urlParts = targetUrl.split('/')
       const fileName = urlParts[urlParts.length - 1] || 'playlist'
-      const playlistName = fileName.replace('.m3u8', '').replace('.m3u', '')
+      const playlistName = catalogEntry?.name || fileName.replace('.m3u8', '').replace('.m3u', '')
 
       // Extract country hint from URL patterns like /countries/at.m3u or /subdivisions/at-2.m3u
-      const countryFromUrl = playlistUrl.match(/\/countries\/([a-z]{2})\.m3u/i)?.[1]
-        || playlistUrl.match(/\/subdivisions\/([a-z]{2})-/i)?.[1]
-        || playlistUrl.match(/\/cities\/([a-z]{2})/i)?.[1]
+      const countryFromUrl = catalogEntry?.country
+        || targetUrl.match(/\/countries\/([a-z]{2})\.m3u/i)?.[1]
+        || targetUrl.match(/\/subdivisions\/([a-z]{2})-/i)?.[1]
+        || targetUrl.match(/\/cities\/([a-z]{2})/i)?.[1]
       const importHint = countryFromUrl || playlistName
 
       const appChannels = convertToAppChannels(m3uChannels, '', importHint)
 
       const result = await createStagingPlaylist(
         playlistName,
-        playlistUrl.trim(),
+        targetUrl,
         'url',
         appChannels.map((ch) => ({
           name: ch.name,
@@ -376,7 +391,29 @@ export default function StagingPage() {
   }) || []
 
   const headerActions = (
-    <div className="flex items-center gap-2 flex-1 max-w-xl">
+    <div className="flex items-center gap-2 flex-1 max-w-3xl">
+      {/* Verified catalog — one click imports a ready playlist into staging */}
+      <select
+        className="h-8 max-w-[220px] rounded-md border bg-background px-2 text-xs"
+        value=""
+        disabled={isImporting}
+        onChange={(e) => {
+          if (e.target.value) handleImportFromUrl(e.target.value)
+        }}
+      >
+        <option value="">Catalog ({playlistCatalog.length} sources)…</option>
+        {catalogByKind.map(([kind, sources]) => (
+          <optgroup key={kind} label={kind}>
+            {sources.map((source) => (
+              <option key={source.id} value={source.url}>
+                {source.flag ? `${source.flag} ` : ''}
+                {source.name} — {source.channels}
+                {source.metrics ? ` · ${Math.round(source.metrics.direct * 100)}% direct` : ''}
+              </option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
       <Input
         type="url"
         placeholder="https://example.com/playlist.m3u"
@@ -385,7 +422,7 @@ export default function StagingPage() {
         onChange={(e) => setPlaylistUrl(e.target.value)}
         disabled={isImporting}
       />
-      <Button onClick={handleImportFromUrl} disabled={isImporting || !playlistUrl.trim()} size="sm" className="h-8">
+      <Button onClick={() => handleImportFromUrl()} disabled={isImporting || !playlistUrl.trim()} size="sm" className="h-8">
         {isImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link className="h-4 w-4" />}
       </Button>
       <input ref={fileInputRef} type="file" accept=".m3u,.m3u8" className="hidden" onChange={handleFileUpload} disabled={isImporting} />

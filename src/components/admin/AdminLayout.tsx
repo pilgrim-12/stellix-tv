@@ -15,6 +15,7 @@ import {
   Copy,
   AlertCircle,
   Globe,
+  Radar,
 } from 'lucide-react'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
@@ -28,6 +29,7 @@ interface AdminLayoutProps {
 
 const navItems = [
   { path: '/admin', label: 'Channels', icon: Tv },
+  { path: '/admin/discover', label: 'Discover', icon: Radar },
   { path: '/admin/staging', label: 'Staging', icon: FolderOpen },
   { path: '/admin/duplicates', label: 'Duplicates', icon: Copy },
   { path: '/admin/health', label: 'Health Check', icon: AlertCircle },
